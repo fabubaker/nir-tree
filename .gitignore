@@ -1,0 +1,51 @@
+# Prerequisites
+*.d
+
+# VS Code Stuff
+.vscode/
+
+# Test files
+*.meta
+*.db
+
+# Compiled Object files
+*.slo
+*.lo
+*.o
+*.obj
+
+# Precompiled Headers
+*.gch
+*.pch
+
+# Compiled Dynamic libraries
+*.so
+*.dylib
+*.dll
+
+# Fortran module files
+*.mod
+*.smod
+
+# Compiled Static libraries
+*.lai
+*.la
+*.a
+*.lib
+
+# Executables
+bin/*
+*.exe
+*.out
+*.app
+
+# Data
+data/*
+prints/*
+
+# Other
+benchmarks/target
+nir-tree/target
+.idea
+cmake-build-debug
+bin
