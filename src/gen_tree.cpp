@@ -57,7 +57,7 @@ void generate_tree( std::map<std::string, unsigned> &configU ) {
     Index *spatialIndex;
     if( configU["tree"] == NIR_TREE ) {
         // FIXME: one of the main slow downs of bulk loading in the NIR-Tree is going to be that
-        // it looks for compression opportunities duringthe bulk load. This makes no sense because
+        // it looks for compression opportunities during the bulk load. This makes no sense because
         // we are guaranteed that each generated rectangle is disjoint.
         nirtreedisk::NIRTreeDisk<5,9,nirtreedisk::ExperimentalStrategy> *tree =  new
             nirtreedisk::NIRTreeDisk<5,9,nirtreedisk::ExperimentalStrategy>(
@@ -142,7 +142,7 @@ void generate_tree( std::map<std::string, unsigned> &configU ) {
 
 int main( int argc, char **argv ) {
 
-    std::map<std::string, unsigned> configU;
+    std::map<std::string, size_t> configU;
     configU.emplace( "tree", NIR_TREE );
     configU.emplace( "distribution", CALIFORNIA);
     configU.emplace( "seed", 0 );
