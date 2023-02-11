@@ -1,7 +1,7 @@
 #include <bulk_load.h>
 
 
-void generate_tree( std::map<std::string, unsigned> &configU ) {
+void generate_tree( std::map<std::string, size_t> &configU ) {
 
     std::string backing_file = "bulkloaded_tree.txt";
     unlink( backing_file.c_str() );

@@ -991,7 +991,7 @@ std::pair<tree_node_handle, Rectangle> quad_tree_style_load(
 template <>
 void bulk_load_tree(
     nirtreedisk::NIRTreeDisk<5,9,nirtreedisk::ExperimentalStrategy>* tree,
-    std::map<std::string,unsigned> &configU,
+    std::map<std::string, size_t> &configU,
     std::vector<Point>::iterator begin,
     std::vector<Point>::iterator end,
     unsigned max_branch_factor
@@ -1023,7 +1023,7 @@ void bulk_load_tree(
 template <>
 void bulk_load_tree(
     rstartreedisk::RStarTreeDisk<5,9>* tree,
-    std::map<std::string,unsigned> &configU,
+    std::map<std::string, size_t> &configU,
     std::vector<Point>::iterator begin,
     std::vector<Point>::iterator end,
     unsigned max_branch_factor
