@@ -13,6 +13,9 @@
 template <typename T>
 class pinned_node_ptr {
 public:
+    buffer_pool &pool_;
+    T *obj_ptr_;
+    page *page_ptr_;
 
     pinned_node_ptr( buffer_pool &pool, T *obj_ptr, page *page_ptr ) :
         pool_( pool ), obj_ptr_( obj_ptr ), page_ptr_( page_ptr ) {
@@ -74,11 +77,6 @@ public:
     constexpr T *operator->() const {
         return obj_ptr_;
     }
-
-    buffer_pool &pool_;
-    T *obj_ptr_;
-    page *page_ptr_;
-
 };
 
 // A wrapper around an int
@@ -92,6 +90,8 @@ struct NodeHandleType {
     uint8_t type_;
 };
 
+// Handle to a node in the tree, using page_id and offset.
+// Also indicates the type of the node and whether it's compressed.
 class tree_node_handle {
 public:
     struct page_location {
@@ -207,6 +207,7 @@ pinned_node_ptr<U> reinterpret_handle_ptr( const pinned_node_ptr<T> &ptr )
 
 static_assert( std::is_trivially_copyable<tree_node_handle>::value );
 
+// Responsible for interfacing with the buffer pool to create nodes.
 class tree_node_allocator {
 public:
     tree_node_allocator( size_t memory_budget,
