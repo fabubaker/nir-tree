@@ -56,7 +56,7 @@ namespace BenchTypeClasses
 	class Uniform : public Benchmark
 	{
 		public:
-			static unsigned size;
+			static size_t size;
 			static unsigned dimensions;
 			static unsigned seed;
 			static constexpr char fileName[] = "";
@@ -66,7 +66,7 @@ namespace BenchTypeClasses
 	class Skew : public Benchmark
 	{
 		public:
-			static constexpr unsigned size = BitDataSize;
+			static constexpr size_t size = BitDataSize;
 			static constexpr unsigned querySize = BitQuerySize;
 			static constexpr unsigned dimensions = 2;
 			static constexpr char fileName[] = "/home/bjglasbe/Documents/code/nir-tree/data/bits02";
@@ -76,7 +76,7 @@ namespace BenchTypeClasses
 	class Zipf : public Benchmark 
 	{
 		public:
-			static unsigned size;
+			static size_t size;
 			static double alpha;
 			static unsigned dimensions;
 			static unsigned seed;
@@ -90,7 +90,7 @@ namespace BenchTypeClasses
 	class Gauss : public Benchmark
 		{
 		public:
-			static unsigned size;
+			static size_t size;
 			static unsigned dimensions;
 			static unsigned seed;
 			static constexpr char fileName[] = "";
@@ -99,7 +99,7 @@ namespace BenchTypeClasses
 	class California : public Benchmark
 	{
 		public:
-			static constexpr unsigned size = CaliforniaDataSize;
+			static constexpr size_t size = CaliforniaDataSize;
 			static constexpr unsigned querySize = CaliforniaQuerySize;
 			static constexpr unsigned dimensions = 2;
 			static constexpr char fileName[] =
@@ -110,7 +110,7 @@ namespace BenchTypeClasses
 	class Biological: public Benchmark
 	{
 		public:
-			static constexpr unsigned size = BiologicalDataSize;
+			static constexpr size_t size = BiologicalDataSize;
 			static constexpr unsigned querySize = BiologicalQuerySize;
 			static constexpr unsigned dimensions = 3;
 			static constexpr char fileName[] = "/home/bjglasbe/Documents/code/nir-tree/data/biological";
@@ -119,7 +119,7 @@ namespace BenchTypeClasses
 	class Forest : public Benchmark
 	{
 		public:
-			static constexpr unsigned size = ForestDataSize;
+			static constexpr size_t size = ForestDataSize;
 			static constexpr unsigned querySize = ForestQuerySize;
 			static constexpr unsigned dimensions = 5;
 			static constexpr char fileName[] = "/home/bjglasbe/Documents/code/nir-tree/data/forest";
@@ -128,7 +128,7 @@ namespace BenchTypeClasses
 	class Canada : public Benchmark
 	{
 		public:
-			static constexpr unsigned size = CanadaDataSize;
+			static constexpr size_t size = CanadaDataSize;
 			static constexpr unsigned querySize = CanadaQuerySize;
 			static constexpr unsigned dimensions = 2;
 			static constexpr char fileName[] = "/home/bjglasbe/Documents/code/nir-tree/data/canada";
@@ -137,7 +137,7 @@ namespace BenchTypeClasses
 	class Gaia : public Benchmark
 	{
 		public:
-			static constexpr unsigned size = GaiaDataSize;
+			static constexpr size_t size = GaiaDataSize;
 			static constexpr unsigned querySize = GaiaQuerySize;
 			static constexpr unsigned dimensions = 3;
 			static constexpr char fileName[] = "/home/bjglasbe/Documents/code/nir-tree/data/gaia";
@@ -146,11 +146,12 @@ namespace BenchTypeClasses
 	class MicrosoftBuildings : public Benchmark
 	{
 		public:
-			static constexpr unsigned size = MicrosoftBuildingsDataSize;
+			static constexpr size_t size = MicrosoftBuildingsDataSize;
 			static constexpr unsigned querySize = 0;
 			static constexpr unsigned dimensions = 2;
 			static constexpr char fileName[] = "/home/bjglasbe/Documents/code/nir-tree/data/microsoftbuildings";
 	};
+//  class NYCTaxi :
 };
 
 
@@ -208,10 +209,10 @@ class PointGenerator
 		std::optional<Point> nextPoint(BenchTag::FileBackedReadChunksAtATime);
 
 		// Class members
-		unsigned benchmarkSize;
+		size_t benchmarkSize;
 		unsigned seed;
 		std::fstream backingFile;
-		unsigned offset;
+		size_t offset;
 
 	public:
 		std::vector<Point> pointBuffer;
@@ -297,7 +298,7 @@ std::optional<Point> PointGenerator<BenchTypeClasses::Uniform>::nextPoint(BenchT
 		double generated_point;
 
 		pointBuffer.reserve(benchmarkSize);
-		for (unsigned i = 0; i < benchmarkSize; i++)
+		for (size_t i = 0; i < benchmarkSize; i++)
 		{
 			Point p;
 			for (unsigned d = 0; d < BenchTypeClasses::Uniform::dimensions; d++)
@@ -358,7 +359,7 @@ std::optional<Point> PointGenerator<BenchTypeClasses::Zipf>::nextPoint(BenchTag:
 		std::uniform_real_distribution<double> pointDist(0.0, 1.0);
 
 		pointBuffer.reserve(benchmarkSize);
-		for (unsigned i = 0; i < benchmarkSize; i++)
+		for (size_t i = 0; i < benchmarkSize; i++)
 		{
 			Point p;
 			p[0] = BenchTypeClasses::Zipf::binary_search(pointDist(generator), cummulative);
@@ -415,7 +416,7 @@ std::optional<Point> PointGenerator<T>::nextPoint(BenchTag::FileBackedReadAll)
 
 		// Initialize points
 		pointBuffer.reserve(benchmarkSize);
-		for (unsigned i = 0; i < benchmarkSize; ++i)
+		for (size_t i = 0; i < benchmarkSize; ++i)
 		{
 			Point p;
 			for (unsigned d = 0; d < T::dimensions; ++d)
@@ -452,7 +453,7 @@ std::optional<Point> PointGenerator<T>::nextPoint(BenchTag::FileBackedReadChunks
 		// Do the fstream song and dance
 
 		// Initialize points
-		for (unsigned i = 0; i < 10000 and offset+i < benchmarkSize; ++i)
+		for (size_t i = 0; i < 10000 and offset+i < benchmarkSize; ++i)
 		{
 			Point p;
 			for (unsigned d = 0; d < T::dimensions; ++d)
@@ -476,7 +477,7 @@ std::optional<Point> PointGenerator<T>::nextPoint()
 	return nextPoint(BenchDetail::getBenchTag<T>{});
 }
 
-static std::vector<Rectangle> generateRectangles(unsigned benchmarkSize, unsigned seed, unsigned rectanglesSize)
+static std::vector<Rectangle> generateRectangles(size_t benchmarkSize, unsigned seed, unsigned rectanglesSize)
 {
 	std::default_random_engine generator(seed + benchmarkSize);
 	std::uniform_real_distribution<double> pointDist(0.0, 1.0);
