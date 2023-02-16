@@ -152,19 +152,19 @@ int main( int argc, char **argv ) {
     while( (option = getopt(argc,argv, "t:m:n:s:p:g:z:")) != -1 ) {
         switch( option ) {
             case 't': {
-                configU["tree"] = (TreeType)atoi(optarg);
+                configU["tree"] = (TreeType)atol(optarg);
                 break;
             }
             case 'm': {
-                configU["distribution"] = (BenchType)atoi(optarg);
+                configU["distribution"] = (BenchType)atol(optarg);
                 break;
             }
             case 'n': {
-                configU["size"] = atoi(optarg);
+                configU["size"] = atol(optarg);
                 break;
             }
             case 'g': {
-                configU["num_elements"] = atoi(optarg);
+                configU["num_elements"] = atol(optarg);
                 break;
             }
             case 'z': {
@@ -172,11 +172,11 @@ int main( int argc, char **argv ) {
                 break;
             }
             case 's': {
-                configU["seed"] = atoi(optarg);
+                configU["seed"] = atol(optarg);
                 break;
             }
             case 'p': {
-                configU["precision"] = atoi(optarg);
+                configU["precision"] = atol(optarg);
                 break;
             }
         }
