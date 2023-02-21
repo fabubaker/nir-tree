@@ -49,3 +49,5 @@ nir-tree/target
 .idea
 cmake-build-debug
 bin
+bulkloaded_tree.txt
+consolidated_nirtree.txt
