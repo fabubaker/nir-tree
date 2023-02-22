@@ -936,7 +936,7 @@ static void runBench(PointGenerator<T> &pointGen, std::map<std::string, unsigned
 	}
 
 	// Initialize search rectangles
-    std::vector<Rectangle> searchRectangles;
+  std::vector<Rectangle> searchRectangles;
 	if (configU["distribution"] == UNIFORM)
 	{
 		searchRectangles = generateRectangles(configU["size"], configU["seed"], configU["rectanglescount"]);
