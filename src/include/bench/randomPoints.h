@@ -35,8 +35,9 @@ static const unsigned CanadaQuerySize = 5000;
 static const unsigned GaiaDataSize = 18084053;
 static const unsigned GaiaQuerySize = 5000;
 static const unsigned MicrosoftBuildingsDataSize = 752704741;
+static const unsigned NYCTaxiDataSize = 337831768;
 
-enum BenchType {UNIFORM, SKEW, CLUSTER, CALIFORNIA, BIOLOGICAL, FOREST, CANADA, GAIA, MICROSOFTBUILDINGS, ZIPF, GAUSS};
+enum BenchType {UNIFORM, SKEW, CLUSTER, CALIFORNIA, BIOLOGICAL, FOREST, CANADA, GAIA, MICROSOFTBUILDINGS, ZIPF, GAUSS, NYCTAXI};
 enum TreeType {R_TREE, R_PLUS_TREE, R_STAR_TREE, NIR_TREE, QUAD_TREE, REVISED_R_STAR_TREE};
 
 // Tags defining how the benchmark is generated
@@ -151,7 +152,14 @@ namespace BenchTypeClasses
 			static constexpr unsigned dimensions = 2;
 			static constexpr char fileName[] = "/home/bjglasbe/Documents/code/nir-tree/data/microsoftbuildings";
 	};
-//  class NYCTaxi :
+  class NYCTaxi : public Benchmark
+  {
+    public:
+      static constexpr size_t size = NYCTaxiDataSize;
+      static constexpr unsigned querySize = 0;
+      static constexpr unsigned dimensions = 2;
+      static constexpr char fileName[] = "/home/f2abubak/nir-tree++/data/NYCTaxi_combined.csv";
+  };
 };
 
 
@@ -191,6 +199,8 @@ namespace BenchDetail
 	template <>
 	struct getBenchTag<BenchTypeClasses::MicrosoftBuildings> : BenchTag::FileBackedReadChunksAtATime {};
 
+  template <>
+  struct getBenchTag<BenchTypeClasses::NYCTaxi> : BenchTag::FileBackedReadChunksAtATime {};
 }
 
 template <typename T>
