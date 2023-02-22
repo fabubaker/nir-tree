@@ -1,17 +1,17 @@
 #include <bench/randomPoints.h>
 
-unsigned BenchTypeClasses::Uniform::size = 10000;
+size_t BenchTypeClasses::Uniform::size = 10000;
 unsigned BenchTypeClasses::Uniform::dimensions = dimensions;
 unsigned BenchTypeClasses::Uniform::seed = 3141;
 int BenchTypeClasses::Uniform::precision = -1;
 
-unsigned BenchTypeClasses::Zipf::size = 10000;
+size_t BenchTypeClasses::Zipf::size = 10000;
 unsigned BenchTypeClasses::Zipf::dimensions = dimensions;
 double BenchTypeClasses::Zipf::alpha = 1.0;
 unsigned BenchTypeClasses::Zipf::seed = 3141;
 unsigned BenchTypeClasses::Zipf::num_elements = 1000;
 
-unsigned BenchTypeClasses::Gauss::size = 10000;
+size_t BenchTypeClasses::Gauss::size = 10000;
 unsigned BenchTypeClasses::Gauss::dimensions = dimensions;
 unsigned BenchTypeClasses::Gauss::seed = 3141;
 
