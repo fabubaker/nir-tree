@@ -47,6 +47,11 @@ void generate_tree( std::map<std::string, size_t> &configU ) {
         while( (next = points.nextPoint() )) {
             all_points.push_back( next.value() );
         }
+    } else if( configU["distribution"] == NYCTAXI ) {
+      PointGenerator<BenchTypeClasses::NYCTaxi> points;
+      while ((next = points.nextPoint())) {
+        all_points.push_back(next.value());
+      }
     }
 
     double bulk_load_pct = 1.0;
