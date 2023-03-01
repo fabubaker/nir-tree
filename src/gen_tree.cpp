@@ -115,7 +115,7 @@ void generate_tree( std::map<std::string, size_t> &configU ) {
     std::shuffle( all_points.begin(), all_points.end(), g );
 
     unsigned totalSearches  = 0;
-	double totalTimeSearches = 0.0;
+    double totalTimeSearches = 0.0;
     for( Point p : all_points ) {
         std::chrono::high_resolution_clock::time_point begin = std::chrono::high_resolution_clock::now();
         std::cout << "Searching: for " << p << std::endl;
@@ -137,8 +137,8 @@ void generate_tree( std::map<std::string, size_t> &configU ) {
 
     spatialIndex->stat();
 
-	std::cout << "Total time to search: " << totalTimeSearches << "s" << std::endl;
-	std::cout << "Avg time to search: " << totalTimeSearches / totalSearches << "s" << std::endl;
+    std::cout << "Total time to search: " << totalTimeSearches << "s" << std::endl;
+    std::cout << "Avg time to search: " << totalTimeSearches / totalSearches << "s" << std::endl;
 
     return;
 }
