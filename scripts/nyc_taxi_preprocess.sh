@@ -6,7 +6,7 @@ set -x
 
 USAGE='nyc_taxi_preprocess.sh <NYCTaxi.csv>'
 
-filename=(basename $1 .csv)
+filename=$(basename $1 .csv)
 
 # Extract points and unique them.
 cat $1 | cut -d',' -f1,2,13,14 | sort -u > ${filename}_cleaned.csv
