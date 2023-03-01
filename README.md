@@ -129,7 +129,7 @@ determines how many rectangles can be stored. See `node.tcc` in `src/include/nir
 
 #### Bulk Loading
   
-Bulk loading support is defined in `src/gen_tree.cpp`. Note that for now, the templates hard code the tree `min_branch_factor` and `max_branch_factor`
+Bulk loading support is defined in `src/bulk_load.cpp`. Note that for now, the templates hard code the tree `min_branch_factor` and `max_branch_factor`
 (<5,9>) respectively.
   
 There are two types of bulk loading. The first is an R-Tree-style load, which uses Sort-Tile Recursive, and is bottom-up. The second is a quad-tree-style
