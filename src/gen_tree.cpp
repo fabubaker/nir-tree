@@ -66,9 +66,9 @@ void generate_tree( std::map<std::string, size_t> &configU ) {
         // we are guaranteed that each generated rectangle is disjoint.
         nirtreedisk::NIRTreeDisk<5,9,nirtreedisk::ExperimentalStrategy> *tree =  new
             nirtreedisk::NIRTreeDisk<5,9,nirtreedisk::ExperimentalStrategy>(
-                    40960UL*130000UL, backing_file );
+                    40960UL*13000L, backing_file );
         std::cout << "Bulk Loading..." << std::endl;
-        std::cout << "Creating tree with " << 40960UL *130000UL << "bytes" << std::endl;
+        std::cout << "Creating tree with " << 40960UL *13000UL << "bytes" << std::endl;
         bulk_load_tree( tree, configU, all_points.begin(), all_points.begin() + cut_off_bulk_load, 9 );
         std::cout << "Created NIRTree." << std::endl;
         
