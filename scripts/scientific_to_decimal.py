@@ -1,4 +1,5 @@
 # Use this script to convert floats in scientific notation to decimal.
+# Might need to run `sort -u` afterwards.
 
 USAGE=\
 '''USAGE: python3 scientific_to_decimal.py <filename.csv>'''
@@ -21,6 +22,7 @@ csv_writer = csv.writer(output_csv_file, delimiter=',')
 for input_row in csv_reader:
     output_row = []
 
+    # Rows with missing values are ignored.
     if '' in input_row:
         continue
 
