@@ -158,7 +158,7 @@ namespace BenchTypeClasses
       static constexpr size_t size = NYCTaxiDataSize;
       static constexpr unsigned querySize = 0;
       static constexpr unsigned dimensions = 2;
-      static constexpr char fileName[] = "/home/f2abubak/nir-tree++/data/NYCTaxi_combined.csv";
+      static constexpr char fileName[] = "/home/f2abubak/nir-tree++/data/NYCTaxi.csv";
   };
 };
 
