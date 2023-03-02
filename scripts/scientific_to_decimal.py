@@ -17,7 +17,7 @@ file_name_without_extension = os.path.splitext(filename)[0]
 output_csv_file = open(file_name_without_extension + "_output.csv", "w")
 
 csv_reader = csv.reader(input_csv_file, delimiter=',')
-csv_writer = csv.writer(output_csv_file, delimiter=',')
+csv_writer = csv.writer(output_csv_file, delimiter=' ')
 
 for input_row in csv_reader:
     output_row = []
@@ -26,7 +26,7 @@ for input_row in csv_reader:
     if '' in input_row:
         continue
 
-    print("Converting row:", input_row)
+    # print("Converting row:", input_row)
     for column in input_row:
         column_float = "{:f}".format(float(column))
         output_row.append(column_float)
