@@ -16,3 +16,5 @@ cat ${filename}_cleaned.csv | cut -d',' -f1,2 > ${filename}_pickup.csv
 cat ${filename}_cleaned.csv | cut -d',' -f3,4 > ${filename}_dropoff.csv
 cat ${filename}_pickup.csv ${filename}_dropoff.csv > ${filename}_combined.csv
 
+sort -u ${filename}_combined.csv > ${filename}_combined_unique.csv
+
