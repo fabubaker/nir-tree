@@ -3,6 +3,7 @@
 USAGE=\
 '''USAGE: python3 scientific_to_decimal.py <filename.csv>'''
 
+import os
 import sys
 import csv
 
@@ -11,7 +12,8 @@ if len(sys.argv) != 2:
 
 filename = sys.argv[1]
 input_csv_file = open(filename)
-output_csv_file = open(filename + "_output.csv", "w")
+file_name_without_extension = os.path.splitext(filename)[0]
+output_csv_file = open(file_name_without_extension + "_output.csv", "w")
 
 csv_reader = csv.reader(input_csv_file, delimiter=',')
 csv_writer = csv.writer(output_csv_file, delimiter=',')
