@@ -40,6 +40,8 @@ static const unsigned NYCTaxiDataSize = 337831768;
 enum BenchType {UNIFORM, SKEW, CLUSTER, CALIFORNIA, BIOLOGICAL, FOREST, CANADA, GAIA, MICROSOFTBUILDINGS, ZIPF, GAUSS, NYCTAXI};
 enum TreeType {R_TREE, R_PLUS_TREE, R_STAR_TREE, NIR_TREE, QUAD_TREE, REVISED_R_STAR_TREE};
 
+#define BUFFER_POOL_MEMORY 40960UL*130000UL
+
 // Tags defining how the benchmark is generated
 namespace BenchTag
 {
@@ -854,7 +856,7 @@ void repack_tree( T *tree_ptr, std::string &new_file_name,
             tree_node_allocator * ) ) {
 
     auto new_file_allocator = std::make_unique<tree_node_allocator>(
-            40960UL*130000UL,
+            BUFFER_POOL_MEMORY,
             new_file_name );
 
     new_file_allocator->initialize();
