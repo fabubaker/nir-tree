@@ -1,4 +1,5 @@
 #include <bulk_load.h>
+#include <vector>
 
 
 void generate_tree( std::map<std::string, size_t> &configU ) {
@@ -66,18 +67,24 @@ void generate_tree( std::map<std::string, size_t> &configU ) {
         // we are guaranteed that each generated rectangle is disjoint.
         nirtreedisk::NIRTreeDisk<5,9,nirtreedisk::ExperimentalStrategy> *tree =  new
             nirtreedisk::NIRTreeDisk<5,9,nirtreedisk::ExperimentalStrategy>(
-                    40960UL*13000L, backing_file );
+                    40960UL*130000UL, backing_file ); //
         std::cout << "Bulk Loading..." << std::endl;
-        std::cout << "Creating tree with " << 40960UL *13000UL << "bytes" << std::endl;
+        std::cout << "Creating tree with " << 40960UL*130000UL << "bytes" << std::endl;
         bulk_load_tree( tree, configU, all_points.begin(), all_points.begin() + cut_off_bulk_load, 9 );
         std::cout << "Created NIRTree." << std::endl;
         
         std::cout << "Creating consolidator..." << std::endl;
-        auto consolidated_allocator = std::make_unique<tree_node_allocator>( 40960UL * 1300UL, "consolidated_nirtree.txt" );
+        auto consolidated_allocator = std::make_unique<tree_node_allocator>( 40960UL*130000UL, "consolidated_nirtree.txt" );
         consolidated_allocator->initialize();
+
         std::cout << "Repacking into consolidator..." << std::endl;
+        std::chrono::high_resolution_clock::time_point begin_time = std::chrono::high_resolution_clock::now();
         tree_node_handle new_root = nirtreedisk::repack_subtree<5,9,nirtreedisk::ExperimentalStrategy>( tree->root, get_node_allocator( tree ), consolidated_allocator.get() );
+        std::chrono::high_resolution_clock::time_point end_time = std::chrono::high_resolution_clock::now();
+        std::chrono::duration<double> delta = std::chrono::duration_cast<std::chrono::duration<double>>(end_time - begin_time);
+        std::cout << "Repacking tree took: " << delta.count() << std::endl;
         std::cout << "Done." << std::endl;
+
 
         std::cout << "Swapping out allocator..." << std::endl;
         tree->node_allocator_ = std::move( consolidated_allocator );

@@ -854,7 +854,7 @@ void repack_tree( T *tree_ptr, std::string &new_file_name,
             tree_node_allocator * ) ) {
 
     auto new_file_allocator = std::make_unique<tree_node_allocator>(
-            40960 * 13000,
+            40960UL*130000UL,
             new_file_name );
 
     new_file_allocator->initialize();
