@@ -956,9 +956,7 @@ void bulk_load_tree(
   std::cout << "Max depth required: " << max_depth << std::endl;
   intersection_count = 0;
 
-  auto tree_ptr =
-      (nirtreedisk::NIRTreeDisk<5, 9, nirtreedisk::ExperimentalStrategy>
-           *)tree;
+  auto tree_ptr = tree;
 
   std::chrono::high_resolution_clock::time_point begin_time = std::chrono::high_resolution_clock::now();
   auto ret = quad_tree_style_load(tree_ptr, begin, end,
