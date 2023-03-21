@@ -6,5 +6,6 @@
 #endif
 
 const unsigned dimensions = DIM;
+#define BUFFER_POOL_MEMORY 40960UL * 130000UL
 
 #endif

@@ -19,6 +19,7 @@
 #include <rtree/rtree.h>
 #include <rtreedisk/rtreedisk.h>
 #include <string>
+#include <globals/globals.h>
 
 static const unsigned BitDataSize = 60000;
 static const unsigned BitQuerySize = 3164;
@@ -55,8 +56,6 @@ enum TreeType { R_TREE,
                 NIR_TREE,
                 QUAD_TREE,
                 REVISED_R_STAR_TREE };
-
-#define BUFFER_POOL_MEMORY 40960UL * 130000UL
 
 // Tags defining how the benchmark is generated
 namespace BenchTag {

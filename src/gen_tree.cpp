@@ -1,7 +1,6 @@
 #include <bulk_load.h>
 #include <vector>
-
-#define BUFFER_POOL_MEMORY 40960UL * 130000UL
+#include <globals/globals.h>
 
 void generate_tree(std::map<std::string, size_t> &configU) {
 
