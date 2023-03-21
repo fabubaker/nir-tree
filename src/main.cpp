@@ -89,6 +89,11 @@ void randomPoints(std::map<std::string, unsigned> &configU, std::map<std::string
     runBench(pointGen, configU, configD);
     break;
   }
+  case NYCTAXI: {
+    PointGenerator<BenchTypeClasses::NYCTaxi> pointGen;
+    runBench(pointGen, configU, configD);
+    break;
+  }
   default: {
     std::cout << "Unknown bench type." << std::endl;
     exit(1);
