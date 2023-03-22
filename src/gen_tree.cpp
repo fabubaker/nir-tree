@@ -66,14 +66,14 @@ void generate_tree(std::map<std::string, size_t> &configU) {
     // it looks for compression opportunities during the bulk load. This makes no sense because
     // we are guaranteed that each generated rectangle is disjoint.
     nirtreedisk::NIRTreeDisk<5, 9, nirtreedisk::ExperimentalStrategy> *tree = new nirtreedisk::NIRTreeDisk<5, 9, nirtreedisk::ExperimentalStrategy>(
-        BUFFER_POOL_MEMORY, backing_file); //
+            GEN_TREE_BUFFER_POOL_MEMORY, backing_file); //
     std::cout << "Bulk Loading..." << std::endl;
-    std::cout << "Creating tree with " << BUFFER_POOL_MEMORY << "bytes" << std::endl;
+    std::cout << "Creating tree with " << GEN_TREE_BUFFER_POOL_MEMORY << "bytes" << std::endl;
     bulk_load_tree(tree, configU, all_points.begin(), all_points.begin() + cut_off_bulk_load, 9);
     std::cout << "Created NIRTree." << std::endl;
 
     std::cout << "Creating consolidator..." << std::endl;
-    auto consolidated_allocator = std::make_unique<tree_node_allocator>(BUFFER_POOL_MEMORY, "consolidated_nirtree.txt");
+    auto consolidated_allocator = std::make_unique<tree_node_allocator>(GEN_TREE_BUFFER_POOL_MEMORY, "consolidated_nirtree.txt");
     consolidated_allocator->initialize();
 
     std::cout << "Repacking into consolidator..." << std::endl;
@@ -101,7 +101,7 @@ void generate_tree(std::map<std::string, size_t> &configU) {
     spatialIndex = tree;
   } else if (configU["tree"] == R_STAR_TREE) {
     rstartreedisk::RStarTreeDisk<5, 9> *tree = new rstartreedisk::RStarTreeDisk<5, 9>(
-        BUFFER_POOL_MEMORY, backing_file);
+            GEN_TREE_BUFFER_POOL_MEMORY, backing_file);
     std::cout << "Bulk Loading..." << std::endl;
     bulk_load_tree(tree, configU, all_points.begin(), all_points.begin() + cut_off_bulk_load, 9);
     std::cout << "Created R*Tree" << std::endl;

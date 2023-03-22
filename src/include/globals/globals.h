@@ -6,6 +6,13 @@
 #endif
 
 const unsigned dimensions = DIM;
-#define BUFFER_POOL_MEMORY 40960UL * 130000UL
+// Buffer pool memory for bulk-loading.
+#define GEN_TREE_BUFFER_POOL_MEMORY 40960 * 130000
+
+// Buffer pool memory for running main benchmarks.
+#define MAIN_BUFFER_POOL_MEMORY 4096 * 13000
+
+// The two above are separate since you might wanna benchmark
+// both with different buffer pool sizes.
 
 #endif

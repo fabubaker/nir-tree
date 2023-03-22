@@ -790,8 +790,8 @@ void repack_tree(T *tree_ptr, std::string &new_file_name,
                                                  tree_node_allocator *)) {
 
   auto new_file_allocator = std::make_unique<tree_node_allocator>(
-      BUFFER_POOL_MEMORY,
-      new_file_name);
+          GEN_TREE_BUFFER_POOL_MEMORY,
+          new_file_name);
 
   new_file_allocator->initialize();
   std::chrono::high_resolution_clock::time_point begin = std::chrono::high_resolution_clock::now();
