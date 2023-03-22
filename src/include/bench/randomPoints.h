@@ -878,7 +878,7 @@ static void runBench(PointGenerator<T> &pointGen, std::map<std::string, unsigned
     // This is not how we should generate rectangles for ZIPF.
     searchRectangles = generateRectangles(configU["size"], configU["seed"], configU["rectanglescount"]);
   } else {
-    return;
+    // Do nothing, rectangle searches are disabled for now...
   }
 
   std::optional<Point> nextPoint;
