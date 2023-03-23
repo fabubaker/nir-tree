@@ -1,17 +1,9 @@
-
 # Arch Linux does not tag GCC versions.
 # Builds on Brad's Laptop
-ifeq (, $(shell which g++-10 &>/dev/null))
-C++ := g++
-SXX := -std=c++20
-else
-# Build on Kevin's computer
-C++ := g++-10
-SXX := -std=c++2a
-endif
+CXX := g++-10
 
 DIR := src/include # Include directory
-CXXFLAGS := -Wall -fno-strict-aliasing
+CXXFLAGS := -std=c++2a -Wall -fno-strict-aliasing
 CPPFLAGS := -DDIM=2 -I $(DIR)
 
 ifdef PROD
@@ -36,16 +28,16 @@ TESTSRC := $(shell find ./src/tests -name '*.cpp')
 TESTOBJ := $(TESTSRC:.cpp=.o)
 
 %.o: %.cpp
-	$(C++) $(SXX) $(CXXFLAGS) $(CPPFLAGS) -c $< -o $@
+	$(C++) $(CXXFLAGS) $(CPPFLAGS) -c $< -o $@
 
 all: bin/main bin/gen_tree bin/tests
 
-src/main.o : src/main.cpp
-	$(C++) $(SXX) $(CXXFLAGS) $(CPPFLAGS) -c $< -o $@
+src/main.o : src/main.cpp src/include/bench/randomPoints.h src/include/globals/globals.h
+	$(CXX) $(CXXFLAGS) $(CPPFLAGS) -c $< -o $@
 
 src/gen_tree.o : src/gen_tree.cpp src/bulk_load.o
 	cp src/bulk_load.o bin/bulk_load.o
-	$(C++) $(SXX) $(CXXFLAGS) $(CPPFLAGS) -c $< -o $@ 
+	$(CXX) $(CXXFLAGS) $(CPPFLAGS) -c $< -o $@
 
 bin/main: $(OBJ) src/main.o
 	mkdir -p bin
@@ -57,13 +49,13 @@ bin/main: $(OBJ) src/main.o
 	cp src/revisedrstartree/node.o bin/revisedrstartreenode.o
 	rm -rf test*.o
 	cp $(OBJ_TO_COPY) bin/
-	$(C++) $(SXX) $(CXXFLAGS) $(CPPFLAGS) bin/*.o src/main.o -o bin/main -I $(DIR)
+	$(CXX) $(CXXFLAGS) $(CPPFLAGS) bin/*.o src/main.o -o bin/main -I $(DIR)
 
 bin/gen_tree: $(OBJ) bin/main src/gen_tree.o
-	$(C++) $(SXX) $(CXXFLAGS) $(CPPFLAGS) bin/*.o src/gen_tree.o -o bin/gen_tree -I $(DIR)
+	$(CXX) $(CXXFLAGS) $(CPPFLAGS) bin/*.o src/gen_tree.o -o bin/gen_tree -I $(DIR)
 
 bin/tests: $(TESTOBJ) bin/main
-	$(C++) $(SXX) $(CXXFLAGS) $(CPPFLAGS) bin/*.o src/tests/*.o -o bin/tests
+	$(CXX) $(CXXFLAGS) $(CPPFLAGS) bin/*.o src/tests/*.o -o bin/tests
 
 .PHONY: all clean prod
 
