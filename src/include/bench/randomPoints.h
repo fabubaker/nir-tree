@@ -951,8 +951,7 @@ static void runBench(PointGenerator<T> &pointGen, std::map<std::string, unsigned
   std::mt19937 g;
   g.seed(0);
 
-  std::shuffle(pointGen.pointBuffer.begin(),
-               pointGen.pointBuffer.end(), g);
+  std::shuffle(pointGen.pointBuffer.begin(), pointGen.pointBuffer.end(), g);
 
 #if 1
   while ((nextPoint = pointGen.nextPoint()) /* Intentional = not == */) {

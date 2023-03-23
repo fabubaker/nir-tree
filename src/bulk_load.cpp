@@ -951,8 +951,7 @@ void bulk_load_tree(
   // Keep in mind there is a 0th level, so floor is correct
   uint64_t num_els = (end - begin);
   std::cout << "Num els: " << num_els << std::endl;
-  uint64_t max_depth =
-      std::floor(log(num_els - 1) / log(max_branch_factor));
+  uint64_t max_depth = std::floor(log(num_els - 1) / log(max_branch_factor));
   std::cout << "Max depth required: " << max_depth << std::endl;
   intersection_count = 0;
 
