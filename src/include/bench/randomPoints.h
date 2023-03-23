@@ -973,7 +973,7 @@ static void runBench(PointGenerator<T> &pointGen, std::map<std::string, unsigned
       std::cout << "Point[" << totalSearches << "] queried. " << delta.count() << " s" << std::endl;
     }
 
-    if (totalSearches >= 300) {
+    if (totalSearches >= configU["num_elements"]) {
       break;
     }
   }
@@ -1053,6 +1053,7 @@ static void runBench(PointGenerator<T> &pointGen, std::map<std::string, unsigned
   // Timing Statistics
   std::cout << "Total time to insert: " << totalTimeInserts << "s" << std::endl;
   std::cout << "Avg time to insert: " << totalTimeInserts / (double)totalInserts << "s" << std::endl;
+  std::cout << "Total searches: " << totalSearches << std::endl;
   std::cout << "Total time to search: " << totalTimeSearches << "s" << std::endl;
   std::cout << "Avg time to search: " << totalTimeSearches / totalSearches << "s" << std::endl;
   std::cout << "Total time to range search: " << totalTimeRangeSearches << "s" << std::endl;
