@@ -35,7 +35,7 @@ all: bin/main bin/gen_tree bin/tests
 src/main.o : src/main.cpp src/include/bench/randomPoints.h src/include/globals/globals.h
 	$(CXX) $(CXXFLAGS) $(CPPFLAGS) -c $< -o $@
 
-src/gen_tree.o : src/gen_tree.cpp src/bulk_load.o
+src/gen_tree.o : src/gen_tree.cpp src/bulk_load.o src/include/bench/randomPoints.h src/include/globals/globals.h
 	cp src/bulk_load.o bin/bulk_load.o
 	$(CXX) $(CXXFLAGS) $(CPPFLAGS) -c $< -o $@
 
