@@ -11,9 +11,9 @@ CPPFLAGS := -DNDEBUG $(CPPFLAGS)
 CXXFLAGS := $(CXXFLAGS) -O3
 else ifdef EXP
 CPPFLAGS := -DNDEBUG -DSTAT $(CPPFLAGS)
-CXXFLAGS := -ggdb $(CXXFLAGS) -O3
+CXXFLAGS := -ggdb3 $(CXXFLAGS) -O3
 else
-CXXFLAGS := -ggdb $(CXXFLAGS)
+CXXFLAGS := -ggdb3 $(CXXFLAGS)
 endif
 
 SRC := $(shell find . -path ./src/tests -prune -o \( -name '*.cpp' -a ! -name 'pencilPrinter.cpp' \) -print)
@@ -28,7 +28,7 @@ TESTSRC := $(shell find ./src/tests -name '*.cpp')
 TESTOBJ := $(TESTSRC:.cpp=.o)
 
 %.o: %.cpp
-	$(C++) $(CXXFLAGS) $(CPPFLAGS) -c $< -o $@
+	$(CXX) $(CXXFLAGS) $(CPPFLAGS) -c $< -o $@
 
 all: bin/main bin/gen_tree bin/tests
 
