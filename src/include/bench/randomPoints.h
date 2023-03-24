@@ -161,7 +161,7 @@ public:
   static constexpr size_t size = NYCTaxiDataSize;
   static constexpr unsigned querySize = 0;
   static constexpr unsigned dimensions = 2;
-  static constexpr char fileName[] = "/home/f2abubak/nir-tree++/data/NYCTaxi.csv";
+  static constexpr char fileName[] = "/hdd1/nir-tree++/data/NYCTaxi.csv";
 };
 }; // namespace BenchTypeClasses
 
@@ -201,7 +201,7 @@ template <>
 struct getBenchTag<BenchTypeClasses::MicrosoftBuildings> : BenchTag::FileBackedReadChunksAtATime {};
 
 template <>
-struct getBenchTag<BenchTypeClasses::NYCTaxi> : BenchTag::FileBackedReadChunksAtATime {};
+struct getBenchTag<BenchTypeClasses::NYCTaxi> : BenchTag::FileBackedReadAll {};
 } // namespace BenchDetail
 
 template <typename T>
