@@ -166,36 +166,31 @@ struct Branch {
     return sz;
   }
 
-  std::optional<std::pair<char *, int>> compute_compression_data(
-      tree_node_allocator *existing_allocator) {
+  std::optional<std::pair<char *, int>> compute_compression_data(tree_node_allocator *existing_allocator) {
     if (std::holds_alternative<tree_node_handle>(boundingPoly)) {
       tree_node_handle poly_handle = std::get<tree_node_handle>(boundingPoly);
-      auto poly_pin =
-          existing_allocator->get_tree_node<InlineUnboundedIsotheticPolygon>(
-              poly_handle);
-      unsigned rect_count =
-          poly_pin->get_total_rectangle_count();
-      std::pair<char *, int> compression_result =
-          compress_polygon(poly_pin->begin(),
-                           poly_pin->end(), rect_count);
-
+      auto poly_pin = existing_allocator->get_tree_node<InlineUnboundedIsotheticPolygon>(poly_handle);
+      unsigned rect_count = poly_pin->get_total_rectangle_count();
+      std::pair<char *, int> compression_result = compress_polygon(poly_pin->begin(),poly_pin->end(), rect_count);
       unsigned compressed_size = compression_result.second;
+
       if (compressed_size + 10 < rect_count * sizeof(Rectangle)) {
         return compression_result;
       }
+
       free(compression_result.first);
       return std::nullopt;
     }
-    InlineBoundedIsotheticPolygon &poly =
-        std::get<InlineBoundedIsotheticPolygon>(boundingPoly);
-    unsigned rect_count = poly.get_rectangle_count();
-    std::pair<char *, int> compression_result =
-        compress_polygon(poly.begin(), poly.end(), rect_count);
 
+    InlineBoundedIsotheticPolygon &poly = std::get<InlineBoundedIsotheticPolygon>(boundingPoly);
+    unsigned rect_count = poly.get_rectangle_count();
+    std::pair<char *, int> compression_result = compress_polygon(poly.begin(), poly.end(), rect_count);
     unsigned compressed_size = compression_result.second;
+
     if (compressed_size + 10 < rect_count * sizeof(Rectangle)) {
       return compression_result;
     }
+
     free(compression_result.first);
     return std::nullopt;
   }
