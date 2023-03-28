@@ -3,7 +3,7 @@
 CXX := g++-10
 
 DIR := src/include # Include directory
-CXXFLAGS := -std=c++2a -Wall -fno-strict-aliasing
+CXXFLAGS := -std=c++2a -Wall -fno-strict-aliasing -fno-omit-frame-pointer
 CPPFLAGS := -DDIM=2 -I $(DIR)
 
 ifdef PROD
