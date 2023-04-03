@@ -784,30 +784,6 @@ static bool is_already_loaded(
   return false;
 }
 
-template <class T>
-void repack_tree(T *tree_ptr, std::string &new_file_name,
-                 tree_node_handle (*repack_func)(tree_node_handle, tree_node_allocator *,
-                                                 tree_node_allocator *)) {
-
-  auto new_file_allocator = std::make_unique<tree_node_allocator>(
-          GEN_TREE_BUFFER_POOL_MEMORY,
-          new_file_name);
-
-  new_file_allocator->initialize();
-  std::chrono::high_resolution_clock::time_point begin = std::chrono::high_resolution_clock::now();
-  auto repacked_handle = repack_func(tree_ptr->root,
-                                     tree_ptr->node_allocator_.get(), new_file_allocator.get());
-  tree_ptr->root = repacked_handle;
-
-  std::chrono::high_resolution_clock::time_point end = std::chrono::high_resolution_clock::now();
-  std::chrono::duration<double> delta = std::chrono::duration_cast<std::chrono::duration<double>>(end - begin);
-
-  std::cout << "Repacking done in: " << delta.count() << "s" << std::endl;
-
-  // This evicts all the old pages, which is painful.
-  tree_ptr->node_allocator_ = std::move(new_file_allocator);
-}
-
 template <typename T>
 static void runBench(PointGenerator<T> &pointGen, std::map<std::string, uint64_t> &configU, std::map<std::string, double> &configD) {
   std::cout << "Running benchmark." << std::endl;

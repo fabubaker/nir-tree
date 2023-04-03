@@ -994,8 +994,6 @@ void bulk_load_tree(
 
   auto tree_ptr = (rstartreedisk::RStarTreeDisk<5, 9> *) tree;
   std::string fname = "repacked_rstar.txt";
-//  repack_tree(tree_ptr, fname,
-//              rstartreedisk::repack_subtree<5, 9>);
 
   auto new_file_allocator = std::make_unique<tree_node_allocator>(configU["buffer_pool_memory"],fname);
   new_file_allocator->initialize();
