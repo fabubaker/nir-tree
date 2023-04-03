@@ -9,7 +9,7 @@
 #include <string>
 #include <unistd.h>
 
-void parameters(std::map<std::string, unsigned> &configU, std::map<std::string, double> configD) {
+void parameters(std::map<std::string, uint64_t> &configU, std::map<std::string, double> configD) {
   std::string treeTypes[] = {"R_TREE", "R_PLUS_TREE", "R_STAR_TREE", "NIR_TREE", "QUAD_TREE", "REVISED_R_STAR_TREE"};
   std::string benchTypes[] = {
       "UNIFORM", "SKEW", "CLUSTER", "CALIFORNIA", "BIOLOGICAL", "FOREST",
@@ -29,7 +29,7 @@ void parameters(std::map<std::string, unsigned> &configU, std::map<std::string, 
             << std::endl;
 }
 
-void randomPoints(std::map<std::string, unsigned> &configU, std::map<std::string, double> &configD) {
+void randomPoints(std::map<std::string, uint64_t> &configU, std::map<std::string, double> &configD) {
   switch (configU["distribution"]) {
   case UNIFORM: {
     BenchTypeClasses::Uniform::size = configU["size"];
@@ -106,7 +106,7 @@ int main(int argc, char *argv[]) {
   int option;
 
   // Benchmark default configuration
-  std::map<std::string, unsigned> configU;
+  std::map<std::string, uint64_t> configU;
   configU.emplace("tree", NIR_TREE);
   configU.emplace("minfanout", 25);
   configU.emplace("maxfanout", 50);
@@ -122,37 +122,37 @@ int main(int argc, char *argv[]) {
     switch (option) {
     case 't': // Tree
     {
-      configU["tree"] = (TreeType)atoi(optarg);
+      configU["tree"] = (TreeType)std::stoull(optarg);
       break;
     }
     case 'm': // Benchmark type
     {
-      configU["distribution"] = (BenchType)atoi(optarg);
+      configU["distribution"] = (BenchType)std::stoull(optarg);
       break;
     }
     case 'a': // Minimum fanout
     {
-      configU["minfanout"] = atoi(optarg);
+      configU["minfanout"] = std::stoull(optarg);
       break;
     }
     case 'b': // Maximum fanout
     {
-      configU["maxfanout"] = atoi(optarg);
+      configU["maxfanout"] = std::stoull(optarg);
       break;
     }
     case 'n': // Benchmark size
     {
-      configU["size"] = atoi(optarg);
+      configU["size"] = std::stoull(optarg);
       break;
     }
     case 's': // Benchmark seed
     {
-      configU["seed"] = atoi(optarg);
+      configU["seed"] = std::stoull(optarg);
       break;
     }
     case 'r': // Number of search rectangles
     {
-      configU["rectanglescount"] = atoi(optarg);
+      configU["rectanglescount"] = std::stoull(optarg);
       break;
     }
     case 'v': // Visualization
@@ -162,22 +162,23 @@ int main(int argc, char *argv[]) {
     }
     case 'z': // Zipf
     {
+      // FIXME: Using stod removes the decimal part from the float
       configU["alpha"] = std::stod(optarg);
       break;
     }
     case 'g': //num_elements
     {
-      configU["num_elements"] = atoi(optarg);
+      configU["num_elements"] = std::stoull(optarg);
       break;
     }
     case 'p': //precision
     {
-      configU["precision"] = atoi(optarg);
+      configU["precision"] = std::stoull(optarg);
       break;
     }
     case 'B': // buffer pool memory
     {
-      configU["buffer_pool_memory"] = atol(optarg);
+      configU["buffer_pool_memory"] = std::stoull(optarg);
       break;
     }
 

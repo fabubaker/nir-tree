@@ -1,6 +1,7 @@
 #include <bulk_load.h>
 #include <vector>
 #include <globals/globals.h>
+#include <string>
 
 void generate_tree(std::map<std::string, size_t> &configU) {
 
@@ -149,7 +150,7 @@ void generate_tree(std::map<std::string, size_t> &configU) {
 
 int main(int argc, char **argv) {
 
-  std::map<std::string, size_t> configU;
+  std::map<std::string, uint64_t> configU;
   configU.emplace("tree", NIR_TREE);
   configU.emplace("distribution", CALIFORNIA);
   configU.emplace("seed", 0);
@@ -159,36 +160,37 @@ int main(int argc, char **argv) {
   while ((option = getopt(argc, argv, "t:m:n:s:p:g:z:B:")) != -1) {
     switch (option) {
     case 't': {
-      configU["tree"] = (TreeType)atol(optarg);
+      configU["tree"] = (TreeType)std::stoull(optarg);
       break;
     }
     case 'm': {
-      configU["distribution"] = (BenchType)atol(optarg);
+      configU["distribution"] = (BenchType)std::stoull(optarg);
       break;
     }
     case 'n': {
-      configU["size"] = atol(optarg);
+      configU["size"] = std::stoull(optarg);
       break;
     }
     case 'g': {
-      configU["num_elements"] = atol(optarg);
+      configU["num_elements"] = std::stoull(optarg);
       break;
     }
     case 'z': {
+      // FIXME: Using stod removes the decimal part from the float
       configU["alpha"] = std::stod(optarg);
       break;
     }
     case 's': {
-      configU["seed"] = atol(optarg);
+      configU["seed"] = std::stoull(optarg);
       break;
     }
     case 'p': {
-      configU["precision"] = atol(optarg);
+      configU["precision"] = std::stoull(optarg);
       break;
     }
     case 'B': // buffer pool memory
     {
-      configU["buffer_pool_memory"] = atol(optarg);
+      configU["buffer_pool_memory"] = std::stoull(optarg);
       break;
     }
     }
