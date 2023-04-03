@@ -829,17 +829,17 @@ static void runBench(PointGenerator<T> &pointGen, std::map<std::string, uint64_t
   Index *spatialIndex;
   if (configU["tree"] == R_TREE) {
     //spatialIndex = new rtree::RTree(configU["minfanout"], configU["maxfanout"]);
-    spatialIndex = new rtreedisk::RTreeDisk<3, 6>(MAIN_BUFFER_POOL_MEMORY, "rtreediskbacked_california.txt");
+    spatialIndex = new rtreedisk::RTreeDisk<3, 6>(configU["buffer_pool_memory"], "rtreediskbacked_california.txt");
   } else if (configU["tree"] == R_PLUS_TREE) {
-    spatialIndex = new rplustreedisk::RPlusTreeDisk<5, 9>(MAIN_BUFFER_POOL_MEMORY, "rplustreediskbacked_california.txt");
+    spatialIndex = new rplustreedisk::RPlusTreeDisk<5, 9>(configU["buffer_pool_memory"], "rplustreediskbacked_california.txt");
     //spatialIndex = new rplustree::RPlusTree(configU["minfanout"], configU["maxfanout"]);
   } else if (configU["tree"] == R_STAR_TREE) {
     //spatialIndex = new rstartree::RStarTree(configU["minfanout"], configU["maxfanout"]);
-    spatialIndex = new rstartreedisk::RStarTreeDisk<5, 9>(MAIN_BUFFER_POOL_MEMORY, "repacked_rstar.txt");
+    spatialIndex = new rstartreedisk::RStarTreeDisk<5, 9>(configU["buffer_pool_memory"], "repacked_rstar.txt");
   } else if (configU["tree"] == NIR_TREE) {
     //spatialIndex = new nirtree::NIRTree(configU["minfanout"], configU["maxfanout"]);
     //spatialIndex = new nirtree::NIRTree(5,9);
-    spatialIndex = new nirtreedisk::NIRTreeDisk<5, 9, nirtreedisk::ExperimentalStrategy>(MAIN_BUFFER_POOL_MEMORY, "consolidated_nirtree.txt");
+    spatialIndex = new nirtreedisk::NIRTreeDisk<5, 9, nirtreedisk::ExperimentalStrategy>(configU["buffer_pool_memory"], "consolidated_nirtree.txt");
   } else if (configU["tree"] == QUAD_TREE) {
     spatialIndex = new quadtree::QuadTree();
   } else if (configU["tree"] == REVISED_R_STAR_TREE) {
