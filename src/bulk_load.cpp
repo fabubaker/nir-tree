@@ -977,24 +977,42 @@ void bulk_load_tree(
     std::vector<Point>::iterator end,
     unsigned max_branch_factor) {
 
+  /* Start measuring bulk load time */
   std::chrono::high_resolution_clock::time_point begin_time = std::chrono::high_resolution_clock::now();
-  std::vector<tree_node_handle> leaves = str_packing_leaf(
-      tree,
-      begin,
-      end,
-      9);
+  std::vector<tree_node_handle> leaves = str_packing_leaf(tree, begin, end,9);
   std::vector<tree_node_handle> branches = str_packing_branch(tree, leaves, 9);
+
   while (branches.size() > 1) {
     branches = str_packing_branch(tree, branches, 9);
   }
   tree->root = branches.at(0);
+
   std::chrono::high_resolution_clock::time_point end_time = std::chrono::high_resolution_clock::now();
   std::chrono::duration<double> delta = std::chrono::duration_cast<std::chrono::duration<double>>(end_time - begin_time);
   std::cout << "Bulk loading tree took: " << delta.count() << std::endl;
+  /* End measuring bulk load time */
 
-  auto tree_ptr = (rstartreedisk::RStarTreeDisk<5, 9> *)tree;
+  auto tree_ptr = (rstartreedisk::RStarTreeDisk<5, 9> *) tree;
   std::string fname = "repacked_rstar.txt";
-  repack_tree(tree_ptr, fname,
-              rstartreedisk::repack_subtree<5, 9>);
+//  repack_tree(tree_ptr, fname,
+//              rstartreedisk::repack_subtree<5, 9>);
+
+  auto new_file_allocator = std::make_unique<tree_node_allocator>(configU["buffer_pool_memory"],fname);
+  new_file_allocator->initialize();
+
+  /* Start measuring repack time */
+  begin_time = std::chrono::high_resolution_clock::now();
+
+  auto repacked_handle = rstartreedisk::repack_subtree<5, 9>(
+    tree_ptr->root, tree_ptr->node_allocator_.get(), new_file_allocator.get());
+  tree_ptr->root = repacked_handle;
+
+  end_time = std::chrono::high_resolution_clock::now();
+  delta = std::chrono::duration_cast<std::chrono::duration<double>>(end_time - begin_time);
+  std::cout << "Repacking done in: " << delta.count() << "s" << std::endl;
+  /* End measuring repack time */
+
+  // This evicts all the old pages, which is painful.
+  tree_ptr->node_allocator_ = std::move(new_file_allocator);
   tree->write_metadata();
 }
