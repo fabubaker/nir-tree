@@ -3,8 +3,25 @@
 #include <globals/globals.h>
 #include <string>
 
-void generate_tree(std::map<std::string, size_t> &configU) {
+void parameters(std::map<std::string, uint64_t> &configU, std::map<std::string, double> configD) {
+  std::string treeTypes[] = {
+          "R_TREE", "R_PLUS_TREE", "R_STAR_TREE",
+          "NIR_TREE", "QUAD_TREE", "REVISED_R_STAR_TREE"
+  };
+  std::string benchTypes[] = {
+          "UNIFORM", "SKEW", "CLUSTER", "CALIFORNIA", "BIOLOGICAL", "FOREST",
+          "CANADA", "GAIA", "MICROSOFTBUILDINGS", "ZIPF", "GAUSS", "NYCTAXI"};
 
+  std::cout << "### GEN TREE PARAMETERS ###" << std::endl;
+  std::cout << "  tree = " << treeTypes[configU["tree"]] << std::endl;
+  std::cout << "  benchmark = " << benchTypes[configU["distribution"]] << std::endl;
+  std::cout << "  size = " << configU["size"] << std::endl;
+  std::cout << "  seed = " << configU["seed"] << std::endl;
+  std::cout << "  buffer pool memory = " << configU["buffer_pool_memory"] << std::endl;
+  std::cout << "### ### ### ### ### ###" << std::endl << std::endl;
+}
+
+void generate_tree(std::map<std::string, size_t> &configU) {
   std::string backing_file = "bulkloaded_tree.txt";
   unlink(backing_file.c_str());
 
@@ -149,13 +166,13 @@ void generate_tree(std::map<std::string, size_t> &configU) {
 }
 
 int main(int argc, char **argv) {
-
+  int option;
   std::map<std::string, uint64_t> configU;
+  std::map<std::string, double> configD;
+
   configU.emplace("tree", NIR_TREE);
   configU.emplace("distribution", CALIFORNIA);
   configU.emplace("seed", 0);
-
-  int option;
 
   while ((option = getopt(argc, argv, "t:m:n:s:p:g:z:B:")) != -1) {
     switch (option) {
@@ -196,6 +213,10 @@ int main(int argc, char **argv) {
     }
   }
 
+  // Print gen_tree parameters
+  parameters(configU, configD);
+
+  // Generate the tree
   generate_tree(configU);
 
   return 0;

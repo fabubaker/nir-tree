@@ -26,8 +26,7 @@ void parameters(std::map<std::string, uint64_t> &configU, std::map<std::string, 
   std::cout << "  visualization = " << (configU["visualization"] ? "on" : "off") << std::endl;
   std::cout << "  zipf = " << configU["alpha"] << std::endl;
   std::cout << "  buffer pool memory = " << configU["buffer_pool_memory"] << std::endl;
-  std::cout << "### ### ### ### ### ###" << std::endl
-            << std::endl;
+  std::cout << "### ### ### ### ### ###" << std::endl << std::endl;
 }
 
 void randomPoints(std::map<std::string, uint64_t> &configU, std::map<std::string, double> &configD) {
