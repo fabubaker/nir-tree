@@ -118,7 +118,7 @@ int main(int argc, char *argv[]) {
 
   std::map<std::string, double> configD;
 
-  while ((option = getopt(argc, argv, "t:m:a:b:n:s:r:v:z:g:p:")) != -1) {
+  while ((option = getopt(argc, argv, "t:m:a:b:n:s:r:v:z:g:p:B:")) != -1) {
     switch (option) {
     case 't': // Tree
     {
@@ -173,6 +173,11 @@ int main(int argc, char *argv[]) {
     case 'p': //precision
     {
       configU["precision"] = atoi(optarg);
+      break;
+    }
+    case 'B': // buffer pool memory
+    {
+      configU["buffer_pool_memory"] = atol(optarg);
       break;
     }
 

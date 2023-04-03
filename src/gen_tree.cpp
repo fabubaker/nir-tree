@@ -156,7 +156,7 @@ int main(int argc, char **argv) {
 
   int option;
 
-  while ((option = getopt(argc, argv, "t:m:n:s:p:g:z:")) != -1) {
+  while ((option = getopt(argc, argv, "t:m:n:s:p:g:z:B:")) != -1) {
     switch (option) {
     case 't': {
       configU["tree"] = (TreeType)atol(optarg);
@@ -184,6 +184,11 @@ int main(int argc, char **argv) {
     }
     case 'p': {
       configU["precision"] = atol(optarg);
+      break;
+    }
+    case 'B': // buffer pool memory
+    {
+      configU["buffer_pool_memory"] = atol(optarg);
       break;
     }
     }
