@@ -1009,7 +1009,8 @@ std::pair<uint16_t, std::vector<std::optional<std::pair<char *, int>>>> BRANCH_N
     for (unsigned i = 0; i < cur_offset_; i++) {
       uint16_t unpacked_size = 0;
       unpacked_size = entries.at(i).compute_packed_size(existing_allocator, new_allocator, maximum_repacked_rect_size, false);
-      auto compression_result = entries.at(i).compute_compression_data(existing_allocator);
+      auto compression_result = std::optional<std::pair<char *, int>>(std::nullopt);
+//      auto compression_result = entries.at(i).compute_compression_data(existing_allocator);
 
       if (compression_result.has_value()) {
         sz += compression_result.value().second + sizeof(tree_node_handle);
