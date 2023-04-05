@@ -992,6 +992,8 @@ void bulk_load_tree(
   std::cout << "Bulk loading tree took: " << delta.count() << std::endl;
   /* End measuring bulk load time */
 
+  tree->stat(); // Print tree stats BEFORE repacking
+
   auto tree_ptr = (rstartreedisk::RStarTreeDisk<5, 9> *) tree;
   std::string fname = "repacked_rstar.txt";
 

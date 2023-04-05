@@ -89,6 +89,7 @@ void generate_tree(std::map<std::string, size_t> &configU) {
     std::cout << "Creating tree with " << configU["buffer_pool_memory"] << "bytes" << std::endl;
     bulk_load_tree(tree, configU, all_points.begin(), all_points.begin() + cut_off_bulk_load, 9);
     std::cout << "Created NIRTree." << std::endl;
+    tree->stat(); // Print tree stats BEFORE repacking
 
     std::cout << "Creating consolidator..." << std::endl;
     auto consolidated_allocator = std::make_unique<tree_node_allocator>(configU["buffer_pool_memory"], "consolidated_nirtree.txt");
@@ -106,8 +107,7 @@ void generate_tree(std::map<std::string, size_t> &configU) {
     tree->node_allocator_ = std::move(consolidated_allocator);
     tree->root = new_root;
     tree->write_metadata();
-
-    tree->stat();
+    tree->stat(); // Print tree stats AFTER repacking
 
     nirtreedisk::tree_validate_recursive(tree->root, tree->node_allocator_.get());
 
@@ -124,7 +124,7 @@ void generate_tree(std::map<std::string, size_t> &configU) {
     std::cout << "Created R*Tree" << std::endl;
     spatialIndex = tree;
 
-    tree->stat();
+    tree->stat(); // Print tree stats AFTER repacking
     exit(0);
 
   } else {
