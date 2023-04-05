@@ -1,8 +1,12 @@
 # Use this script to add jitter to points in a csv file.
+# By default, both the original and the jittered points are kept in the output file,
+# effectively doubling the input.
+# Comment out the 'NO_RETAIN' variable below to not retain the original points.
 # Might need to run `sort -u` afterwards.
 
-USAGE=\
-'USAGE: python3 jitter.py <filename.csv>'
+NO_RETAIN = False
+
+USAGE='USAGE: python3 jitter.py <filename.csv>'
 
 import os
 import sys
@@ -22,15 +26,19 @@ csv_writer = csv.writer(output_csv_file, delimiter=' ')
 
 for input_row in csv_reader:
     # print("Add jitter to row:", input_row)
+    jittered_row = [None, None]
 
     x = float(input_row[0])
     y = float(input_row[1])
-    x += float(random.randint(0,99))/(10**4)
-    y += float(random.randint(0,99))/(10**4)
-    input_row[0] = "{:f}".format(x)
-    input_row[1] = "{:f}".format(y)
+    x += float(random.randint(1,99))/(10**4)
+    y += float(random.randint(1,99))/(10**4)
+    jittered_row[0] = "{:f}".format(x)
+    jittered_row[1] = "{:f}".format(y)
 
-    csv_writer.writerow(input_row)
+    if not NO_RETAIN:
+        csv_writer.writerow(input_row)
+
+    csv_writer.writerow(jittered_row)
 
 input_csv_file.close()
 output_csv_file.close()
