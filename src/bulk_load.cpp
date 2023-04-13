@@ -226,24 +226,23 @@ std::vector<tree_node_handle> str_packing_branch(
   // constantly
   std::vector<std::pair<Point, tree_node_handle>> node_point_pairs;
   node_point_pairs.reserve(child_nodes.size());
+
   for (tree_node_handle &child_handle : child_nodes) {
     Rectangle bbox;
+
     if (child_handle.get_type() == LEAF_NODE) {
-      auto child =
-          allocator->get_tree_node<LN>(child_handle);
+      auto child = allocator->get_tree_node<LN>(child_handle);
       bbox = child->boundingBox();
     } else {
-      auto child =
-          allocator->get_tree_node<BN>(child_handle);
+      auto child = allocator->get_tree_node<BN>(child_handle);
       bbox = child->boundingBox();
     }
     node_point_pairs.push_back(std::make_pair(bbox.centrePoint(), child_handle));
   }
 
   uint64_t P = node_point_pairs.size() / branch_factor;
-  if (node_point_pairs.size() % branch_factor != 0) {
-    P++;
-  }
+
+  if (node_point_pairs.size() % branch_factor != 0) P++;
 
   double S_dbl = std::ceil(sqrt(P));
   uint64_t S = (uint64_t)S_dbl;
@@ -256,26 +255,28 @@ std::vector<tree_node_handle> str_packing_branch(
   for (uint64_t i = 0; i < S; i++) {
     uint64_t start_offset = i * (S * branch_factor);
     uint64_t stop_offset = (i + 1) * (S * branch_factor);
+
     if (stop_offset > node_point_pairs.size()) {
       stop_offset = node_point_pairs.size();
     }
+
     auto start_point = node_point_pairs.begin() + start_offset;
     auto stop_point = node_point_pairs.begin() + stop_offset;
+
     std::sort(start_point, stop_point, [](std::pair<Point, tree_node_handle> &l, std::pair<Point, tree_node_handle> &r) { return l.first[1] < r.first[1]; });
-    if (stop_offset == node_point_pairs.size()) {
-      break;
-    }
+
+    if (stop_offset == node_point_pairs.size()) break;
   }
 
   std::vector<tree_node_handle> branches;
   uint64_t offset = 0;
-  while (offset < node_point_pairs.size()) {
 
+  while (offset < node_point_pairs.size()) {
     // Create the branch node
-    auto alloc_data =
-        allocator->create_new_tree_node<BN>(NodeHandleType(BRANCH_NODE));
-    new (&(*alloc_data.first))
-        BN(tree, nullptr, alloc_data.second, 1);
+    auto alloc_data = allocator->create_new_tree_node<BN>(NodeHandleType(BRANCH_NODE));
+
+    new (&(*alloc_data.first)) BN(tree, nullptr, alloc_data.second, 1);
+
     auto branch_node = alloc_data.first;
     tree_node_handle branch_handle = alloc_data.second;
 
@@ -287,8 +288,10 @@ std::vector<tree_node_handle> str_packing_branch(
         offset,
         branch_factor,
         (LN *)nullptr);
+
     branches.push_back(branch_handle);
   }
+
   return branches;
 }
 
