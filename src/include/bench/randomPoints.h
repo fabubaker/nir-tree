@@ -975,13 +975,14 @@ static void runBench(PointGenerator<T> &pointGen, std::map<std::string, uint64_t
 	for (unsigned i = 0; i < searchRectangles.size(); ++i)
 	{
 		// Search
-		std::chrono::high_resolution_clock::time_point begin = std::chrono::high_resolution_clock::now();
-        std::cout << "Searching for: " << searchRectangles.at(i) << std::endl;
+    std::cout << "Searching for: " << searchRectangles.at(i) << std::endl;
+    std::chrono::high_resolution_clock::time_point begin = std::chrono::high_resolution_clock::now();
 		std::vector<Point> v = spatialIndex->search(searchRectangles[i]);
-        std::cout << "Points: " << v.size() << std::endl;
 		std::chrono::high_resolution_clock::time_point end = std::chrono::high_resolution_clock::now();
+    std::cout << "Points: " << v.size() << std::endl;
 		std::chrono::duration<double> delta = std::chrono::duration_cast<std::chrono::duration<double>>(end - begin);
-		totalTimeRangeSearches += delta.count();
+
+    totalTimeRangeSearches += delta.count();
 		totalRangeSearches += 1;
 		rangeSearchChecksum += v.size();
 		// std::cout << "searchRectangles[" << i << "] queried. " << delta.count() << " s" << std::endl;
