@@ -570,13 +570,9 @@ std::vector<tree_node_handle> str_packing_leaf(
   std::vector<tree_node_handle> leaves;
   uint64_t offset = 0;
   while (offset < count) {
+    auto alloc_data = allocator->create_new_tree_node<LN>(NodeHandleType(LEAF_NODE));
 
-    auto alloc_data =
-        allocator->create_new_tree_node<LN>(NodeHandleType(LEAF_NODE));
-
-    new (&(*alloc_data.first))
-        LN(tree, nullptr,
-           alloc_data.second, 0);
+    new (&(*alloc_data.first)) LN(tree, nullptr, alloc_data.second, 0);
 
     auto leaf_node = alloc_data.first;
     tree_node_handle leaf_handle = alloc_data.second;
@@ -615,10 +611,8 @@ std::vector<tree_node_handle> str_packing_leaf_euclidean(
   std::list<Point> loc_points(begin, end);
 
   for (;;) {
-
     Point cur_point = loc_points.front();
-    double max_allowed_distance =
-        std::numeric_limits<double>::max();
+    double max_allowed_distance = std::numeric_limits<double>::max();
     uint64_t worst_index = 0;
     std::vector<Point> pts_to_remove;
     pts_to_remove.reserve(branch_factor);
@@ -801,8 +795,7 @@ std::pair<tree_node_handle, Rectangle> quad_tree_style_load(
 
     auto repacked_handle = leaf_node->repack(allocator);
     Rectangle bbox = leaf_node->boundingBox();
-    allocator->free(leaf_handle, sizeof(
-                                     nirtreedisk::LeafNode<5, 9, nirtreedisk::ExperimentalStrategy>));
+    allocator->free(leaf_handle, sizeof(nirtreedisk::LeafNode<5, 9, nirtreedisk::ExperimentalStrategy>));
     return std::make_pair(repacked_handle, bbox);
   }
 
@@ -827,16 +820,16 @@ std::pair<tree_node_handle, Rectangle> quad_tree_style_load(
   for (uint64_t i = 0; i < x_lines.size() - 1; i++) {
     uint64_t x_start = x_lines.at(i);
     uint64_t x_end = x_lines.at(i + 1); /* not inclusive */
+
     std::vector<uint64_t> y_lines = find_bounding_lines(
         start + x_start, start + x_end, 1, branch_factor, tiles, 1, max_depth - cur_depth);
     for (uint64_t j = 0; j < y_lines.size() - 1; j++) {
       uint64_t y_start = y_lines.at(j);
       uint64_t y_end = y_lines.at(j + 1); /* not inclusive */
 
-      std::vector<Point>::iterator sub_start = start + x_start +
-                                               y_start;
-      std::vector<Point>::iterator sub_stop = start + x_start +
-                                              y_end;
+      std::vector<Point>::iterator sub_start = start + x_start + y_start;
+      std::vector<Point>::iterator sub_stop = start + x_start + y_end;
+
       if (sub_start == sub_stop) {
         // I think this can happen when we run out of points in
         // the lowest layer to split among children.
@@ -852,6 +845,7 @@ std::pair<tree_node_handle, Rectangle> quad_tree_style_load(
           cur_depth + 1,
           max_depth,
           branch_handle);
+
       tree_node_handle child_handle = ret.first;
       Rectangle bbox = ret.second;
 
@@ -862,8 +856,7 @@ std::pair<tree_node_handle, Rectangle> quad_tree_style_load(
       // any of their polygons overlap with our polygon. If so, we need to
       // figure out who owns the overlapping region.
       for (uint64_t i = 0; i < branch_handles.size(); i++) {
-        std::vector<Rectangle> &existing_rects =
-            branch_handles.at(i).first.basicRectangles;
+        std::vector<Rectangle> &existing_rects = branch_handles.at(i).first.basicRectangles;
 
         if (branch_handles.at(i).first.intersectsPolygon(ip)) {
           // It is imperative that the references here are set carefully.
@@ -910,11 +903,11 @@ std::pair<tree_node_handle, Rectangle> quad_tree_style_load(
 #endif
     }
   }
+
   for (uint64_t i = 0; i < branch_handles.size(); i++) {
     nirtreedisk::Branch b;
     b.child = branch_handles.at(i).second;
-    IsotheticPolygon &constructed_poly =
-        branch_handles.at(i).first;
+    IsotheticPolygon &constructed_poly = branch_handles.at(i).first;
     if (constructed_poly.basicRectangles.size() <= MAX_RECTANGLE_COUNT) {
       b.boundingPoly = InlineBoundedIsotheticPolygon();
       std::get<InlineBoundedIsotheticPolygon>(b.boundingPoly).push_polygon_to_disk(constructed_poly);
@@ -924,8 +917,7 @@ std::pair<tree_node_handle, Rectangle> quad_tree_style_load(
           constructed_poly.basicRectangles.size());
       auto alloc_data =
           allocator->create_new_tree_node<InlineUnboundedIsotheticPolygon>(
-              compute_sizeof_inline_unbounded_polygon(
-                  rect_size),
+              compute_sizeof_inline_unbounded_polygon(rect_size),
               NodeHandleType(BIG_POLYGON));
       new (&(*alloc_data.first)) InlineUnboundedIsotheticPolygon(allocator, rect_size);
       alloc_data.first->push_polygon_to_disk(constructed_poly);
@@ -939,8 +931,7 @@ std::pair<tree_node_handle, Rectangle> quad_tree_style_load(
   assert(repacked_handle);
 
   Rectangle bbox = branch_node->boundingBox();
-  allocator->free(branch_handle, sizeof(
-                                     nirtreedisk::BranchNode<5, 9, nirtreedisk::ExperimentalStrategy>));
+  allocator->free(branch_handle, sizeof(nirtreedisk::BranchNode<5, 9, nirtreedisk::ExperimentalStrategy>));
   return std::make_pair(repacked_handle, bbox);
 }
 

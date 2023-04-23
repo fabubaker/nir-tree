@@ -29,8 +29,7 @@ public:
   // Constructors and destructors
   RStarTreeDisk(size_t memory_budget, std::string backing_file) : backing_file_(backing_file) {
 
-    node_allocator_ = std::make_unique<tree_node_allocator>(
-        memory_budget, backing_file);
+    node_allocator_ = std::make_unique<tree_node_allocator>(memory_budget, backing_file);
     // Initialize buffer pool
     node_allocator_->initialize();
 

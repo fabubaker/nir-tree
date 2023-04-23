@@ -17,11 +17,10 @@
 #include <storage/page.h>
 
 
-buffer_pool::buffer_pool( size_t pool_size_bytes, std::string
-        backing_file_name ) {
+buffer_pool::buffer_pool( size_t pool_size_bytes, std::string backing_file_name ) {
 
     max_mem_pages_ = pool_size_bytes / PAGE_SIZE;
-    if( pool_size_bytes % PAGE_SIZE != 0 ) {
+    if ( pool_size_bytes % PAGE_SIZE != 0 ) {
         max_mem_pages_++;
     }
 
@@ -39,7 +38,6 @@ buffer_pool::~buffer_pool() {
 }
 
 void buffer_pool::initialize() {
-    
     backing_file_fd_ = open( backing_file_name_.c_str(), O_CREAT | O_RDWR | O_DIRECT,
             S_IRUSR | S_IWUSR );
 
@@ -110,7 +108,6 @@ void buffer_pool::initialize() {
 }
 
 page *buffer_pool::get_page( size_t page_id ) {
-
     if( page_id > highest_allocated_page_id_ ) {
         return nullptr;
     }

@@ -2006,8 +2006,7 @@ NODE_TEMPLATE_PARAMS
 tree_node_handle LEAF_NODE_CLASS_TYPES::repack(tree_node_allocator *allocator) {
   static_assert(sizeof(void *) == sizeof(uint64_t));
   uint16_t alloc_size = compute_packed_size();
-  auto alloc_data = allocator->create_new_tree_node<packed_node>(
-      alloc_size, NodeHandleType(REPACKED_LEAF_NODE));
+  auto alloc_data = allocator->create_new_tree_node<packed_node>(alloc_size, NodeHandleType(REPACKED_LEAF_NODE));
 
   char *buffer = alloc_data.first->buffer_;
   buffer += write_data_to_buffer(buffer, &cur_offset_);
@@ -2022,8 +2021,7 @@ NODE_TEMPLATE_PARAMS
 tree_node_handle BRANCH_NODE_CLASS_TYPES::repack(tree_node_allocator
                                                      *allocator) {
   uint16_t alloc_size = compute_packed_size();
-  auto alloc_data = allocator->create_new_tree_node<packed_node>(
-      alloc_size, NodeHandleType(REPACKED_BRANCH_NODE));
+  auto alloc_data = allocator->create_new_tree_node<packed_node>(alloc_size, NodeHandleType(REPACKED_BRANCH_NODE));
 
   char *buffer = alloc_data.first->buffer_;
   buffer += write_data_to_buffer(buffer, &cur_offset_);
@@ -2044,11 +2042,9 @@ tree_node_handle repack_subtree(
   std::vector<tree_node_handle> repacked_handles;
   switch (handle.get_type()) {
   case LEAF_NODE: {
-    auto leaf_node =
-        existing_allocator->get_tree_node<LEAF_NODE_CLASS_TYPES>(handle);
+    auto leaf_node = existing_allocator->get_tree_node<LEAF_NODE_CLASS_TYPES>(handle);
     auto new_handle = leaf_node->repack(new_allocator);
-    existing_allocator->free(handle, sizeof(
-                                         LEAF_NODE_CLASS_TYPES));
+    existing_allocator->free(handle, sizeof(LEAF_NODE_CLASS_TYPES));
     return new_handle;
   }
   case BRANCH_NODE: {
@@ -2063,8 +2059,7 @@ tree_node_handle repack_subtree(
       branch_node->entries.at(i).child = new_child_handle;
     }
     auto new_handle = branch_node->repack(new_allocator);
-    existing_allocator->free(handle, sizeof(
-                                         BRANCH_NODE_CLASS_TYPES));
+    existing_allocator->free(handle, sizeof(BRANCH_NODE_CLASS_TYPES));
     return new_handle;
   }
   default:

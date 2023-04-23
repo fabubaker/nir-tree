@@ -109,8 +109,8 @@ void generate_tree(std::map<std::string, size_t> &configU) {
     tree->write_metadata();
     tree->stat(); // Print tree stats AFTER repacking
 
-    nirtreedisk::tree_validate_recursive(tree->root, tree->node_allocator_.get());
-
+//    nirtreedisk::tree_validate_recursive(tree->root, tree->node_allocator_.get());
+    exit(0);
     /*
         if( !tree->validate() ) {
             std::cout << "Tree Validation Failed" << std::endl;

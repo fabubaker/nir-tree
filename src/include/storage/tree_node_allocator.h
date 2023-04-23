@@ -210,8 +210,7 @@ static_assert( std::is_trivially_copyable<tree_node_handle>::value );
 // Responsible for interfacing with the buffer pool to create nodes.
 class tree_node_allocator {
 public:
-    tree_node_allocator( size_t memory_budget,
-            std::string backing_file );
+    tree_node_allocator( size_t memory_budget, std::string backing_file );
 
     inline void initialize() {
         buffer_pool_.initialize();
