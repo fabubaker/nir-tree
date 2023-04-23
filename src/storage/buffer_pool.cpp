@@ -47,23 +47,21 @@ void buffer_pool::initialize() {
 
     // Step 1: Read every data page we have, load 'em into memory
     size_t file_offset = 0;
-    for( ;; ) {
+    for ( ;; ) {
         std::unique_ptr<page> page_ptr = std::make_unique<page>();
         int rc = read( backing_file_fd_, (char *) page_ptr.get(), PAGE_SIZE );
-        if( rc == PAGE_SIZE ) {
+        if ( rc == PAGE_SIZE ) {
             page *raw_page_ptr = page_ptr.get();
 
             // Construct metadata and record it 
-            allocated_pages_.emplace_back( std::move(
-                            page_ptr ) );
-            page_index_.insert( { raw_page_ptr->header_.page_id_,
-                    raw_page_ptr } ); 
+            allocated_pages_.emplace_back(std::move(page_ptr));
+            page_index_.insert({ raw_page_ptr->header_.page_id_,raw_page_ptr});
 
             // Increment offsets
             file_offset += PAGE_SIZE;
             existing_page_count_++;
 
-            if( existing_page_count_ == max_mem_pages_ ) {
+            if (existing_page_count_ == max_mem_pages_) {
                 // If we are out of memory to use, then the rest will need to be
                 // read later.
                 break;
@@ -229,12 +227,9 @@ page *buffer_pool::obtain_clean_page() {
     do {
         std::unique_ptr<page> &page = allocated_pages_[ clock_hand_pos_ ];
         // Move hand past
-        clock_hand_pos_ = ( clock_hand_pos_ + 1 ) %
-            allocated_pages_.size();
+        clock_hand_pos_ = ( clock_hand_pos_ + 1 ) % allocated_pages_.size();
 
-        if( not page->header_.clock_active_ and not
-                (page->header_.pin_count_
-                    > 0) ) { 
+        if (not page->header_.clock_active_ and not (page->header_.pin_count_> 0)) {
             // Evict the page
             page->header_.clock_active_ = true;
             evict( page );
@@ -242,10 +237,10 @@ page *buffer_pool::obtain_clean_page() {
         }
         // Unset
         page->header_.clock_active_ = false;
-        if( orig_clock_hand_pos_ == clock_hand_pos_ ) {
+        if ( orig_clock_hand_pos_ == clock_hand_pos_ ) {
             // We should have unset all the in_use bits and found
             // something, every page is pinned
-            if( looped_over_everything_once ) {
+            if ( looped_over_everything_once ) {
                 break;
             }
             looped_over_everything_once = true;

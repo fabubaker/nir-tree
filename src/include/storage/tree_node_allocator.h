@@ -232,10 +232,10 @@ public:
     create_new_tree_node( uint16_t node_size, NodeHandleType type_code ) {
         assert( node_size <= PAGE_DATA_SIZE );
 
-        for( auto iter = free_list_.begin(); iter != free_list_.end();
-                iter++ ) {
+        for (auto iter = free_list_.begin(); iter != free_list_.end(); iter++) {
             auto alloc_location = *iter;
-            if( alloc_location.second < node_size ) {
+
+            if (alloc_location.second < node_size) {
                 continue;
             }
 
@@ -243,11 +243,8 @@ public:
 
             size_t remainder = alloc_location.second - node_size;
             free_list_.erase( iter );
-            page *page_ptr = buffer_pool_.get_page(
-                alloc_location.first.get_page_id() );
-            T *obj_ptr = (T *) (page_ptr->data_ +
-                    alloc_location.first.get_offset() );
-
+            page *page_ptr = buffer_pool_.get_page(alloc_location.first.get_page_id());
+            T *obj_ptr = (T *) (page_ptr->data_ + alloc_location.first.get_offset());
 
             // sizeof inline unbounded polygon with
             // MAX_RECTANGLE_COUNT+1
@@ -255,19 +252,14 @@ public:
             // includes. So instead I static assert it in that file and
             // use the constant here.
             if( remainder >= 272 ) {
-                uint16_t new_offset = alloc_location.first.get_offset() +
-                    node_size;
+                uint16_t new_offset = alloc_location.first.get_offset() + node_size;
                 tree_node_handle split_handle(
                         alloc_location.first.get_page_id(), new_offset,
                         type_code );
-                free_list_.push_back( std::make_pair( split_handle,
-                            remainder ) );
+                free_list_.push_back( std::make_pair( split_handle,remainder));
             }
 
-            return std::make_pair( pinned_node_ptr( buffer_pool_,
-                        obj_ptr, page_ptr ), alloc_location.first );
-
-
+            return std::make_pair(pinned_node_ptr( buffer_pool_,obj_ptr, page_ptr), alloc_location.first);
         }
 
         // Fall through, need new location
@@ -283,11 +275,9 @@ public:
         uint16_t offset_into_page = (PAGE_DATA_SIZE - space_left_in_cur_page_);
         T *obj_ptr = (T *) (page_ptr->data_ + offset_into_page);
         space_left_in_cur_page_ -= node_size;
-        tree_node_handle meta_ptr( page_ptr->header_.page_id_,
-                offset_into_page, type_code );
+        tree_node_handle meta_ptr( page_ptr->header_.page_id_,  offset_into_page, type_code );
         
-        return std::make_pair( pinned_node_ptr( buffer_pool_, obj_ptr,
-                    page_ptr ), std::move(meta_ptr) );
+        return std::make_pair( pinned_node_ptr( buffer_pool_, obj_ptr, page_ptr ), std::move(meta_ptr) );
     }
 
     void free( tree_node_handle handle, uint16_t alloc_size ) {
@@ -296,11 +286,9 @@ public:
 
 
     void dump_free_list() {
-        std::cout << "Free list items: " << free_list_.size() <<
-            std::endl;
-        for( auto &item : free_list_ ) {
-            std::cout << "FL handle: " << item.first << " sz: " <<
-                item.second << std::endl;
+        std::cout << "Free list items: " << free_list_.size() <<  std::endl;
+        for ( auto &item : free_list_ ) {
+            std::cout << "FL handle: " << item.first << " sz: " << item.second << std::endl;
         }
         std::cout << "Done." << std::endl;
     }
