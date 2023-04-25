@@ -446,7 +446,7 @@ std::optional<Point> PointGenerator<T>::nextPoint() {
   return nextPoint(BenchDetail::getBenchTag<T>{});
 }
 
-static std::vector<Rectangle> generateRectangles(size_t benchmarkSize, unsigned seed, unsigned rectanglesSize) {
+static std::vector<Rectangle> generateRectangles(size_t benchmarkSize, unsigned seed, unsigned rectanglesSize, size_t pointsPerRectangle) {
   std::default_random_engine generator(seed + benchmarkSize);
   std::uniform_real_distribution<double> pointDist(0.0, 1.0);
 
@@ -455,10 +455,10 @@ static std::vector<Rectangle> generateRectangles(size_t benchmarkSize, unsigned 
   Point ur;
   std::vector<Rectangle> rectangles;
   rectangles.reserve(rectanglesSize);
-  // Compute the dimensions-th root of a percentage that will give rectangles that in expectation return 1000 points
-  double requiredPercentage = 1500.0 / (double)benchmarkSize;
+  // Compute the dimensions-th root of a percentage that will give rectangles that in expectation return "pointsPerRectangle" points
+  double requiredPercentage = pointsPerRectangle / (double)benchmarkSize;
   double root = std::pow(requiredPercentage, 1.0 / (double)dimensions);
-  std::cout << "Begnning initialization of " << rectanglesSize << " rectangles with " << requiredPercentage << "% and " << root << "..." << std::endl;
+  std::cout << "Beginning initialization of " << rectanglesSize << " rectangles with " << requiredPercentage << "% and " << root << "..." << std::endl;
   for (unsigned i = 0; i < rectanglesSize; ++i) {
     Rectangle rect;
     // Generate a new point and then create a square from it that covers 5% of the total area
@@ -828,7 +828,7 @@ static void runBench(PointGenerator<T> &pointGen, std::map<std::string, uint64_t
   // Initialize search rectangles
   std::vector<Rectangle> searchRectangles;
   if (configU["distribution"] == UNIFORM) {
-    searchRectangles = generateRectangles(configU["size"], configU["seed"], configU["rectanglescount"]);
+    searchRectangles = generateRectangles(configU["size"], configU["seed"], configU["rectanglescount"], configU["points_per_rectangle"]);
   } else if (configU["distribution"] == SKEW) {
     configU["rectanglescount"] = BitQuerySize;
     searchRectangles = generateBitRectangles();
@@ -852,7 +852,7 @@ static void runBench(PointGenerator<T> &pointGen, std::map<std::string, uint64_t
     searchRectangles = generateGaiaRectangles();
   } else if (configU["distribution"] == ZIPF) {
     // This is not how we should generate rectangles for ZIPF.
-    searchRectangles = generateRectangles(configU["size"], configU["seed"], configU["rectanglescount"]);
+    searchRectangles = generateRectangles(configU["size"], configU["seed"], configU["rectanglescount"], configU["points_per_rectangle"]);
   } else {
     // Do nothing, rectangle searches are disabled for now...
   }

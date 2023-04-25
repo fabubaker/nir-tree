@@ -26,6 +26,7 @@ void parameters(std::map<std::string, uint64_t> &configU, std::map<std::string, 
   std::cout << "  visualization = " << (configU["visualization"] ? "on" : "off") << std::endl;
   std::cout << "  zipf = " << configU["alpha"] << std::endl;
   std::cout << "  buffer pool memory = " << configU["buffer_pool_memory"] << std::endl;
+  std::cout << "  points per rectangle = " << configU["points_per_rectangle"] << std::endl;
   std::cout << "### ### ### ### ### ###" << std::endl << std::endl;
 }
 
@@ -118,7 +119,7 @@ int main(int argc, char *argv[]) {
 
   std::map<std::string, double> configD;
 
-  while ((option = getopt(argc, argv, "t:m:a:b:n:s:r:v:z:g:p:B:")) != -1) {
+  while ((option = getopt(argc, argv, "t:m:a:b:n:s:r:v:z:g:p:B:P:")) != -1) {
     switch (option) {
     case 't': // Tree
     {
@@ -174,6 +175,11 @@ int main(int argc, char *argv[]) {
     case 'p': //precision
     {
       configU["precision"] = std::stoull(optarg);
+      break;
+    }
+    case 'P': // Number of points per rectangle
+    {
+      configU["points_per_rectangle"] = std::stoull(optarg);
       break;
     }
     case 'B': // buffer pool memory
