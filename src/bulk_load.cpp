@@ -724,7 +724,7 @@ std::vector<tree_node_handle> str_packing_leaf(
 std::vector<uint64_t> find_bounding_lines(
     std::vector<Point>::iterator start,
     std::vector<Point>::iterator stop,
-    unsigned d,
+    unsigned d, // dimension
     unsigned branch_factor,
     unsigned partitions,
     unsigned sub_partitions,
@@ -734,12 +734,11 @@ std::vector<uint64_t> find_bounding_lines(
                 return p1[d] < p2[d]; });
 
   std::vector<uint64_t> lines;
-  lines.reserve(partitions + 2);
+  lines.reserve(partitions + 2); // We include x = 0 and x = count
   lines.push_back(0);
 
   uint64_t count = stop - start;
-  unsigned optimally_filled_branch = pow(branch_factor, length);
-
+  unsigned optimally_filled_branch = pow(branch_factor, length); // Total number of children starting from this level and below
   unsigned min_branches = std::ceil((double)count / (double)optimally_filled_branch);
   unsigned branches_per_partition = min_branches / partitions;
   unsigned remainder = min_branches % partitions;
