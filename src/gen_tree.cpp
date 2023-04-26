@@ -193,8 +193,7 @@ int main(int argc, char **argv) {
       break;
     }
     case 'z': {
-      double alpha = std::stod(optarg);
-      configD["alpha"] = alpha;
+      configD["alpha"] = std::stod(optarg);
       break;
     }
     case 's': {

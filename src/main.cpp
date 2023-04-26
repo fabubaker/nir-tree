@@ -163,7 +163,6 @@ int main(int argc, char *argv[]) {
     }
     case 'z': // Zipf
     {
-      // FIXME: Using stod removes the decimal part from the float
       configD["alpha"] = std::stod(optarg);
       break;
     }
