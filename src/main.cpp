@@ -119,73 +119,78 @@ int main(int argc, char *argv[]) {
 
   std::map<std::string, double> configD;
 
-  while ((option = getopt(argc, argv, "t:m:a:b:n:s:r:v:z:g:p:B:P:")) != -1) {
+  while ((option = getopt(argc, argv, "t:m:a:b:n:s:r:v:z:g:p:B:P:S")) != -1) {
     switch (option) {
-    case 't': // Tree
-    {
-      configU["tree"] = (TreeType)std::stoull(optarg);
-      break;
-    }
-    case 'm': // Benchmark type
-    {
-      configU["distribution"] = (BenchType)std::stoull(optarg);
-      break;
-    }
-    case 'a': // Minimum fanout
-    {
-      configU["minfanout"] = std::stoull(optarg);
-      break;
-    }
-    case 'b': // Maximum fanout
-    {
-      configU["maxfanout"] = std::stoull(optarg);
-      break;
-    }
-    case 'n': // Benchmark size
-    {
-      configU["size"] = std::stoull(optarg);
-      break;
-    }
-    case 's': // Benchmark seed
-    {
-      configU["seed"] = std::stoull(optarg);
-      break;
-    }
-    case 'r': // Number of search rectangles
-    {
-      configU["rectanglescount"] = std::stoull(optarg);
-      break;
-    }
-    case 'v': // Visualization
-    {
-      configU["visualization"] = true;
-      break;
-    }
-    case 'z': // Zipf
-    {
-      configD["alpha"] = std::stod(optarg);
-      break;
-    }
-    case 'g': //num_elements
-    {
-      configU["num_elements"] = std::stoull(optarg);
-      break;
-    }
-    case 'p': //precision
-    {
-      configU["precision"] = std::stoull(optarg);
-      break;
-    }
-    case 'P': // Number of points per rectangle
-    {
-      configU["points_per_rectangle"] = std::stoull(optarg);
-      break;
-    }
-    case 'B': // buffer pool memory
-    {
-      configU["buffer_pool_memory"] = std::stoull(optarg);
-      break;
-    }
+      case 't': // Tree
+      {
+        configU["tree"] = (TreeType) std::stoull(optarg);
+        break;
+      }
+      case 'm': // Benchmark type
+      {
+        configU["distribution"] = (BenchType) std::stoull(optarg);
+        break;
+      }
+      case 'a': // Minimum fanout
+      {
+        configU["minfanout"] = std::stoull(optarg);
+        break;
+      }
+      case 'b': // Maximum fanout
+      {
+        configU["maxfanout"] = std::stoull(optarg);
+        break;
+      }
+      case 'n': // Benchmark size
+      {
+        configU["size"] = std::stoull(optarg);
+        break;
+      }
+      case 's': // Benchmark seed
+      {
+        configU["seed"] = std::stoull(optarg);
+        break;
+      }
+      case 'r': // Number of search rectangles
+      {
+        configU["rectanglescount"] = std::stoull(optarg);
+        break;
+      }
+      case 'v': // Visualization
+      {
+        configU["visualization"] = true;
+        break;
+      }
+      case 'z': // Zipf
+      {
+        configD["alpha"] = std::stod(optarg);
+        break;
+      }
+      case 'g': //num_elements
+      {
+        configU["num_elements"] = std::stoull(optarg);
+        break;
+      }
+      case 'p': //precision
+      {
+        configU["precision"] = std::stoull(optarg);
+        break;
+      }
+      case 'P': // Number of points per rectangle
+      {
+        configU["points_per_rectangle"] = std::stoull(optarg);
+        break;
+      }
+      case 'B': // buffer pool memory
+      {
+        configU["buffer_pool_memory"] = std::stoull(optarg);
+        break;
+      }
+      case 'S': // Number of search points
+      {
+        configU["num_points_to_search"] = std::stoull(optarg);
+        break;
+      }
 
     default: {
       std::cout << "Bad option. Usage:" << std::endl;

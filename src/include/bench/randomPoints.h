@@ -958,7 +958,7 @@ static void runBench(PointGenerator<T> &pointGen, std::map<std::string, uint64_t
       std::cout << "Point[" << totalSearches << "] queried. " << delta.count() << " s" << std::endl;
     }
 
-    if (totalSearches >= configU["num_elements"]) {
+    if (totalSearches >= configU["num_points_to_search"]) {
       break;
     }
   }
