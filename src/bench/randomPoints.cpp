@@ -45,6 +45,7 @@ unsigned BenchTypeClasses::Zipf::binary_search(double needle, std::vector<double
   return med_pos;
 }
 
+// 1/(position + 1)^alpha
 double BenchTypeClasses::Zipf::invert_prob(unsigned position) {
   double p = pow((double)(position + 1), alpha);
   double inv_p = (1.0 / p);
