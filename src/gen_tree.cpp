@@ -21,7 +21,7 @@ void parameters(std::map<std::string, uint64_t> &configU, std::map<std::string, 
   std::cout << "### ### ### ### ### ###" << std::endl << std::endl;
 }
 
-void generate_tree(std::map<std::string, size_t> &configU) {
+void generate_tree(std::map<std::string, size_t> &configU, std::map<std::string, double> &configD) {
   std::string backing_file = "bulkloaded_tree.txt";
   unlink(backing_file.c_str());
 
@@ -50,7 +50,7 @@ void generate_tree(std::map<std::string, size_t> &configU) {
     BenchTypeClasses::Zipf::dimensions = dimensions;
     BenchTypeClasses::Zipf::seed = configU["seed"];
     BenchTypeClasses::Zipf::num_elements = configU["num_elements"];
-    BenchTypeClasses::Zipf::alpha = configU["alpha"];
+    BenchTypeClasses::Zipf::alpha = configD["alpha"];
 
     PointGenerator<BenchTypeClasses::Zipf> points;
     while ((next = points.nextPoint())) {
@@ -193,8 +193,8 @@ int main(int argc, char **argv) {
       break;
     }
     case 'z': {
-      // FIXME: Using stod removes the decimal part from the float
-      configU["alpha"] = std::stod(optarg);
+      double alpha = std::stod(optarg);
+      configD["alpha"] = alpha;
       break;
     }
     case 's': {
@@ -217,7 +217,7 @@ int main(int argc, char **argv) {
   parameters(configU, configD);
 
   // Generate the tree
-  generate_tree(configU);
+  generate_tree(configU, configD);
 
   return 0;
 }
