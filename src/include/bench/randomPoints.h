@@ -36,7 +36,7 @@ static const unsigned CanadaQuerySize = 5000;
 static const unsigned GaiaDataSize = 18084053;
 static const unsigned GaiaQuerySize = 5000;
 static const unsigned MicrosoftBuildingsDataSize = 752704741;
-static const unsigned NYCTaxiDataSize = 337831768;
+static const unsigned NYCTaxiDataSize = 81616580;
 
 enum BenchType { UNIFORM,
                  SKEW,
