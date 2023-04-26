@@ -330,17 +330,26 @@ inline std::optional<Point> PointGenerator<BenchTypeClasses::Zipf>::nextPoint(Be
     cummulative.reserve(BenchTypeClasses::Zipf::num_elements);
     double running_sum = 0.0;
 
+    // For each i of num_elements, compute the inverse prob 1/(i+1)^alpha
+    // Compute the cumulative probabilities up to i and store them in cummulative
+    // Sum up the cumulative probabilities into running_sum
     for (unsigned pos = 0; pos < BenchTypeClasses::Zipf::num_elements; pos++) {
       double prob = BenchTypeClasses::Zipf::invert_prob(pos);
       running_sum += prob;
       cummulative.push_back(running_sum);
     }
 
+    // For each cumulative probability per i, divide by running_sum to get the actual probability and store
+    // it in cummulative.
     for (unsigned pos = 0; pos < BenchTypeClasses::Zipf::num_elements; pos++) {
       double cum_prob = cummulative.at(pos);
       double prob = cum_prob / running_sum;
       cummulative.at(pos) = prob;
     }
+
+    // By now, cummulative is a vector containing increasing probabilities per i.
+    // Generate a uniform_probability and use it to retrieve the smallest i such that
+    // probability(i) < uniform_probability
 
     std::cout << "Produced generator using seed: " << BenchTypeClasses::Zipf::seed << " alpha: " << BenchTypeClasses::Zipf::alpha << std::endl;
     std::default_random_engine generator(BenchTypeClasses::Zipf::seed);
