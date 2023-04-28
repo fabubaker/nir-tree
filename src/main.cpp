@@ -197,6 +197,7 @@ int main(int argc, char *argv[]) {
       case 'f': // db file name
       {
         configS["db_file_name"] = optarg;
+        break;
       }
 
     default: {
