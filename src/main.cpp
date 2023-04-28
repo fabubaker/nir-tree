@@ -27,6 +27,7 @@ void parameters(std::map<std::string, uint64_t> &configU, std::map<std::string, 
   std::cout << "  zipf = " << configU["alpha"] << std::endl;
   std::cout << "  buffer pool memory = " << configU["buffer_pool_memory"] << std::endl;
   std::cout << "  points per rectangle = " << configU["points_per_rectangle"] << std::endl;
+  std::cout << "  points to search = " << configU["num_points_to_search"] << std::endl;
   std::cout << "### ### ### ### ### ###" << std::endl << std::endl;
 }
 
@@ -181,9 +182,9 @@ int main(int argc, char *argv[]) {
         configU["points_per_rectangle"] = std::stoull(optarg);
         break;
       }
-      case 'B': // buffer pool memory
+      case 'B': // buffer pool memory in MB
       {
-        configU["buffer_pool_memory"] = std::stoull(optarg);
+        configU["buffer_pool_memory"] = std::stoull(optarg) * 1000000;
         break;
       }
       case 'S': // Number of search points

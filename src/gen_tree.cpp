@@ -204,9 +204,9 @@ int main(int argc, char **argv) {
       configU["precision"] = std::stoull(optarg);
       break;
     }
-    case 'B': // buffer pool memory
+    case 'B': // buffer pool memory in MB
     {
-      configU["buffer_pool_memory"] = std::stoull(optarg);
+      configU["buffer_pool_memory"] = std::stoull(optarg) * 1000000;
       break;
     }
     }
