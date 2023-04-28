@@ -298,8 +298,8 @@ requires(std::derived_from<strategy, BranchPartitionStrategy>) class LeafNode {
 public:
   NIRTreeDisk<min_branch_factor, max_branch_factor, strategy> *treeRef;
   tree_node_handle parent;
-  unsigned cur_offset_;
-  tree_node_handle self_handle_;
+  unsigned cur_offset_; // Pointer into next free slot in "entries", essentially size of "entries"
+  tree_node_handle self_handle_; // Why do we need this?
   uint8_t level_;
 
   std::array<Point, max_branch_factor + 1> entries;
