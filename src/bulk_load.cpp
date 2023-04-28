@@ -569,6 +569,7 @@ std::vector<tree_node_handle> str_packing_leaf(
   tree_node_allocator *allocator = tree->node_allocator_.get();
   std::vector<tree_node_handle> leaves;
   uint64_t offset = 0;
+
   while (offset < count) {
     auto alloc_data = allocator->create_new_tree_node<LN>(NodeHandleType(LEAF_NODE));
 
@@ -585,6 +586,7 @@ std::vector<tree_node_handle> str_packing_leaf(
     }
     leaves.push_back(leaf_handle);
   }
+
   return leaves;
 }
 
