@@ -3,7 +3,7 @@
 #include <globals/globals.h>
 #include <string>
 
-void parameters(std::map<std::string, uint64_t> &configU, std::map<std::string, double> configD) {
+void parameters(std::map<std::string, uint64_t> &configU, std::map<std::string, double> &configD) {
   std::string treeTypes[] = {
           "R_TREE", "R_PLUS_TREE", "R_STAR_TREE",
           "NIR_TREE", "QUAD_TREE", "REVISED_R_STAR_TREE"

@@ -9,7 +9,7 @@
 #include <string>
 #include <unistd.h>
 
-void parameters(std::map<std::string, uint64_t> &configU, std::map<std::string, double> configD) {
+void parameters(std::map<std::string, uint64_t> &configU, std::map<std::string, double> configD, std::map<std::string, std::string> &configS) {
   std::string treeTypes[] = {"R_TREE", "R_PLUS_TREE", "R_STAR_TREE", "NIR_TREE", "QUAD_TREE", "REVISED_R_STAR_TREE"};
   std::string benchTypes[] = {
       "UNIFORM", "SKEW", "CLUSTER", "CALIFORNIA", "BIOLOGICAL", "FOREST",
@@ -28,10 +28,11 @@ void parameters(std::map<std::string, uint64_t> &configU, std::map<std::string, 
   std::cout << "  buffer pool memory = " << configU["buffer_pool_memory"] << std::endl;
   std::cout << "  points per rectangle = " << configU["points_per_rectangle"] << std::endl;
   std::cout << "  points to search = " << configU["num_points_to_search"] << std::endl;
+  std::cout << "  db file name = " << configS["db_file_name"] << std::endl;
   std::cout << "### ### ### ### ### ###" << std::endl << std::endl;
 }
 
-void randomPoints(std::map<std::string, uint64_t> &configU, std::map<std::string, double> &configD) {
+void randomPoints(std::map<std::string, uint64_t> &configU, std::map<std::string, double> &configD, std::map<std::string, std::string> &configS) {
   switch (configU["distribution"]) {
   case UNIFORM: {
     BenchTypeClasses::Uniform::size = configU["size"];
@@ -43,42 +44,42 @@ void randomPoints(std::map<std::string, uint64_t> &configU, std::map<std::string
     }
 
     PointGenerator<BenchTypeClasses::Uniform> pointGen;
-    runBench(pointGen, configU, configD);
+    runBench(pointGen, configU, configD, configS);
     break;
   }
   case SKEW: {
     PointGenerator<BenchTypeClasses::Skew> pointGen;
-    runBench(pointGen, configU, configD);
+    runBench(pointGen, configU, configD, configS);
     break;
   }
   case CALIFORNIA: {
     PointGenerator<BenchTypeClasses::California> pointGen;
-    runBench(pointGen, configU, configD);
+    runBench(pointGen, configU, configD, configS);
     break;
   }
   case BIOLOGICAL: {
     PointGenerator<BenchTypeClasses::Biological> pointGen;
-    runBench(pointGen, configU, configD);
+    runBench(pointGen, configU, configD, configS);
     break;
   }
   case FOREST: {
     PointGenerator<BenchTypeClasses::Forest> pointGen;
-    runBench(pointGen, configU, configD);
+    runBench(pointGen, configU, configD, configS);
     break;
   }
   case CANADA: {
     PointGenerator<BenchTypeClasses::Canada> pointGen;
-    runBench(pointGen, configU, configD);
+    runBench(pointGen, configU, configD, configS);
     break;
   }
   case GAIA: {
     PointGenerator<BenchTypeClasses::Gaia> pointGen;
-    runBench(pointGen, configU, configD);
+    runBench(pointGen, configU, configD, configS);
     break;
   }
   case MICROSOFTBUILDINGS: {
     PointGenerator<BenchTypeClasses::MicrosoftBuildings> pointGen;
-    runBench(pointGen, configU, configD);
+    runBench(pointGen, configU, configD, configS);
     break;
   }
   case ZIPF: {
@@ -88,12 +89,12 @@ void randomPoints(std::map<std::string, uint64_t> &configU, std::map<std::string
     BenchTypeClasses::Zipf::num_elements = configU["num_elements"];
     BenchTypeClasses::Zipf::alpha = configD["alpha"];
     PointGenerator<BenchTypeClasses::Zipf> pointGen;
-    runBench(pointGen, configU, configD);
+    runBench(pointGen, configU, configD, configS);
     break;
   }
   case NYCTAXI: {
     PointGenerator<BenchTypeClasses::NYCTaxi> pointGen;
-    runBench(pointGen, configU, configD);
+    runBench(pointGen, configU, configD, configS);
     break;
   }
   default: {
@@ -119,8 +120,9 @@ int main(int argc, char *argv[]) {
   configU.emplace("visualization", false);
 
   std::map<std::string, double> configD;
+  std::map<std::string, std::string> configS;
 
-  while ((option = getopt(argc, argv, "t:m:a:b:n:s:r:v:z:g:p:B:P:S:")) != -1) {
+  while ((option = getopt(argc, argv, "t:m:a:b:n:s:r:v:z:g:p:B:P:S:f:")) != -1) {
     switch (option) {
       case 't': // Tree
       {
@@ -192,6 +194,10 @@ int main(int argc, char *argv[]) {
         configU["num_points_to_search"] = std::stoull(optarg);
         break;
       }
+      case 'f': // db file name
+      {
+        configS["db_file_name"] = optarg;
+      }
 
     default: {
       std::cout << "Bad option. Usage:" << std::endl;
@@ -208,9 +214,14 @@ int main(int argc, char *argv[]) {
     }
   }
 
+  if (configS["db_file_name"].empty()) {
+    std::cout << "Need to specify database file name using -f! Exiting..." << std::endl;
+    exit(1);
+  }
+
   // Print test parameters
-  parameters(configU, configD);
+  parameters(configU, configD, configS);
 
   // Run the benchmark
-  randomPoints(configU, configD);
+  randomPoints(configU, configD, configS);
 }

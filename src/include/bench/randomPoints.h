@@ -794,7 +794,9 @@ static bool is_already_loaded(
 }
 
 template <typename T>
-static void runBench(PointGenerator<T> &pointGen, std::map<std::string, uint64_t> &configU, std::map<std::string, double> &configD) {
+static void
+runBench(PointGenerator<T> &pointGen, std::map<std::string, uint64_t> &configU, std::map<std::string, double> &configD,
+         std::map<std::string, std::string> &configS) {
   std::cout << "Running benchmark." << std::endl;
 
   // Setup checksums
