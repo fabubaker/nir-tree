@@ -755,41 +755,37 @@ static std::vector<Rectangle> generateGaiaRectangles() {
   return rectangles;
 }
 
-static bool is_already_loaded(
-    std::map<std::string, uint64_t> &configU,
-    Index *spatial_index) {
+static bool is_already_loaded(std::map<std::string, uint64_t> &configU, Index *spatial_index) {
   if (configU["tree"] == NIR_TREE) {
-
-    nirtreedisk::NIRTreeDisk<5, 9, nirtreedisk::ExperimentalStrategy>
-        *tree =
-            (nirtreedisk::NIRTreeDisk<5, 9, nirtreedisk::ExperimentalStrategy> *)spatial_index;
-
+    auto tree = (nirtreedisk::NIRTreeDisk<5, 9, nirtreedisk::ExperimentalStrategy> *) spatial_index;
     size_t existing_page_count = tree->node_allocator_->buffer_pool_.get_preexisting_page_count();
+
     if (existing_page_count > 0) {
       return true;
     }
   } else if (configU["tree"] == R_PLUS_TREE) {
-    rplustreedisk::RPlusTreeDisk<5, 9> *tree =
-        (rplustreedisk::RPlusTreeDisk<5, 9> *)spatial_index;
+    auto tree = (rplustreedisk::RPlusTreeDisk<5, 9> *) spatial_index;
     size_t existing_page_count = tree->node_allocator_.buffer_pool_.get_preexisting_page_count();
+
     if (existing_page_count > 0) {
       return true;
     }
   } else if (configU["tree"] == R_STAR_TREE) {
-    rstartreedisk::RStarTreeDisk<5, 9> *tree =
-        (rstartreedisk::RStarTreeDisk<5, 9> *)spatial_index;
+    auto tree = (rstartreedisk::RStarTreeDisk<5, 9> *) spatial_index;
     size_t existing_page_count = tree->node_allocator_->buffer_pool_.get_preexisting_page_count();
+
     if (existing_page_count > 0) {
       return true;
     }
   } else if (configU["tree"] == R_TREE) {
-    rtreedisk::RTreeDisk<3, 6> *tree =
-        (rtreedisk::RTreeDisk<3, 6> *)spatial_index;
+    auto tree = (rtreedisk::RTreeDisk<3, 6> *) spatial_index;
     size_t existing_page_count = tree->node_allocator_.buffer_pool_.get_preexisting_page_count();
+
     if (existing_page_count > 0) {
       return true;
     }
   }
+
   return false;
 }
 
