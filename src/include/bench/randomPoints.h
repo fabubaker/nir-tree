@@ -795,9 +795,6 @@ runBench(PointGenerator<T> &pointGen, std::map<std::string, uint64_t> &configU, 
          std::map<std::string, std::string> &configS) {
   std::cout << "Running benchmark." << std::endl;
 
-  // Setup checksums
-  unsigned directSum = 0;
-
   // Setup statistics
   double totalTimeInserts = 0.0;
   double totalTimeSearches = 0.0;
@@ -869,58 +866,10 @@ runBench(PointGenerator<T> &pointGen, std::map<std::string, uint64_t> &configU, 
   if (not is_already_loaded(configU, spatialIndex)) {
     // If we read stuff from disk and don't need to reinsert, skip this.
     // Insert points and time their insertion
-    std::cout << "SHOULD ALREADY BE LOADED. BreAKING." << std::endl;
+    std::cout << "Tree should already be generated! Exiting..." << std::endl;
     exit(1);
-    std::cout << "Inserting Points." << std::endl;
-    while ((nextPoint = pointGen.nextPoint()) /* Intentional = and not == */) {
-      // Compute the checksum directly
-      for (unsigned d = 0; d < dimensions; ++d) {
-        directSum += (unsigned)nextPoint.value()[d];
-      }
-
-      // Insert
-      std::chrono::high_resolution_clock::time_point begin = std::chrono::high_resolution_clock::now();
-      spatialIndex->insert(nextPoint.value());
-      std::chrono::high_resolution_clock::time_point end = std::chrono::high_resolution_clock::now();
-      std::chrono::duration<double> delta = std::chrono::duration_cast<std::chrono::duration<double>>(end - begin);
-      totalTimeInserts += delta.count();
-      totalInserts += 1;
-
-      if (totalInserts % 10000 == 0) {
-        std::cout << "Point[" << totalInserts << "] inserted. " << delta.count() << "s" << std::endl;
-      }
-      std::cout << "Insert OK." << std::endl;
-
-      // std::cout << "Point[" << totalInserts << "] inserted. " << delta.count() << "s" << std::endl;
-    }
-    std::cout << "Insertion OK." << std::endl;
-
-    // Validate checksum
-    if (spatialIndex->checksum() != directSum) {
-      std::cout << "Bad Checksum!" << std::endl;
-      exit(1);
-    }
-    std::cout << "Checksum OK." << std::endl;
-
-    /*
-        if( configU["tree"] == NIR_TREE ) {
-            std::cout << "Repacking..." << std::endl;
-            auto tree_ptr =
-                (nirtreedisk::NIRTreeDisk<5,9,nirtreedisk::ExperimentalStrategy> *) spatialIndex;
-            std::string fname = "repacked_nirtree.txt";
-            repack_tree( tree_ptr, fname,
-                    nirtreedisk::repack_subtree<5,9,nirtreedisk::ExperimentalStrategy>  );
-        } else if( configU["tree"] == R_STAR_TREE ) {
-            std::cout << "Repacking..." << std::endl;
-            auto tree_ptr = (rstartreedisk::RStarTreeDisk<5,9> *) spatialIndex;
-            std::string fname = "repacked_rstar.txt";
-            repack_tree( tree_ptr, fname, rstartreedisk::repack_subtree<5,9> );
-        }*/
-
-    spatialIndex->write_metadata();
-
   } else {
-    std::cout << "Already loaded!" << std::endl;
+    std::cout << "Tree is loaded. Running benchmarks..." << std::endl;
   }
 
   // Validate tree
@@ -960,17 +909,8 @@ runBench(PointGenerator<T> &pointGen, std::map<std::string, uint64_t> &configU, 
       break;
     }
   }
-  std::cout << "Search OK." << std::endl;
 
-  // Validate checksum
-  /*
-	if (spatialIndex->checksum() != directSum)
-	{
-		std::cout << "Bad Checksum!" << std::endl;
-		exit(1);
-	}
-	std::cout << "Checksum OK." << std::endl;
-    */
+  std::cout << "Search OK." << std::endl;
 
 #endif
   std::shuffle(searchRectangles.begin(), searchRectangles.end(), g);
@@ -1006,34 +946,6 @@ runBench(PointGenerator<T> &pointGen, std::map<std::string, uint64_t> &configU, 
   std::cout << "Statistics OK." << std::endl;
 #endif
 
-  // Validate checksum
-  /*
-	if (spatialIndex->checksum() != directSum)
-	{
-		std::cout << "Bad Checksum!" << std::endl;
-		exit(1);
-	}
-	std::cout << "Checksum OK." << std::endl;
-    */
-
-  /*
-	// Delete points and time their deletion
-	std::cout << "Beginning deletion." << std::endl;
-	pointGen.reset();
-	while((nextPoint = pointGen.nextPoint()))
-	{
-		// Delete
-		std::chrono::high_resolution_clock::time_point begin = std::chrono::high_resolution_clock::now();
-		spatialIndex->remove(nextPoint.value());
-		std::chrono::high_resolution_clock::time_point end = std::chrono::high_resolution_clock::now();
-		std::chrono::duration<double> delta = std::chrono::duration_cast<std::chrono::duration<double>>(end - begin);
-		totalTimeDeletes += delta.count();
-		totalDeletes += 1;
-		// std::cout << "Point[" << i << "] deleted." << delta.count() << " s" << std::endl;
-	}
-	std::cout << "Deletion OK." << std::endl;
-    */
-
   // Timing Statistics
   std::cout << "Total time to insert: " << totalTimeInserts << "s" << std::endl;
   std::cout << "Avg time to insert: " << totalTimeInserts / (double)totalInserts << "s" << std::endl;
@@ -1044,10 +956,4 @@ runBench(PointGenerator<T> &pointGen, std::map<std::string, uint64_t> &configU, 
   std::cout << "Avg time to range search: " << totalTimeRangeSearches / totalRangeSearches << "s" << std::endl;
   std::cout << "Total time to delete: " << totalTimeDeletes << "s" << std::endl;
   std::cout << "Avg time to delete: " << totalTimeDeletes / (double)totalDeletes << "s" << std::endl;
-
-  spatialIndex->write_metadata();
-
-  std::cout << "Metadata written." << std::endl;
-  // Cleanup
-  //delete spatialIndex;
 }
