@@ -52,19 +52,15 @@ public:
   NIRTreeDisk(size_t memory_budget, std::string backing_file) : node_allocator_(std::make_unique<tree_node_allocator>(memory_budget, backing_file)) {
     node_allocator_->initialize();
 
-    size_t existing_page_count =
-        node_allocator_->buffer_pool_.get_preexisting_page_count();
+    size_t existing_page_count = node_allocator_->buffer_pool_.get_preexisting_page_count();
 
     hasReinsertedOnLevel = {false};
     // If this is a fresh tree, we need a root
     if (existing_page_count == 0) {
-      auto alloc =
-          node_allocator_->create_new_tree_node<LeafNode<min_branch_factor, max_branch_factor, strategy>>(
-              NodeHandleType(LEAF_NODE));
+      auto alloc = node_allocator_->create_new_tree_node<LeafNode<min_branch_factor, max_branch_factor, strategy>>(NodeHandleType(LEAF_NODE));
       root = alloc.second;
-      new (&(*(alloc.first)))
-          LeafNode<min_branch_factor, max_branch_factor, strategy>(this,
-                                                                   tree_node_handle(nullptr), root, 0);
+
+      new (&(*(alloc.first))) LeafNode<min_branch_factor, max_branch_factor, strategy>(this, tree_node_handle(nullptr), root, 0);
 
       return;
     }
