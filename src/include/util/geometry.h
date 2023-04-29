@@ -46,33 +46,33 @@ class Point
 {
 	public:
 
-        double values[dimensions];
+    double values[dimensions];
 
 		static Point atInfinity;
 		static Point atNegInfinity;
 		static Point atOrigin;
-        static Point closest_larger_point( const Point &existing_point ) {
-            Point local_point( existing_point );
-            for( unsigned d = 0; d < dimensions; d++ ) {
-                local_point[d] = nextafter( local_point[d], DBL_MAX );
-                if( !(local_point[d] > existing_point[d] ) ) {
-                    std::cout << "existing point: " << existing_point[d]
-                        << std::endl;
-                    abort();
-                }
-                assert( local_point[d] > existing_point[d] );
-            }
-            return local_point;
-        }
-        static Point closest_smaller_point( const Point &existing_point ) {
-            Point local_point( existing_point );
-            for( unsigned d = 0; d < dimensions; d++ ) {
-                local_point[d] = nextafter( local_point[d], -DBL_MAX );
-                assert( local_point[d] < existing_point[d] );
-            }
-            return local_point;
-        }
+    static Point closest_larger_point( const Point &existing_point ) {
+      Point local_point( existing_point );
+      for( unsigned d = 0; d < dimensions; d++ ) {
+          local_point[d] = nextafter( local_point[d], DBL_MAX );
+          if( !(local_point[d] > existing_point[d] ) ) {
+              std::cout << "existing point: " << existing_point[d]
+                  << std::endl;
+              abort();
+          }
+          assert( local_point[d] > existing_point[d] );
+      }
+      return local_point;
+    }
 
+    static Point closest_smaller_point( const Point &existing_point ) {
+      Point local_point( existing_point );
+      for( unsigned d = 0; d < dimensions; d++ ) {
+          local_point[d] = nextafter( local_point[d], -DBL_MAX );
+          assert( local_point[d] < existing_point[d] );
+      }
+      return local_point;
+    }
 
 		Point();
 
@@ -82,7 +82,7 @@ class Point
 
 		bool orderedCompare(const Point &rhs, unsigned startingDimension) const;
 		double distance(const Point &p) const;
-        double fast_distance(const Point &p) const;
+    double fast_distance(const Point &p) const;
 
 		Point &operator-=(const Point &rhs);
 		Point &operator+=(const Point &rhs);

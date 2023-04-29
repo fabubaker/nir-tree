@@ -42,9 +42,8 @@ tree_node_handle get_root_handle(
 
 class Branch {
 public:
-  Branch(Rectangle boundingBox, tree_node_handle
-                                    child_handle) : boundingBox(boundingBox),
-                                                    child(child_handle) {}
+  Branch(Rectangle boundingBox, tree_node_handle child_handle):
+    boundingBox(boundingBox), child(child_handle) {}
 
   Branch() = default;
 

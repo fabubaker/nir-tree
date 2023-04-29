@@ -94,9 +94,7 @@ struct NodeHandleType {
 class tree_node_handle {
 public:
     struct page_location {
-        page_location( unsigned page_id, unsigned offset ) :
-            page_id_( page_id ),
-            offset_( offset ) {}
+        page_location(unsigned page_id, unsigned offset): page_id_(page_id), offset_(offset) {}
 
         // Total size = 64 bytes. I could make this smaller, but
         // I think x86 wants to access things in units of 64 bytes
@@ -106,16 +104,14 @@ public:
         static_assert( PAGE_SIZE <= std::numeric_limits<uint16_t>::max() );
 
         bool operator==( const page_location &other ) const {
-            return page_id_ == other.page_id_ and offset_ ==
-                other.offset_;
+            return page_id_ == other.page_id_ and offset_ == other.offset_;
         }
     };
 
-    tree_node_handle( uint32_t page_id, uint16_t offset, NodeHandleType
-            type ) :
-        page_location_( std::in_place, page_id, offset ),
-        type_( type.type_ ),
-        associated_poly_is_compressed_( 0 ) {
+    tree_node_handle(uint32_t page_id, uint16_t offset, NodeHandleType type) :
+        page_location_(std::in_place, page_id, offset),
+        type_(type.type_),
+        associated_poly_is_compressed_(0) {
     }
 
     tree_node_handle() :
