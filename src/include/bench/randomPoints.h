@@ -956,4 +956,9 @@ runBench(PointGenerator<T> &pointGen, std::map<std::string, uint64_t> &configU, 
   std::cout << "Avg time to range search: " << totalTimeRangeSearches / totalRangeSearches << "s" << std::endl;
   std::cout << "Total time to delete: " << totalTimeDeletes << "s" << std::endl;
   std::cout << "Avg time to delete: " << totalTimeDeletes / (double)totalDeletes << "s" << std::endl;
+
+  // Generate visualization
+  if (configU["visualization"]) {
+    spatialIndex->visualize();
+  }
 }
