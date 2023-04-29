@@ -262,11 +262,8 @@ void treeWalker(RStarTreeDisk<min_branch_factor, max_branch_factor> *treeRef, tr
         context.push(node->entries.at(i).child);
       }
     } else if (currentContext.get_type() == REPACKED_BRANCH_NODE) {
-      tree_node_allocator *allocator =
-              treeRef->node_allocator_.get();
-      auto node =
-              allocator->get_tree_node<packed_node>(
-                      currentContext);
+      tree_node_allocator *allocator = treeRef->node_allocator_.get();
+      auto node = allocator->get_tree_node<packed_node>(currentContext);
       char *buffer = node->buffer_;
       decode_entry_count_and_offset_packed_node(buffer);
       for (unsigned i = 0; i < count; i++) {
@@ -286,8 +283,7 @@ void LEAF_NODE_CLASS_TYPES::deleteSubtrees() {
 NODE_TEMPLATE_PARAMS
 Rectangle LEAF_NODE_CLASS_TYPES::boundingBox() const {
   assert(cur_offset_ > 0);
-  Rectangle boundingBox(entries[0], Point::closest_larger_point(
-          entries[0]));
+  Rectangle boundingBox(entries[0], Point::closest_larger_point(entries[0]));
 
   for (unsigned i = 0; i < cur_offset_; i++) {
     boundingBox.expand(entries.at(i));
@@ -2078,17 +2074,15 @@ NODE_TEMPLATE_PARAMS
 void BRANCH_NODE_CLASS_TYPES::printTree() const {
   // Print this node first
   struct Printer {
-      void operator()(
-              RStarTreeDisk<min_branch_factor, max_branch_factor> *treeRef,
-              tree_node_handle node_handle) {
-        if (node_handle.get_type() == LEAF_NODE) {
-          auto node = treeRef->get_leaf_node(node_handle);
-          node->print();
-        } else {
-          auto node = treeRef->get_branch_node(node_handle);
-          node->print();
-        }
+    void operator()(RStarTreeDisk<min_branch_factor, max_branch_factor> *treeRef, tree_node_handle node_handle) {
+      if (node_handle.get_type() == LEAF_NODE) {
+        auto node = treeRef->get_leaf_node(node_handle);
+        node->print();
+      } else {
+        auto node = treeRef->get_branch_node(node_handle);
+        node->print();
       }
+    }
   };
 
   Printer p;

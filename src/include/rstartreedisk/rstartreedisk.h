@@ -28,8 +28,8 @@ public:
 
   // Constructors and destructors
   RStarTreeDisk(size_t memory_budget, std::string backing_file) : backing_file_(backing_file) {
-
     node_allocator_ = std::make_unique<tree_node_allocator>(memory_budget, backing_file);
+
     // Initialize buffer pool
     node_allocator_->initialize();
 
@@ -37,15 +37,12 @@ public:
 
     /* We need to figure out if there was already data, and read
                  * that into memory if we have it. */
-
-    size_t existing_page_count =
-        node_allocator_->buffer_pool_.get_preexisting_page_count();
+    size_t existing_page_count = node_allocator_->buffer_pool_.get_preexisting_page_count();
 
     // If this is a fresh tree, then make a fresh root
     if (existing_page_count == 0) {
-      auto alloc =
-          node_allocator_->create_new_tree_node<LeafNode<min_branch_factor, max_branch_factor>>(
-              NodeHandleType(LEAF_NODE));
+      auto node_type = NodeHandleType(LEAF_NODE);
+      auto alloc = node_allocator_->create_new_tree_node<LeafNode<min_branch_factor, max_branch_factor>>(node_type);
       root = alloc.second;
       new (&(*(alloc.first)))
           LeafNode<min_branch_factor, max_branch_factor>(
@@ -79,18 +76,14 @@ public:
 
   inline pinned_node_ptr<LeafNode<min_branch_factor, max_branch_factor>> get_leaf_node(tree_node_handle node_handle) {
     assert(node_handle.get_type() == LEAF_NODE);
-    auto ptr =
-        node_allocator_->get_tree_node<LeafNode<min_branch_factor, max_branch_factor>>(
-            node_handle);
+    auto ptr = node_allocator_->get_tree_node<LeafNode<min_branch_factor, max_branch_factor>>(node_handle);
     ptr->treeRef = this;
     return ptr;
   }
 
   inline pinned_node_ptr<BranchNode<min_branch_factor, max_branch_factor>> get_branch_node(tree_node_handle node_handle) {
     assert(node_handle.get_type() == BRANCH_NODE);
-    auto ptr =
-        node_allocator_->get_tree_node<BranchNode<min_branch_factor, max_branch_factor>>(
-            node_handle);
+    auto ptr = node_allocator_->get_tree_node<BranchNode<min_branch_factor, max_branch_factor>>(node_handle);
     ptr->treeRef = this;
     return ptr;
   }
@@ -102,8 +95,7 @@ public:
 
     // Step 2:
     // Write metadata file
-    std::string meta_fname =
-        node_allocator_->get_backing_file_name() + ".meta";
+    std::string meta_fname = node_allocator_->get_backing_file_name() + ".meta";
 
     int fd = open(meta_fname.c_str(), O_WRONLY | O_TRUNC | O_CREAT, S_IRUSR | S_IWUSR);
     assert(fd >= 0);
