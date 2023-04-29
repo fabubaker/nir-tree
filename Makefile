@@ -12,6 +12,8 @@ CXXFLAGS := $(CXXFLAGS) -O3
 else ifdef EXP
 CPPFLAGS := -DNDEBUG -DSTAT $(CPPFLAGS)
 CXXFLAGS := -ggdb3 $(CXXFLAGS) -O3
+else ifdef DEBUG
+CXXFLAGS := -ggdb3 $(CXXFLAGS) -O0
 else
 CXXFLAGS := -ggdb3 $(CXXFLAGS)
 endif
