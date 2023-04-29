@@ -17,24 +17,23 @@ public:
     T *obj_ptr_;
     page *page_ptr_;
 
-    pinned_node_ptr( buffer_pool &pool, T *obj_ptr, page *page_ptr ) :
-        pool_( pool ), obj_ptr_( obj_ptr ), page_ptr_( page_ptr ) {
-            if( page_ptr != nullptr ) {
-                pool_.pin_page( page_ptr_ );
-            } }
-
-    pinned_node_ptr( const pinned_node_ptr &other ) :
-        pool_( other.pool_ ), obj_ptr_( other.obj_ptr_ ),
-        page_ptr_( other.page_ptr_ ){
-            if( page_ptr_ != nullptr ) {
-                pool_.pin_page( page_ptr_ );
+    pinned_node_ptr(buffer_pool &pool, T *obj_ptr, page *page_ptr) :
+        pool_(pool), obj_ptr_(obj_ptr), page_ptr_(page_ptr) {
+            if (page_ptr != nullptr) {
+                pool_.pin_page(page_ptr_);
             }
-        
+        }
+
+    pinned_node_ptr(const pinned_node_ptr &other): pool_(other.pool_), obj_ptr_(other.obj_ptr_),
+        page_ptr_(other.page_ptr_) {
+        if (page_ptr_ != nullptr) {
+            pool_.pin_page( page_ptr_);
+        }
     }
 
     ~pinned_node_ptr() {
-        if( page_ptr_ != nullptr ) {
-            pool_.unpin_page( page_ptr_ );
+        if (page_ptr_ != nullptr) {
+            pool_.unpin_page(page_ptr_);
         }
     }
 
@@ -295,22 +294,21 @@ public:
     template <typename T>
     pinned_node_ptr<T> get_tree_node( tree_node_handle node_ptr ) {
 #ifndef NDEBUG
-        for( const auto &entry : free_list_ ) {
-            if( entry.first == node_ptr ) {
-                std::cout << "Using freed pointer: " << node_ptr <<
-                    std::endl;
+        for (const auto &entry : free_list_) {
+            if (entry.first == node_ptr) {
+                std::cout << "Using freed pointer: " << node_ptr << std::endl;
             }
             assert( entry.first != node_ptr );
         }
 #endif
-        page *page_ptr = buffer_pool_.get_page( node_ptr.get_page_id() );
-        if( page_ptr == nullptr ) {
+        page *page_ptr = buffer_pool_.get_page(node_ptr.get_page_id());
+        if (page_ptr == nullptr) {
             std::cout << "Page is null." << std::endl;
             abort();
         }
-        assert( page_ptr != nullptr );
-        T *obj_ptr = (T *) (page_ptr->data_ + node_ptr.get_offset() );
-        return pinned_node_ptr( buffer_pool_, obj_ptr, page_ptr );
+        assert(page_ptr != nullptr);
+        T *obj_ptr = (T *) (page_ptr->data_ + node_ptr.get_offset());
+        return pinned_node_ptr(buffer_pool_, obj_ptr, page_ptr);
     }
 
     buffer_pool buffer_pool_;

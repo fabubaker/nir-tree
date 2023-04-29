@@ -959,6 +959,6 @@ runBench(PointGenerator<T> &pointGen, std::map<std::string, uint64_t> &configU, 
 
   // Generate visualization
   if (configU["visualization"]) {
-    spatialIndex->visualize();
+    spatialIndex->print();
   }
 }
