@@ -610,7 +610,7 @@ bool operator!=( const Rectangle &lhs, const Rectangle &rhs )
 std::ostream& operator<<(std::ostream &os, const Rectangle &rectangle)
 {
 	os.precision(std::numeric_limits<double>::max_digits10+3);
-	os << "[" << rectangle.lowerLeft << "; " << rectangle.upperRight << "]";
+	os << "[" << rectangle.lowerLeft << ", " << rectangle.upperRight << "]";
 	return os;
 }
 
