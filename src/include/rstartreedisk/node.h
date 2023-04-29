@@ -17,6 +17,7 @@
 #include <utility>
 #include <variant>
 #include <vector>
+#include <fstream>
 
 namespace rstartreedisk {
 template <int min_branch_factor, int max_branch_factor>
@@ -2086,6 +2087,32 @@ void BRANCH_NODE_CLASS_TYPES::printTree() const {
 
   Printer p;
   treeWalker<min_branch_factor, max_branch_factor>(treeRef, self_handle_, p);
+}
+
+template <int min_branch_factor, int max_branch_factor>
+void printPackedNodes(
+        RStarTreeDisk<min_branch_factor, max_branch_factor> *treeRef,
+        tree_node_handle node_handle,
+        std::ofstream &printFile
+  ) {
+  tree_node_allocator *allocator = treeRef->node_allocator_.get();
+  auto node = allocator->get_tree_node<packed_node>(node_handle);
+  char *data = node->buffer_;
+  decode_entry_count_and_offset_packed_node(data);
+
+  if (node_handle.get_type() == REPACKED_BRANCH_NODE) {
+    for (size_t i = 0; i < count; i++) {
+      Branch *b = (Branch *)(data + offset);
+      printFile << b->boundingBox << std::endl;
+      offset += sizeof(Branch);
+    }
+  } else if (node_handle.get_type() == REPACKED_LEAF_NODE) {
+    for (size_t i = 0; i < count; i++) {
+      Point *p = (Point *)(data + offset);
+      printFile << *p << std::endl;
+      offset += sizeof(Point);
+    }
+  }
 }
 
 NODE_TEMPLATE_PARAMS

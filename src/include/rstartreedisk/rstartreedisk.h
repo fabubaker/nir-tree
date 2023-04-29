@@ -9,6 +9,8 @@
 #include <util/bmpPrinter.h>
 #include <util/geometry.h>
 #include <vector>
+#include <iostream>
+#include <fstream>
 
 #include <fcntl.h>
 #include <unistd.h>
@@ -168,12 +170,22 @@ unsigned RStarTreeDisk<min_branch_factor, max_branch_factor>::checksum() {
 
 template <int min_branch_factor, int max_branch_factor>
 void RStarTreeDisk<min_branch_factor, max_branch_factor>::print() {
-  if (root.get_type() == LEAF_NODE) {
-    auto root_ptr = get_leaf_node(root);
-    root_ptr->printTree();
-  }
-  auto root_ptr = get_branch_node(root);
-  root_ptr->printTree();
+  std::ofstream outputFile("printed_tree.txt");
+
+  struct Printer {
+      Printer(std::ofstream &printFile): printFile(printFile) {}
+
+      void operator()(RStarTreeDisk<min_branch_factor, max_branch_factor> *treeRef, tree_node_handle node_handle) {
+        printPackedNodes<min_branch_factor, max_branch_factor>(treeRef, node_handle, printFile);
+      }
+
+      std::ofstream &printFile;
+  };
+
+  Printer printer(outputFile);
+  treeWalker<min_branch_factor, max_branch_factor>(this, root, printer);
+
+  outputFile.close();
 }
 
 template <int min_branch_factor, int max_branch_factor>
