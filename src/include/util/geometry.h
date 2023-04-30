@@ -413,7 +413,6 @@ struct PageableIsotheticPolygon {
 // DO NOT MATERIALIZE ON THE STACK
 class InlineUnboundedIsotheticPolygon {
 	public:
-
         struct Iterator {
             using iterator_category = std::forward_iterator_tag;
             // Meaningless, do not compare

@@ -128,6 +128,7 @@ public:
 
   inline Point get_a_contained_point(tree_node_handle node_handle) {
     tree_node_allocator *allocator = node_allocator_.get();
+
     while (node_handle.get_type() != LEAF_NODE and node_handle.get_type() != REPACKED_LEAF_NODE) {
       if (node_handle.get_type() == BRANCH_NODE) {
         auto branch_node =
@@ -162,11 +163,9 @@ public:
     return parent_handle;
   }
 
+  /* If unpack_perm=true, the tree will be modified */
   inline pinned_node_ptr<LeafNode<min_branch_factor, max_branch_factor, strategy>>
-  get_leaf_node(
-      tree_node_handle node_handle,
-      bool unpack_perm = true /* If true, the tree will be modified */
-  ) {
+  get_leaf_node(tree_node_handle node_handle, bool unpack_perm = true) {
     assert(node_handle.get_type() == LEAF_NODE || node_handle.get_type() == REPACKED_LEAF_NODE);
 
     if (node_handle.get_type() == REPACKED_LEAF_NODE) {
@@ -205,11 +204,9 @@ public:
     return ptr;
   }
 
+  /* If unpack_perm=true, the tree will be modified */
   inline pinned_node_ptr<BranchNode<min_branch_factor, max_branch_factor, strategy>>
-  get_branch_node(
-      tree_node_handle node_handle,
-      bool unpack_perm = true /* If true, the tree will be modified */
-  ) {
+  get_branch_node(tree_node_handle node_handle, bool unpack_perm = true) {
     assert(node_handle.get_type() == BRANCH_NODE || node_handle.get_type() == REPACKED_BRANCH_NODE);
 
     if (node_handle.get_type() == REPACKED_BRANCH_NODE) {

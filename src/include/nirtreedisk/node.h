@@ -92,8 +92,7 @@ struct Branch {
     return poly_pin;
   }
 
-  IsotheticPolygon materialize_polygon(tree_node_allocator
-                                           *allocator) {
+  IsotheticPolygon materialize_polygon(tree_node_allocator *allocator) {
     if (std::holds_alternative<InlineBoundedIsotheticPolygon>(
             boundingPoly)) {
       return std::get<InlineBoundedIsotheticPolygon>(
@@ -108,8 +107,7 @@ struct Branch {
     return poly_pin->materialize_polygon();
   }
 
-  std::pair<bool,
-            pinned_node_ptr<InlineUnboundedIsotheticPolygon>>
+  std::pair<bool, pinned_node_ptr<InlineUnboundedIsotheticPolygon>>
   should_repack_big_poly(
       tree_node_handle poly_handle,
       tree_node_allocator *existing_allocator,
@@ -3817,49 +3815,51 @@ void stat_node(tree_node_handle start_handle, NIRTreeDisk<min_branch_factor, max
 
   while (!context.empty()) {
     auto currentContext = context.top();
-    context.pop();
 
+    context.pop();
     totalNodes++;
 
     if (currentContext.get_type() == LEAF_NODE) {
-
       auto current_node = treeRef->get_leaf_node(currentContext);
-
       unsigned fanout = current_node->cur_offset_;
+
       if (fanout >= histogramFanout.size()) {
         histogramFanout.resize(2 * fanout, 0);
       }
-      histogramFanout[fanout]++;
 
+      histogramFanout[fanout]++;
       totalLeaves++;
-      memoryFootprint +=
-              sizeof(LeafNode<min_branch_factor, max_branch_factor, strategy>);
+      memoryFootprint += sizeof(LeafNode<min_branch_factor, max_branch_factor, strategy>);
     } else if (currentContext.get_type() == REPACKED_LEAF_NODE) {
-      auto current_node = allocator->get_tree_node<packed_node>(
-              currentContext);
-
+      auto current_node = allocator->get_tree_node<packed_node>(currentContext);
       char *data = current_node->buffer_;
+
       decode_entry_count_and_offset_packed_node(data);
+
       totalLeaves++;
       unsigned fanout = (unsigned)count;
-      if (fanout >= histogramFanout.size()) {
-        histogramFanout.resize(2 * fanout, 0);
-      }
-      histogramFanout[fanout]++;
-      memoryFootprint += sizeof(unsigned) +
-                         count * sizeof(Point);
-    } else if (currentContext.get_type() == REPACKED_BRANCH_NODE) {
-      auto current_node = allocator->get_tree_node<packed_node>(
-              currentContext);
 
-      char *buffer = current_node->buffer_;
-      decode_entry_count_and_offset_packed_node(buffer);
-      unsigned fanout = (unsigned)count;
       if (fanout >= histogramFanout.size()) {
         histogramFanout.resize(2 * fanout, 0);
       }
+
+      histogramFanout[fanout]++;
+      memoryFootprint += sizeof(unsigned) + count * sizeof(Point);
+    } else if (currentContext.get_type() == REPACKED_BRANCH_NODE) {
+      auto current_node = allocator->get_tree_node<packed_node>(currentContext);
+      char *buffer = current_node->buffer_;
+
+      decode_entry_count_and_offset_packed_node(buffer);
+
+      unsigned fanout = (unsigned) count;
+
+      if (fanout >= histogramFanout.size()) {
+        histogramFanout.resize(2 * fanout, 0);
+      }
+
       histogramFanout[fanout]++;
       memoryFootprint += sizeof(unsigned);
+
       for (unsigned i = 0; i < count; i++) {
         tree_node_handle *child = (tree_node_handle *)(buffer + offset);
         context.push(*child);
@@ -3870,43 +3870,34 @@ void stat_node(tree_node_handle start_handle, NIRTreeDisk<min_branch_factor, max
           offset += sizeof(unsigned);
           memoryFootprint += sizeof(tree_node_handle) + sizeof(unsigned);
           if (rect_count == std::numeric_limits<unsigned>::max()) {
-            auto handle = *(tree_node_handle *)(buffer +
-                                                offset);
+            auto handle = *(tree_node_handle *)(buffer + offset);
+
             offset += sizeof(tree_node_handle);
             memoryFootprint += sizeof(tree_node_handle);
-            auto poly_pin =
-                    allocator->get_tree_node<InlineUnboundedIsotheticPolygon>(
-                            handle);
-            memoryFootprint +=
-                    compute_sizeof_inline_unbounded_polygon(
-                            poly_pin->get_total_rectangle_count());
-            memoryPolygons +=
-                    (compute_sizeof_inline_unbounded_polygon(
-                            poly_pin->get_total_rectangle_count()) -
-                     sizeof(Rectangle));
-            histogramPolygon.at(
-                    poly_pin->get_total_rectangle_count())++;
+
+            auto poly_pin = allocator->get_tree_node<InlineUnboundedIsotheticPolygon>(handle);
+
+            memoryFootprint += compute_sizeof_inline_unbounded_polygon(poly_pin->get_total_rectangle_count());
+            memoryPolygons += (compute_sizeof_inline_unbounded_polygon(poly_pin->get_total_rectangle_count()) - sizeof(Rectangle));
+
+            histogramPolygon.at(poly_pin->get_total_rectangle_count())++;
             totalPolygonSize += poly_pin->get_total_rectangle_count();
           } else {
             offset += rect_count * sizeof(Rectangle);
             memoryFootprint += rect_count * sizeof(Rectangle);
-            memoryPolygons += (rect_count * sizeof(Rectangle) -
-                               sizeof(Rectangle));
+            memoryPolygons += (rect_count * sizeof(Rectangle) - sizeof(Rectangle));
             histogramPolygon.at(rect_count)++;
             totalPolygonSize += rect_count;
           }
         } else {
           int new_offset;
-          IsotheticPolygon decomp_poly = decompress_polygon(buffer + offset,
-                                                            &new_offset);
-          histogramPolygon.at(
-                  decomp_poly.basicRectangles.size())++;
+          IsotheticPolygon decomp_poly = decompress_polygon(buffer + offset, &new_offset);
+          histogramPolygon.at(decomp_poly.basicRectangles.size())++;
           totalPolygonSize += decomp_poly.basicRectangles.size();
           memoryFootprint += sizeof(tree_node_handle) + new_offset;
           offset += new_offset;
         }
       }
-
     } else if (currentContext.get_type() == BRANCH_NODE) {
       auto current_branch_node = treeRef->get_branch_node(currentContext);
 
