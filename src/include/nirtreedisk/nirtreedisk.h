@@ -355,13 +355,22 @@ void NIRTreeDisk<min_branch_factor, max_branch_factor, strategy>::stat() {
 
 template <int min_branch_factor, int max_branch_factor, class strategy>
 void NIRTreeDisk<min_branch_factor, max_branch_factor, strategy>::print() {
-  if (root.get_type() == LEAF_NODE || root.get_type() == REPACKED_LEAF_NODE) {
-    auto root_node = get_leaf_node(root, false);
-    root_node->printTree();
-  } else {
-    auto root_node = get_branch_node(root, false);
-    root_node->printTree();
-  }
+  std::ofstream outputFile("printed_nir_tree.txt");
+
+  struct Printer {
+      Printer(std::ofstream &printFile): printFile(printFile) {}
+
+      void operator()(NIRTreeDisk<min_branch_factor, max_branch_factor, strategy> *treeRef, tree_node_handle node_handle) {
+        printPackedNodes<min_branch_factor, max_branch_factor, strategy>(treeRef, node_handle, printFile);
+      }
+
+      std::ofstream &printFile;
+  };
+
+  Printer printer(outputFile);
+  treeWalker<min_branch_factor, max_branch_factor, strategy>(this, root, printer);
+
+  outputFile.close();
 }
 
 template <int min_branch_factor, int max_branch_factor, class strategy>

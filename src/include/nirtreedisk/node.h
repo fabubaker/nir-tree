@@ -2376,6 +2376,97 @@ void BRANCH_NODE_CLASS_TYPES::removeBranch(
     }                                                                                            \
   }
 
+template <int min_branch_factor, int max_branch_factor, class strategy, typename functor>
+void treeWalker(NIRTreeDisk<min_branch_factor, max_branch_factor, strategy> *treeRef, tree_node_handle root, functor &f) {
+  std::stack<tree_node_handle> context;
+  context.push(root);
+  tree_node_handle currentContext;
+
+  while (!context.empty()) {
+    currentContext = context.top();
+    context.pop();
+
+    f(treeRef, currentContext);
+
+    if (currentContext.get_type() == BRANCH_NODE) {
+      auto node = treeRef->get_branch_node(currentContext);
+      for (unsigned i = 0; i < node->cur_offset_; i++) {
+        context.push(node->entries.at(i).child);
+      }
+    } else if (currentContext.get_type() == REPACKED_BRANCH_NODE) {
+      tree_node_allocator *allocator = treeRef->node_allocator_.get();
+      auto node = allocator->get_tree_node<packed_node>(currentContext);
+      char *buffer = node->buffer_;
+
+      decode_entry_count_and_offset_packed_node(buffer);
+
+      for (unsigned i = 0; i < count; i++) {
+        tree_node_handle *child = (tree_node_handle *)(buffer + offset);
+        context.push(*child);
+        offset += sizeof(tree_node_handle);
+
+        unsigned rect_count = *(unsigned *)(buffer + offset);
+        offset += sizeof(unsigned);
+
+        if (rect_count == std::numeric_limits<unsigned>::max()) {
+          offset += sizeof(tree_node_handle);
+        } else {
+          offset += rect_count * sizeof(Rectangle);
+        }
+      }
+    }
+  }
+}
+
+template <int min_branch_factor, int max_branch_factor, class strategy>
+void printPackedNodes(
+        NIRTreeDisk<min_branch_factor, max_branch_factor, strategy> *treeRef,
+        tree_node_handle node_handle,
+        std::ofstream &printFile
+) {
+  tree_node_allocator *allocator = treeRef->node_allocator_.get();
+  auto node = allocator->get_tree_node<packed_node>(node_handle);
+  char *data = node->buffer_;
+
+  decode_entry_count_and_offset_packed_node(data);
+
+  if (node_handle.get_type() == REPACKED_BRANCH_NODE) {
+    for (size_t i = 0; i < count; i++) {
+      tree_node_handle *child = (tree_node_handle *)(data + offset);
+      offset += sizeof(tree_node_handle);
+
+      unsigned rect_count = *(unsigned *)(data + offset);
+      offset += sizeof(unsigned);
+
+      if (rect_count == std::numeric_limits<unsigned>::max()) {
+        auto handle = *(tree_node_handle *)(data + offset);
+        offset += sizeof(tree_node_handle);
+
+        auto poly_pin = allocator->get_tree_node<InlineUnboundedIsotheticPolygon>(handle);
+
+        // We really don't get here that often, decide what to do later...
+        abort();
+      } else {
+        for (size_t j = 0; j < rect_count; j++) {
+          Rectangle *rect = (Rectangle *)(data + offset);
+
+          if (child->get_type() == REPACKED_LEAF_NODE) {
+            printFile << *rect << std::endl;
+          }
+
+          offset += sizeof(Rectangle);
+        }
+      }
+    }
+  } else if (node_handle.get_type() == REPACKED_LEAF_NODE) {
+    for (size_t i = 0; i < count; i++) {
+      Point *p = (Point *) (data + offset);
+      printFile << *p << std::endl;
+      offset += sizeof(Point);
+    }
+  }
+}
+
 template <int min_branch_factor, int max_branch_factor, class strategy>
 std::vector<Point> point_search(tree_node_handle start_point, Point &requestedPoint,
         NIRTreeDisk<min_branch_factor, max_branch_factor, strategy> *treeRef) {
