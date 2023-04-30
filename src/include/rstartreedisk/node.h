@@ -2103,7 +2103,13 @@ void printPackedNodes(
   if (node_handle.get_type() == REPACKED_BRANCH_NODE) {
     for (size_t i = 0; i < count; i++) {
       Branch *b = (Branch *)(data + offset);
-      printFile << b->boundingBox << std::endl;
+
+      // Only print the last layer of branch nodes, this is where intersection
+      // happens the most.
+      if (b->child.get_type() == REPACKED_LEAF_NODE) {
+        printFile << b->boundingBox << std::endl;
+      }
+
       offset += sizeof(Branch);
     }
   } else if (node_handle.get_type() == REPACKED_LEAF_NODE) {
