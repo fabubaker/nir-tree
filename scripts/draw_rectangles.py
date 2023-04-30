@@ -10,7 +10,7 @@ def parse_input_file(file_path):
 
             if line.startswith('[('):
                 coordinates = line.strip()[1:-1].split('), ')
-                x1, y1 = map(float, coordinates[0][1:-1].split(', '))
+                x1, y1 = map(float, coordinates[0][1:].split(', '))
                 x2, y2 = map(float, coordinates[1][1:-1].split(', '))
                 rectangles.append(([(x1, y1), (x2, y2)]))
 
