@@ -1,3 +1,4 @@
+import sys
 import matplotlib.pyplot as plt
 import matplotlib.patches as patches
 
@@ -12,7 +13,7 @@ def parse_input_file(file_path):
                 coordinates = line.strip()[1:-1].split('), ')
                 x1, y1 = map(float, coordinates[0][1:].split(', '))
                 x2, y2 = map(float, coordinates[1][1:-1].split(', '))
-                rectangles.append(([(x1, y1), (x2, y2)]))
+                rectangles.append([(x1, y1), (x2, y2)])
 
     return rectangles
 
@@ -35,6 +36,10 @@ def draw_rectangles(rectangles):
     plt.grid(visible=False)
     plt.show()
 
-input_file = '/home/fabubaker/Desktop/printed_tree.txt'
-rectangles = parse_input_file(input_file)
-draw_rectangles(rectangles)
+# Check if an input file path is provided as a command line argument
+if len(sys.argv) > 1:
+    input_file = sys.argv[1]
+    rectangles = parse_input_file(input_file)
+    draw_rectangles(rectangles)
+else:
+    print("Please provide the path to the input file as a command line argument.")

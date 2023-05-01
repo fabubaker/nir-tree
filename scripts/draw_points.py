@@ -1,3 +1,4 @@
+import sys
 import matplotlib.pyplot as plt
 import matplotlib.patches as patches
 from matplotlib.collections import PatchCollection
@@ -28,7 +29,7 @@ def draw_points_and_rectangles(points, rectangles):
     # Draw points using PathCollection
     x_points = [p[0] for p in points]
     y_points = [p[1] for p in points]
-    ax.scatter(x_points, y_points, color='red')
+    ax.scatter(x_points, y_points, color='red', s=0.1)
 
     plt.xlabel('X')
     plt.ylabel('Y')
@@ -36,11 +37,10 @@ def draw_points_and_rectangles(points, rectangles):
     plt.grid(True)
     plt.show()
 
-# Input file path
-file_path = '/home/fabubaker/Desktop/printed_tree.txt'
-
-# Parse points and rectangles from input file
-points, rectangles = parse_input_file(file_path)
-
-# Draw points and rectangles
-draw_points_and_rectangles(points, rectangles)
+# Check if an input file path is provided as a command line argument
+if len(sys.argv) > 1:
+    file_path = sys.argv[1]
+    points, rectangles = parse_input_file(file_path)
+    draw_points_and_rectangles(points, rectangles)
+else:
+    print("Please provide the path to the input file as a command line argument.")
