@@ -34,7 +34,7 @@ def draw_points_and_rectangles(points, rectangles):
     plt.xlabel('X')
     plt.ylabel('Y')
     plt.title('Points and Rectangles')
-    plt.grid(True)
+    plt.grid(False)
     plt.show()
 
 # Check if an input file path is provided as a command line argument
