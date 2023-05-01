@@ -36,6 +36,7 @@
 #include <utility>
 #include <variant>
 #include <vector>
+#include <fstream>
 
 namespace nirtreedisk {
 struct BranchPartitionStrategy {};
@@ -2443,9 +2444,13 @@ void printPackedNodes(
         offset += sizeof(tree_node_handle);
 
         auto poly_pin = allocator->get_tree_node<InlineUnboundedIsotheticPolygon>(handle);
+        auto poly = poly_pin->materialize_polygon();
 
-        // We really don't get here that often, decide what to do later...
-        abort();
+        if (child->get_type() == REPACKED_LEAF_NODE) {
+          for (const Rectangle &rect: poly.basicRectangles) {
+            printFile << rect << std::endl;
+          }
+        }
       } else {
         for (size_t j = 0; j < rect_count; j++) {
           Rectangle *rect = (Rectangle *)(data + offset);
