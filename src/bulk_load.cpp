@@ -181,26 +181,22 @@ void fill_branch(
 
   // Add up to branch factor items to it
   for (uint64_t i = 0; i < branch_factor; i++) {
-    tree_node_handle child_handle =
-        node_point_pairs[offset++].second;
+    tree_node_handle child_handle = node_point_pairs[offset++].second;
     Rectangle bbox;
+
     // Adjust parent
     if (child_handle.get_type() == LEAF_NODE) {
-      auto node =
-          allocator->get_tree_node<LN>(
-              child_handle);
+      auto node = allocator->get_tree_node<LN>(child_handle);
       node->parent = node_handle;
       bbox = node->boundingBox();
     } else {
-      auto node =
-          allocator->get_tree_node<BN>(
-              child_handle);
+      auto node = allocator->get_tree_node<BN>(child_handle);
       node->parent = node_handle;
       bbox = node->boundingBox();
     }
 
-    bb_and_handles.push_back(std::make_pair(
-        bbox, child_handle));
+    std::cout << bbox << std::endl;
+    bb_and_handles.push_back(std::make_pair(bbox, child_handle));
 
     rstartreedisk::Branch b;
     b.child = child_handle;
