@@ -194,8 +194,7 @@ void fill_branch(
       node->parent = node_handle;
       bbox = node->boundingBox();
     }
-
-    std::cout << bbox << std::endl;
+    
     bb_and_handles.push_back(std::make_pair(bbox, child_handle));
 
     rstartreedisk::Branch b;
