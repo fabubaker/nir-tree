@@ -239,6 +239,7 @@ public:
 
   std::optional<Point> nextPoint();
   void reset();
+  void generate();
 };
 
 static void fileGoodOrDie(std::fstream &file) {
@@ -453,6 +454,18 @@ std::optional<Point> PointGenerator<T>::nextPoint(BenchTag::FileBackedReadChunks
 template <typename T>
 std::optional<Point> PointGenerator<T>::nextPoint() {
   return nextPoint(BenchDetail::getBenchTag<T>{});
+}
+
+// Materialize all points immediately
+template <typename T>
+void PointGenerator<T>::generate() {
+  if (!pointBuffer.empty()) {
+    std::cout << "Already generated! Exiting..." << std::endl;
+    abort();
+  }
+
+  this->nextPoint();
+  this->reset();
 }
 
 static std::vector<Rectangle> generateRectangles(size_t benchmarkSize, unsigned seed, unsigned rectanglesSize, size_t pointsPerRectangle) {
@@ -804,6 +817,9 @@ runBench(PointGenerator<T> &pointGen, std::map<std::string, uint64_t> &configU, 
   unsigned totalSearches = 0;
   double totalRangeSearches = 0.0;
   unsigned totalDeletes = 0.0;
+
+  // Populate pointGen buffers with points
+  pointGen.generate();
 
   // Initialize the index
   Index *spatialIndex;
