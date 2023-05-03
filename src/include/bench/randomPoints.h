@@ -468,7 +468,7 @@ void PointGenerator<T>::generate() {
   this->reset();
 }
 
-static std::vector<Rectangle> generateRectangles(size_t benchmarkSize, unsigned seed, unsigned rectanglesSize, size_t pointsPerRectangle) {
+static std::vector<Rectangle> generateRectangles(size_t benchmarkSize, unsigned seed, unsigned numRectangles, size_t pointsPerRectangle) {
   std::default_random_engine generator(seed + benchmarkSize);
   std::uniform_real_distribution<double> pointDist(0.0, 1.0);
 
@@ -476,13 +476,12 @@ static std::vector<Rectangle> generateRectangles(size_t benchmarkSize, unsigned 
   Point ll;
   Point ur;
   std::vector<Rectangle> rectangles;
-  rectangles.reserve(rectanglesSize);
+  rectangles.reserve(numRectangles);
   // Compute the dimensions-th root of a percentage that will give rectangles that in expectation return "pointsPerRectangle" points
-  double requiredPercentage = pointsPerRectangle / (double)benchmarkSize;
+  double requiredPercentage = pointsPerRectangle / (double) benchmarkSize;
   double root = std::pow(requiredPercentage, 1.0 / (double)dimensions);
-  std::cout << "Beginning initialization of " << rectanglesSize << " rectangles with " << requiredPercentage << "% and " << root << "..." << std::endl;
-  for (unsigned i = 0; i < rectanglesSize; ++i) {
-    Rectangle rect;
+  std::cout << "Beginning initialization of " << numRectangles << " rectangles with " << requiredPercentage << "% and " << root << "..." << std::endl;
+  for (unsigned i = 0; i < numRectangles; ++i) {
     // Generate a new point and then create a square from it that covers 5% of the total area
     for (unsigned d = 0; d < dimensions; ++d) {
       ll[d] = pointDist(generator);
