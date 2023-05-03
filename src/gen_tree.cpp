@@ -54,7 +54,6 @@ void generate_tree(std::map<std::string, size_t> &configU, std::map<std::string,
 
     PointGenerator<BenchTypeClasses::Zipf> points;
     while ((next = points.nextPoint())) {
-      std::cout << next.value() << std::endl;
       all_points.push_back(next.value());
     }
   } else if (configU["distribution"] == GAUSS) {
@@ -130,11 +129,6 @@ void generate_tree(std::map<std::string, size_t> &configU, std::map<std::string,
   } else {
     abort();
   }
-
-  std::mt19937 g;
-  g.seed(0);
-
-  std::shuffle(all_points.begin(), all_points.end(), g);
 
   unsigned totalSearches = 0;
   double totalTimeSearches = 0.0;
