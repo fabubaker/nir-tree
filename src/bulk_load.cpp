@@ -156,15 +156,15 @@ void fill_branch(
 
 template <>
 void fill_branch(
-    rstartreedisk::RStarTreeDisk<5, 9> *treeRef,
-    pinned_node_ptr<rstartreedisk::BranchNode<5, 9>> branch_node,
+    rstartreedisk::RStarTreeDisk<5, R_STAR_FANOUT> *treeRef,
+    pinned_node_ptr<rstartreedisk::BranchNode<5, R_STAR_FANOUT>> branch_node,
     tree_node_handle node_handle,
     std::vector<std::pair<Point, tree_node_handle>> &node_point_pairs,
     uint64_t &offset,
     unsigned branch_factor,
-    rstartreedisk::LeafNode<5, 9> *leaf_type) {
-  using LN = rstartreedisk::LeafNode<5, 9>;
-  using BN = rstartreedisk::BranchNode<5, 9>;
+    rstartreedisk::LeafNode<5, R_STAR_FANOUT> *leaf_type) {
+  using LN = rstartreedisk::LeafNode<5, R_STAR_FANOUT>;
+  using BN = rstartreedisk::BranchNode<5, R_STAR_FANOUT>;
 
   std::vector<std::pair<Rectangle, tree_node_handle>> bb_and_handles;
   tree_node_allocator *allocator = treeRef->node_allocator_.get();
@@ -500,20 +500,24 @@ std::vector<tree_node_handle> str_packing_branch(
   nirtreedisk::BranchNode<5, 9, nirtreedisk::ExperimentalStrategy>
       *targ2 = nullptr;
 
-  return str_packing_branch(tree, child_nodes, branch_factor, targ,
-                            targ2);
+  return str_packing_branch(
+    tree, child_nodes, branch_factor, targ,targ2
+  );
 }
 
 template <>
 std::vector<tree_node_handle> str_packing_branch(
-    rstartreedisk::RStarTreeDisk<5, 9> *tree,
+    rstartreedisk::RStarTreeDisk<5, R_STAR_FANOUT> *tree,
     std::vector<tree_node_handle> &child_nodes,
-    unsigned branch_factor) {
-  rstartreedisk::LeafNode<5, 9> *targ = nullptr;
-  rstartreedisk::BranchNode<5, 9> *targ2 = nullptr;
+    unsigned branch_factor
+) {
+  rstartreedisk::LeafNode<5, R_STAR_FANOUT> *targ = nullptr;
+  rstartreedisk::BranchNode<5, R_STAR_FANOUT> *targ2 = nullptr;
 
-  return str_packing_branch(tree, child_nodes, branch_factor, targ,
-                            targ2);
+
+  return str_packing_branch(
+    tree, child_nodes, branch_factor, targ, targ2
+  );
 }
 
 template <typename T, typename LN, typename BN>
@@ -692,21 +696,23 @@ std::vector<tree_node_handle> str_packing_leaf(
   nirtreedisk::BranchNode<5, 9, nirtreedisk::ExperimentalStrategy>
       *targ2 = nullptr;
 
-  return str_packing_leaf(tree, begin, end, branch_factor,
-                          targ, targ2);
+  return str_packing_leaf(
+    tree, begin, end, branch_factor,targ, targ2
+  );
 }
 
 template <>
 std::vector<tree_node_handle> str_packing_leaf(
-    rstartreedisk::RStarTreeDisk<5, 9> *tree,
+    rstartreedisk::RStarTreeDisk<5, R_STAR_FANOUT> *tree,
     std::vector<Point>::iterator begin,
     std::vector<Point>::iterator end,
     unsigned branch_factor) {
-  rstartreedisk::LeafNode<5, 9> *targ = nullptr;
-  rstartreedisk::BranchNode<5, 9> *targ2 = nullptr;
+  rstartreedisk::LeafNode<5, R_STAR_FANOUT> *targ = nullptr;
+  rstartreedisk::BranchNode<5, R_STAR_FANOUT> *targ2 = nullptr;
 
-  return str_packing_leaf(tree, begin, end, branch_factor,
-                          targ, targ2);
+  return str_packing_leaf(
+    tree, begin, end, branch_factor,targ, targ2
+  );
 }
 
 std::vector<uint64_t> find_bounding_lines(
@@ -955,19 +961,21 @@ void bulk_load_tree(
 
 template <>
 void bulk_load_tree(
-    rstartreedisk::RStarTreeDisk<5, 9> *tree,
+    rstartreedisk::RStarTreeDisk<5, R_STAR_FANOUT> *tree,
     std::map<std::string, size_t> &configU,
     std::vector<Point>::iterator begin,
     std::vector<Point>::iterator end,
-    unsigned max_branch_factor) {
-
+    unsigned max_branch_factor
+) {
   /* Start measuring bulk load time */
   std::chrono::high_resolution_clock::time_point begin_time = std::chrono::high_resolution_clock::now();
-  std::vector<tree_node_handle> leaves = str_packing_leaf(tree, begin, end,9);
-  std::vector<tree_node_handle> branches = str_packing_branch(tree, leaves, 9);
+  std::vector<tree_node_handle> leaves = str_packing_leaf(tree, begin, end,max_branch_factor);
+  std::vector<tree_node_handle> branches = str_packing_branch(tree, leaves, max_branch_factor);
 
+  std::cout << sizeof(rstartreedisk::BranchNode<5, R_STAR_FANOUT>) << std::endl;
+  std::cout << sizeof(Point) << std::endl;
   while (branches.size() > 1) {
-    branches = str_packing_branch(tree, branches, 9);
+    branches = str_packing_branch(tree, branches, max_branch_factor);
   }
   tree->root = branches.at(0);
 
@@ -978,7 +986,7 @@ void bulk_load_tree(
 
   tree->stat(); // Print tree stats BEFORE repacking
 
-  auto tree_ptr = (rstartreedisk::RStarTreeDisk<5, 9> *) tree;
+  auto tree_ptr = (rstartreedisk::RStarTreeDisk<5, R_STAR_FANOUT> *) tree;
   std::string fname = "repacked_rstar.txt";
 
   auto new_file_allocator = std::make_unique<tree_node_allocator>(configU["buffer_pool_memory"],fname);
@@ -987,7 +995,7 @@ void bulk_load_tree(
   /* Start measuring repack time */
   begin_time = std::chrono::high_resolution_clock::now();
 
-  auto repacked_handle = rstartreedisk::repack_subtree<5, 9>(
+  auto repacked_handle = rstartreedisk::repack_subtree<5, R_STAR_FANOUT>(
     tree_ptr->root, tree_ptr->node_allocator_.get(), new_file_allocator.get()
   );
   tree_ptr->root = repacked_handle;

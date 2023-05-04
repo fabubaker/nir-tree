@@ -61,10 +61,8 @@ typedef std::variant<Branch, Point> NodeEntry;
 template <int min_branch_factor, int max_branch_factor>
 class LeafNode {
 private:
-  void searchSub(const Point &requestedPoint,
-                 std::vector<Point> &accumulator);
-  void searchSub(const Rectangle &rectangle,
-                 std::vector<Point> &accumulator);
+  void searchSub(const Point &requestedPoint, std::vector<Point> &accumulator);
+  void searchSub(const Rectangle &rectangle, std::vector<Point> &accumulator);
 
 public:
   RStarTreeDisk<min_branch_factor, max_branch_factor> *treeRef;
@@ -132,10 +130,8 @@ public:
 template <int min_branch_factor, int max_branch_factor>
 class BranchNode {
 private:
-  void searchSub(const Point &requestedPoint,
-                 std::vector<Point> &accumulator);
-  void searchSub(const Rectangle &rectangle,
-                 std::vector<Point> &accumulator);
+  void searchSub(const Point &requestedPoint, std::vector<Point> &accumulator);
+  void searchSub(const Rectangle &rectangle, std::vector<Point> &accumulator);
 
 public:
   RStarTreeDisk<min_branch_factor, max_branch_factor> *treeRef;

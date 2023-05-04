@@ -38,10 +38,9 @@ buffer_pool::~buffer_pool() {
 }
 
 void buffer_pool::initialize() {
-    backing_file_fd_ = open( backing_file_name_.c_str(), O_CREAT | O_RDWR | O_DIRECT,
-            S_IRUSR | S_IWUSR );
+    backing_file_fd_ = open(backing_file_name_.c_str(),O_CREAT | O_RDWR | O_DIRECT, S_IRUSR | S_IWUSR);
 
-    assert( backing_file_fd_ != -1 );
+    assert(backing_file_fd_ != -1);
 
     // Step 1: Read every data page we have, load 'em into memory
     size_t file_offset = 0;

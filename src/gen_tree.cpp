@@ -117,9 +117,9 @@ void generate_tree(std::map<std::string, size_t> &configU, std::map<std::string,
         */
     spatialIndex = tree;
   } else if (configU["tree"] == R_STAR_TREE) {
-    rstartreedisk::RStarTreeDisk<5, 9> *tree = new rstartreedisk::RStarTreeDisk<5, 9>(configU["buffer_pool_memory"], backing_file);
+    rstartreedisk::RStarTreeDisk<5, R_STAR_FANOUT> *tree = new rstartreedisk::RStarTreeDisk<5, R_STAR_FANOUT>(configU["buffer_pool_memory"], backing_file);
     std::cout << "Bulk Loading..." << std::endl;
-    bulk_load_tree(tree, configU, all_points.begin(), all_points.begin() + cut_off_bulk_load, 9);
+    bulk_load_tree(tree, configU, all_points.begin(), all_points.begin() + cut_off_bulk_load, R_STAR_FANOUT);
     std::cout << "Created R*Tree" << std::endl;
     spatialIndex = tree;
 

@@ -39,13 +39,13 @@ void fill_branch(
 
 template <>
 void fill_branch(
-    rstartreedisk::RStarTreeDisk<5, 9> *treeRef,
-    pinned_node_ptr<rstartreedisk::BranchNode<5, 9>> branch_node,
+    rstartreedisk::RStarTreeDisk<5, R_STAR_FANOUT> *treeRef,
+    pinned_node_ptr<rstartreedisk::BranchNode<5, R_STAR_FANOUT>> branch_node,
     tree_node_handle node_handle,
     std::vector<std::pair<Point, tree_node_handle>> &node_point_pairs,
     uint64_t &offset,
     unsigned branch_factor,
-    rstartreedisk::LeafNode<5, 9> *leaf_type);
+    rstartreedisk::LeafNode<5, R_STAR_FANOUT> *leaf_type);
 
 template <typename T>
 std::vector<tree_node_handle> str_packing_branch(
@@ -81,7 +81,7 @@ std::vector<tree_node_handle> str_packing_branch(
 
 template <>
 std::vector<tree_node_handle> str_packing_branch(
-    rstartreedisk::RStarTreeDisk<5, 9> *tree,
+    rstartreedisk::RStarTreeDisk<5, R_STAR_FANOUT> *tree,
     std::vector<tree_node_handle> &child_nodes,
     unsigned branch_factor);
 
@@ -119,7 +119,7 @@ std::vector<tree_node_handle> str_packing_leaf(
 
 template <>
 std::vector<tree_node_handle> str_packing_leaf(
-    rstartreedisk::RStarTreeDisk<5, 9> *tree,
+    rstartreedisk::RStarTreeDisk<5, R_STAR_FANOUT> *tree,
     std::vector<Point>::iterator begin,
     std::vector<Point>::iterator end,
     unsigned branch_factor);
@@ -157,7 +157,7 @@ void bulk_load_tree(
 
 template <>
 void bulk_load_tree(
-    rstartreedisk::RStarTreeDisk<5, 9> *tree,
+    rstartreedisk::RStarTreeDisk<5, R_STAR_FANOUT> *tree,
     std::map<std::string, size_t> &configU,
     std::vector<Point>::iterator begin,
     std::vector<Point>::iterator end,
