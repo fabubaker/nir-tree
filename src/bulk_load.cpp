@@ -994,7 +994,8 @@ void bulk_load_tree(
   begin_time = std::chrono::high_resolution_clock::now();
 
   auto repacked_handle = rstartreedisk::repack_subtree<5, 9>(
-    tree_ptr->root, tree_ptr->node_allocator_.get(), new_file_allocator.get());
+    tree_ptr->root, tree_ptr->node_allocator_.get(), new_file_allocator.get()
+  );
   tree_ptr->root = repacked_handle;
 
   end_time = std::chrono::high_resolution_clock::now();

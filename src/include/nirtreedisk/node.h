@@ -2559,28 +2559,28 @@ tree_node_handle repack_subtree(tree_node_handle handle, tree_node_allocator *ex
 
   switch (handle.get_type()) {
     case LEAF_NODE: {
-      auto leaf_node =
-              existing_allocator->get_tree_node<LEAF_NODE_CLASS_TYPES>(handle);
+      auto leaf_node = existing_allocator->get_tree_node<LEAF_NODE_CLASS_TYPES>(handle);
       auto new_handle = leaf_node->repack(new_allocator);
-      existing_allocator->free(handle, sizeof(
-              LEAF_NODE_CLASS_TYPES));
+      existing_allocator->free(handle, sizeof(LEAF_NODE_CLASS_TYPES));
 
       if (handle.get_associated_poly_is_compressed()) {
         new_handle.set_associated_poly_is_compressed();
       }
+
       return new_handle;
     }
     case BRANCH_NODE: {
-      auto branch_node =
-              existing_allocator->get_tree_node<BRANCH_NODE_CLASS_TYPES>(handle);
+      auto branch_node = existing_allocator->get_tree_node<BRANCH_NODE_CLASS_TYPES>(handle);
+
       // Repack all my children, adjust my handles
       for (unsigned i = 0; i < branch_node->cur_offset_; i++) {
         auto child_handle = branch_node->entries.at(i).child;
-        auto new_child_handle =
-        repack_subtree<min_branch_factor, max_branch_factor, strategy>(child_handle,
-                existing_allocator, new_allocator);
+        auto new_child_handle = repack_subtree<min_branch_factor, max_branch_factor, strategy>(
+          child_handle, existing_allocator, new_allocator
+        );
         branch_node->entries.at(i).child = new_child_handle;
       }
+
       auto new_handle = branch_node->repack(existing_allocator, new_allocator);
 
       // Children nodes want to know who their parent is, but
@@ -2598,8 +2598,7 @@ tree_node_handle repack_subtree(tree_node_handle handle, tree_node_allocator *ex
               }
               */
 
-      existing_allocator->free(handle, sizeof(
-              BRANCH_NODE_CLASS_TYPES));
+      existing_allocator->free(handle, sizeof(BRANCH_NODE_CLASS_TYPES));
 
       // If the polygon associated with our handle was compressed, it will still be compressed.
       // Mark that accordingly.
@@ -2615,15 +2614,13 @@ tree_node_handle repack_subtree(tree_node_handle handle, tree_node_allocator *ex
     }
       // For repacked leaf nodes, just transfer the data over.
     case REPACKED_LEAF_NODE: {
-      auto leaf_node =
-              existing_allocator->get_tree_node<packed_node>(handle);
+      auto leaf_node = existing_allocator->get_tree_node<packed_node>(handle);
       char *data = leaf_node->buffer_;
       decode_entry_count_and_offset_packed_node(data);
-      uint16_t node_size = sizeof(unsigned) + sizeof(Point) *
-                                              count;
-      auto alloc_data =
-              new_allocator->create_new_tree_node<packed_node>(
-                      node_size, NodeHandleType(REPACKED_LEAF_NODE));
+      uint16_t node_size = sizeof(unsigned) + sizeof(Point) * count;
+      auto alloc_data = new_allocator->create_new_tree_node<packed_node>(
+        node_size, NodeHandleType(REPACKED_LEAF_NODE)
+      );
       memcpy(alloc_data.first->buffer_, data, node_size);
 
       if (handle.get_associated_poly_is_compressed()) {
@@ -2651,22 +2648,21 @@ tree_node_handle repack_subtree(tree_node_handle handle, tree_node_allocator *ex
       // NODE_ENTRY_COUNT (unsigned) | CHILD_HANDLE (tree_node_handle) | RECT_COUNT (unsigned)
       // | RECTANGLE (rectangle * COUNT )
 
-      auto branch_node =
-              existing_allocator->get_tree_node<packed_node>(handle);
+      auto branch_node = existing_allocator->get_tree_node<packed_node>(handle);
       char *buffer = branch_node->buffer_;
       decode_entry_count_and_offset_packed_node(buffer);
 
       for (unsigned i = 0; i < count; i++) {
-
         // repack this child, change handle
 
         tree_node_handle *child = (tree_node_handle *)(buffer + offset);
         assert(child);
         bool poly_was_compressed = child->get_associated_poly_is_compressed();
-        auto new_child_handle =
-        repack_subtree<min_branch_factor, max_branch_factor, strategy>(
-                *child, existing_allocator, new_allocator);
+        auto new_child_handle = repack_subtree<min_branch_factor, max_branch_factor, strategy>(
+          *child, existing_allocator, new_allocator
+        );
         *child = new_child_handle;
+
         if (poly_was_compressed) {
           assert(child->get_associated_poly_is_compressed());
         }
@@ -2712,9 +2708,9 @@ tree_node_handle repack_subtree(tree_node_handle handle, tree_node_allocator *ex
       }
 
       // memcpy the crap in
-      auto alloc_data =
-              new_allocator->create_new_tree_node<packed_node>(
-                      offset, NodeHandleType(REPACKED_BRANCH_NODE));
+      auto alloc_data = new_allocator->create_new_tree_node<packed_node>(
+              offset, NodeHandleType(REPACKED_BRANCH_NODE)
+      );
 
       memcpy(alloc_data.first->buffer_, branch_node->buffer_, offset);
 
