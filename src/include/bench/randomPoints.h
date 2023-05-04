@@ -767,6 +767,47 @@ static std::vector<Rectangle> generateGaiaRectangles() {
   return rectangles;
 }
 
+// Idea:
+// With uniform probability, pick a generated point. It is highly likely that this point
+// belongs to the axis with the most number of points. Create a bounding box with a constant
+// area using that point.
+static std::vector<Rectangle> generateZipfRectangles(
+  std::vector<Point> points, size_t benchmarkSize, unsigned seed,
+  size_t numRectangles, size_t numElements
+) {
+  std::default_random_engine generator(seed + benchmarkSize);
+  std::uniform_int_distribution<int> pointDist(0, points.size() - 1);
+  std::vector<Rectangle> rectangles;
+  // For every dimension other than the first one, zipf generates values
+  // between 0 and 1. Therefore, length below has to be in that range.
+  const double length = 0.3;
+
+  for (unsigned i = 0; i < numRectangles; ++i) {
+    int pointIndex = pointDist(generator);
+    Point ll = points[pointIndex];
+    Point ur = Point(ll);
+
+    // Create a rectangle with the appropriate lengths
+    ur[0] += 1000;
+    for (unsigned d = 1; d < dimensions; d++) {
+      ur[d] += length;
+    }
+
+    Rectangle rectangle(ll, ur);
+    rectangles.emplace_back(rectangle);
+  }
+
+//  for (auto r: rectangles) {
+//    std::cout << "grep this: " << r << std::endl;
+//  }
+//
+//  for (auto p: points) {
+//    std::cout << "grep this: " << p << std::endl;
+//  }
+
+  return rectangles;
+}
+
 static bool is_already_loaded(std::map<std::string, uint64_t> &configU, Index *spatial_index) {
   if (configU["tree"] == NIR_TREE) {
     auto tree = (nirtreedisk::NIRTreeDisk<5, 9, nirtreedisk::ExperimentalStrategy> *) spatial_index;
@@ -870,8 +911,11 @@ runBench(PointGenerator<T> &pointGen, std::map<std::string, uint64_t> &configU, 
     configU["rectanglescount"] = GaiaQuerySize;
     searchRectangles = generateGaiaRectangles();
   } else if (configU["distribution"] == ZIPF) {
-    // This is not how we should generate rectangles for ZIPF.
-    searchRectangles = generateRectangles(configU["size"], configU["seed"], configU["rectanglescount"], configU["points_per_rectangle"]);
+    searchRectangles = generateZipfRectangles(
+      pointGen.pointBuffer, configU["size"],
+      configU["seed"], configU["rectanglescount"],
+      configU["num_elements"]
+    );
   } else {
     // Do nothing, rectangle searches are disabled for now...
   }
