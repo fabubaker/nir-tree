@@ -83,37 +83,30 @@ void fill_branch(
     uint64_t &offset,
     unsigned branch_factor,
     nirtreedisk::LeafNode<5, 9, nirtreedisk::ExperimentalStrategy> *leaf_type) {
-  using LN =
-      nirtreedisk::LeafNode<5, 9, nirtreedisk::ExperimentalStrategy>;
-  using BN =
-      nirtreedisk::BranchNode<5, 9, nirtreedisk::ExperimentalStrategy>;
+  using LN = nirtreedisk::LeafNode<5, 9, nirtreedisk::ExperimentalStrategy>;
+  using BN = nirtreedisk::BranchNode<5, 9, nirtreedisk::ExperimentalStrategy>;
 
-  std::vector<std::pair<IsotheticPolygon, tree_node_handle>>
-      fixed_bb_and_handles;
+  std::vector<std::pair<IsotheticPolygon, tree_node_handle>> fixed_bb_and_handles;
   tree_node_allocator *allocator = treeRef->node_allocator_.get();
 
   // Add up to branch factor items to it
   for (uint64_t i = 0; i < branch_factor; i++) {
-    tree_node_handle child_handle =
-        node_point_pairs[offset++].second;
+    tree_node_handle child_handle = node_point_pairs[offset++].second;
     Rectangle bbox;
     // Adjust parent
     if (child_handle.get_type() == LEAF_NODE) {
-      auto node =
-          allocator->get_tree_node<LN>(
-              child_handle);
+      auto node = allocator->get_tree_node<LN>(
+              child_handle
+      );
       node->parent = node_handle;
       bbox = node->boundingBox();
     } else {
-      auto node =
-          allocator->get_tree_node<BN>(
-              child_handle);
+      auto node = allocator->get_tree_node<BN>(child_handle);
       node->parent = node_handle;
       bbox = node->boundingBox();
     }
 
-    fixed_bb_and_handles.push_back(std::make_pair(
-        IsotheticPolygon(bbox), child_handle));
+    fixed_bb_and_handles.push_back(std::make_pair(IsotheticPolygon(bbox), child_handle));
 
     if (offset == node_point_pairs.size()) {
       break;
@@ -123,16 +116,15 @@ void fill_branch(
   for (uint64_t i = 0; i < fixed_bb_and_handles.size(); i++) {
     for (uint64_t j = i + 1; j < fixed_bb_and_handles.size(); j++) {
 
-      std::vector<Rectangle> &existing_rects_a =
-          fixed_bb_and_handles.at(i).first.basicRectangles;
-      std::vector<Rectangle> &existing_rects_b =
-          fixed_bb_and_handles.at(j).first.basicRectangles;
+      std::vector<Rectangle> &existing_rects_a = fixed_bb_and_handles.at(i).first.basicRectangles;
+      std::vector<Rectangle> &existing_rects_b = fixed_bb_and_handles.at(j).first.basicRectangles;
       make_all_rects_disjoint(
           treeRef,
           existing_rects_a,
           fixed_bb_and_handles.at(i).second,
           existing_rects_b,
-          fixed_bb_and_handles.at(j).second);
+          fixed_bb_and_handles.at(j).second
+      );
     }
   }
 
@@ -141,21 +133,19 @@ void fill_branch(
   for (uint64_t i = 0; i < fixed_bb_and_handles.size(); i++) {
     nirtreedisk::Branch b;
     b.child = fixed_bb_and_handles.at(i).second;
-    IsotheticPolygon &constructed_poly =
-        fixed_bb_and_handles.at(i).first;
-    if (constructed_poly.basicRectangles.size() <=
-        MAX_RECTANGLE_COUNT) {
+    IsotheticPolygon &constructed_poly = fixed_bb_and_handles.at(i).first;
+    if (constructed_poly.basicRectangles.size() <= MAX_RECTANGLE_COUNT) {
       b.boundingPoly = InlineBoundedIsotheticPolygon();
       std::get<InlineBoundedIsotheticPolygon>(b.boundingPoly).push_polygon_to_disk(constructed_poly);
     } else {
       unsigned rect_size = std::min(
           InlineUnboundedIsotheticPolygon::maximum_possible_rectangles_on_first_page(),
-          constructed_poly.basicRectangles.size());
-      auto alloc_data =
-          allocator->create_new_tree_node<InlineUnboundedIsotheticPolygon>(
-              compute_sizeof_inline_unbounded_polygon(
-                  rect_size),
-              NodeHandleType(BIG_POLYGON));
+          constructed_poly.basicRectangles.size()
+      );
+      auto alloc_data = allocator->create_new_tree_node<InlineUnboundedIsotheticPolygon>(
+    compute_sizeof_inline_unbounded_polygon(rect_size),
+    NodeHandleType(BIG_POLYGON)
+      );
       new (&(*alloc_data.first)) InlineUnboundedIsotheticPolygon(allocator, rect_size);
       alloc_data.first->push_polygon_to_disk(constructed_poly);
       b.boundingPoly = alloc_data.second;
@@ -282,7 +272,8 @@ std::vector<tree_node_handle> str_packing_branch(
         node_point_pairs,
         offset,
         branch_factor,
-        (LN *)nullptr);
+        (LN *) nullptr
+    );
 
     branches.push_back(branch_handle);
   }
@@ -532,8 +523,8 @@ std::vector<tree_node_handle> str_packing_leaf(
     std::vector<Point>::iterator end,
     unsigned branch_factor,
     LN *ln_type,
-    BN *bn_type) {
-
+    BN *bn_type
+) {
   uint64_t count = (end - begin);
   uint64_t P = count / branch_factor;
   if (count % branch_factor != 0) {
@@ -937,7 +928,8 @@ void bulk_load_tree(
     std::map<std::string, size_t> &configU,
     std::vector<Point>::iterator begin,
     std::vector<Point>::iterator end,
-    unsigned max_branch_factor) {
+    unsigned max_branch_factor
+) {
   // Keep in mind there is a 0th level, so floor is correct
   uint64_t num_els = (end - begin);
   std::cout << "Num els: " << num_els << std::endl;
@@ -948,8 +940,10 @@ void bulk_load_tree(
   auto tree_ptr = tree;
 
   std::chrono::high_resolution_clock::time_point begin_time = std::chrono::high_resolution_clock::now();
-  auto ret = quad_tree_style_load(tree_ptr, begin, end,
-                                  max_branch_factor, 0, max_depth, nullptr);
+  auto ret = quad_tree_style_load(
+  tree_ptr, begin, end,
+      max_branch_factor, 0, max_depth, nullptr
+  );
   tree->root = ret.first;
   std::chrono::high_resolution_clock::time_point end_time = std::chrono::high_resolution_clock::now();
   std::chrono::duration<double> delta = std::chrono::duration_cast<std::chrono::duration<double>>(end_time - begin_time);
