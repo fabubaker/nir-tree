@@ -923,7 +923,6 @@ runBench(PointGenerator<T> &pointGen, std::map<std::string, uint64_t> &configU, 
   std::cout << "Search OK." << std::endl;
 
 #endif
-  std::shuffle(searchRectangles.begin(), searchRectangles.end(), g);
 
 #if 0
 	// Search for rectangles
