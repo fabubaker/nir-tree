@@ -83,7 +83,7 @@ public:
 // accidentally specify a type as the size during allocations and cause
 // amazing memory problems
 struct NodeHandleType {
-    explicit NodeHandleType( uint8_t type ) :
+    explicit NodeHandleType( uint8_t type ):
        type_( type ) { } 
 
     uint8_t type_;
@@ -172,9 +172,8 @@ public:
         type_ = type.type_;
     }
 
-    friend std::ostream& operator<<(std::ostream &os, const
-            tree_node_handle &handle ) {
-        if( handle.page_location_.has_value() ) {
+    friend std::ostream& operator<<(std::ostream &os, const tree_node_handle &handle ) {
+        if ( handle.page_location_.has_value() ) {
             os << "{ PageID: " << handle.page_location_.value().page_id_
                 << ", Offset: " << handle.page_location_.value().offset_ << "}";
         } else {
@@ -189,7 +188,6 @@ private:
     // end of this handle.
     uint8_t type_;
     uint8_t associated_poly_is_compressed_;
-
 };
 
 static_assert( sizeof(tree_node_handle) == 16 );
@@ -229,6 +227,7 @@ public:
         for (auto iter = free_list_.begin(); iter != free_list_.end(); iter++) {
             auto alloc_location = *iter;
 
+            std::cout << "alloc_location node size: " << alloc_location.second << std::endl;
             if (alloc_location.second < node_size) {
                 continue;
             }
@@ -245,11 +244,12 @@ public:
             // Can't use that symbol here because it would be recursive
             // includes. So instead I static assert it in that file and
             // use the constant here.
-            if( remainder >= 272 ) {
+            if (remainder >= 272) {
                 uint16_t new_offset = alloc_location.first.get_offset() + node_size;
                 tree_node_handle split_handle(
                         alloc_location.first.get_page_id(), new_offset,
-                        type_code );
+                      type_code
+                );
                 free_list_.push_back( std::make_pair( split_handle,remainder));
             }
 
