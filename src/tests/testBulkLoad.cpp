@@ -61,7 +61,7 @@ std::vector<Point> generate_points_gauss( unsigned size ) {
     return all_points;
 }
 
-void generate_tree(nirtreedisk::NIRTreeDisk<5,9,nirtreedisk::ExperimentalStrategy> *tree, std::vector<Point> &all_points, unsigned branch_factor) {
+void generate_tree(nirtreedisk::NIRTreeDisk<5,NIR_FANOUT,nirtreedisk::ExperimentalStrategy> *tree, std::vector<Point> &all_points, unsigned branch_factor) {
     double bulk_load_pct = 1.0;
     unsigned size = (unsigned) all_points.size();
     uint64_t cut_off_bulk_load = std::floor(bulk_load_pct*all_points.size());
@@ -75,7 +75,7 @@ void generate_tree(nirtreedisk::NIRTreeDisk<5,9,nirtreedisk::ExperimentalStrateg
     tree->root = ret.first;
 }
 
-int count_underfill(tree_node_handle branch, nirtreedisk::NIRTreeDisk<5,9,nirtreedisk::ExperimentalStrategy> *tree) {
+int count_underfill(tree_node_handle branch, nirtreedisk::NIRTreeDisk<5,NIR_FANOUT,nirtreedisk::ExperimentalStrategy> *tree) {
     if (branch.get_type() == LEAF_NODE || branch.get_type() == REPACKED_LEAF_NODE) {
         auto leaf_node = tree->get_leaf_node(branch);
         if (leaf_node->cur_offset_ != 9) {
@@ -97,7 +97,7 @@ int count_underfill(tree_node_handle branch, nirtreedisk::NIRTreeDisk<5,9,nirtre
     return 0;
 }
 
-void check_packing(nirtreedisk::NIRTreeDisk<5,9,nirtreedisk::ExperimentalStrategy> *tree) {
+void check_packing(nirtreedisk::NIRTreeDisk<5,NIR_FANOUT,nirtreedisk::ExperimentalStrategy> *tree) {
     tree_node_handle root = tree->root;
     int count = count_underfill(root, tree);
     assert(count <= 1);
@@ -106,8 +106,8 @@ void check_packing(nirtreedisk::NIRTreeDisk<5,9,nirtreedisk::ExperimentalStrateg
 TEST_CASE("gen_tree: test_uniform_generation") {
     unlink( "bulkloaded_tree_test.txt" );
     std::string file_name = "bulkloaded_tree_test.txt";
-    nirtreedisk::NIRTreeDisk<5,9,nirtreedisk::ExperimentalStrategy> *tree =  new
-            nirtreedisk::NIRTreeDisk<5,9,nirtreedisk::ExperimentalStrategy>(
+    nirtreedisk::NIRTreeDisk<5,NIR_FANOUT,nirtreedisk::ExperimentalStrategy> *tree =  new
+            nirtreedisk::NIRTreeDisk<5,NIR_FANOUT,nirtreedisk::ExperimentalStrategy>(
                     40960UL*20000UL, file_name );
     unsigned size = 81;
     std::vector<Point> points = generate_points_uniform(size);
@@ -126,12 +126,12 @@ TEST_CASE("gen_tree: test_uniform_generation") {
 TEST_CASE("gen_tree: test_zipf_generation") {
     unlink( "bulkloaded_tree_test.txt" );
     std::string file_name = "bulkloaded_tree_test.txt";
-    nirtreedisk::NIRTreeDisk<5,9,nirtreedisk::ExperimentalStrategy> *tree =  new
-            nirtreedisk::NIRTreeDisk<5,9,nirtreedisk::ExperimentalStrategy>(
+    nirtreedisk::NIRTreeDisk<5,NIR_FANOUT,nirtreedisk::ExperimentalStrategy> *tree =  new
+            nirtreedisk::NIRTreeDisk<5,NIR_FANOUT,nirtreedisk::ExperimentalStrategy>(
                     40960UL*20000UL, file_name );
     unsigned size = 81;
     std::vector<Point> points = generate_points_zipf(size);
-    generate_tree(tree, points, 9);
+    generate_tree(tree, points, NIR_FANOUT);
 
     for( Point p : points ) {
         std::vector<Point> out = tree->search(p);
@@ -146,8 +146,8 @@ TEST_CASE("gen_tree: test_zipf_generation") {
 TEST_CASE("gen_tree: test_gauss_generation") {
     unlink( "bulkloaded_tree_test.txt" );
     std::string file_name = "bulkloaded_tree_test.txt";
-    nirtreedisk::NIRTreeDisk<5,9,nirtreedisk::ExperimentalStrategy> *tree =  new
-            nirtreedisk::NIRTreeDisk<5,9,nirtreedisk::ExperimentalStrategy>(
+    nirtreedisk::NIRTreeDisk<5,NIR_FANOUT,nirtreedisk::ExperimentalStrategy> *tree =  new
+            nirtreedisk::NIRTreeDisk<5,NIR_FANOUT,nirtreedisk::ExperimentalStrategy>(
                     40960UL*20000UL, file_name );
     unsigned size = 81;
     std::vector<Point> points = generate_points_gauss(size);
@@ -166,8 +166,8 @@ TEST_CASE("gen_tree: test_gauss_generation") {
 TEST_CASE("gen_tree: test_non_perfect_depth") {
     unlink( "test_non_perfect_depth.txt" );
     std::string file_name = "test_non_perfect_depth.txt";
-    nirtreedisk::NIRTreeDisk<5,9,nirtreedisk::ExperimentalStrategy> *tree =  new
-            nirtreedisk::NIRTreeDisk<5,9,nirtreedisk::ExperimentalStrategy>(
+    nirtreedisk::NIRTreeDisk<5,NIR_FANOUT,nirtreedisk::ExperimentalStrategy> *tree =  new
+            nirtreedisk::NIRTreeDisk<5,NIR_FANOUT,nirtreedisk::ExperimentalStrategy>(
                     4096UL*20, file_name );
     unsigned size = 1203;
     std::vector<Point> points = generate_points_uniform(size);
@@ -187,8 +187,8 @@ TEST_CASE("gen_tree: test_non_perfect_depth") {
 TEST_CASE("gen_tree: test_same_y") {
     unlink( "test_same_y.txt" );
     std::string file_name = "test_same_y.txt";
-    nirtreedisk::NIRTreeDisk<5,9,nirtreedisk::ExperimentalStrategy> *tree =  new
-            nirtreedisk::NIRTreeDisk<5,9,nirtreedisk::ExperimentalStrategy>(
+    nirtreedisk::NIRTreeDisk<5,NIR_FANOUT,nirtreedisk::ExperimentalStrategy> *tree =  new
+            nirtreedisk::NIRTreeDisk<5,NIR_FANOUT,nirtreedisk::ExperimentalStrategy>(
                     4096UL*200, file_name);
     unsigned size = 81;
     std::vector<Point> points;
@@ -213,8 +213,8 @@ TEST_CASE("gen_tree: test_same_y") {
 TEST_CASE("gen_tree: test_same_x") {
     unlink( "test_same_x.txt" );
     std::string file_name = "test_same_x.txt";
-    nirtreedisk::NIRTreeDisk<5,9,nirtreedisk::ExperimentalStrategy> *tree =  new
-            nirtreedisk::NIRTreeDisk<5,9,nirtreedisk::ExperimentalStrategy>(
+    nirtreedisk::NIRTreeDisk<5,NIR_FANOUT,nirtreedisk::ExperimentalStrategy> *tree =  new
+            nirtreedisk::NIRTreeDisk<5,NIR_FANOUT,nirtreedisk::ExperimentalStrategy>(
                     4096UL*200, file_name);
     unsigned size = 81;
     std::vector<Point> points;
@@ -239,8 +239,8 @@ TEST_CASE("gen_tree: test_same_x") {
 TEST_CASE("gen_tree: underfill_tree") {
     unlink( "underfill_tree.txt" );
     std::string file_name = "underfill_tree.txt";
-    nirtreedisk::NIRTreeDisk<5,9,nirtreedisk::ExperimentalStrategy> *tree =  new
-            nirtreedisk::NIRTreeDisk<5,9,nirtreedisk::ExperimentalStrategy>(
+    nirtreedisk::NIRTreeDisk<5,NIR_FANOUT,nirtreedisk::ExperimentalStrategy> *tree =  new
+            nirtreedisk::NIRTreeDisk<5,NIR_FANOUT,nirtreedisk::ExperimentalStrategy>(
                     4096UL*200UL, file_name);
     unsigned size = 8;
     std::vector<Point> points = generate_points_uniform(size);
@@ -262,8 +262,8 @@ TEST_CASE("gen_tree: optimally_pack") {
     unlink( "optimally_pack.txt" );
     std::string file_name = "optimally_pack.txt";
 
-    nirtreedisk::NIRTreeDisk<5,9,nirtreedisk::ExperimentalStrategy> *tree =  new
-            nirtreedisk::NIRTreeDisk<5,9,nirtreedisk::ExperimentalStrategy>(
+    nirtreedisk::NIRTreeDisk<5,NIR_FANOUT,nirtreedisk::ExperimentalStrategy> *tree =  new
+            nirtreedisk::NIRTreeDisk<5,NIR_FANOUT,nirtreedisk::ExperimentalStrategy>(
                     4096UL*20, file_name );
     unsigned size = 12039;
     std::vector<Point> points = generate_points_uniform(size);

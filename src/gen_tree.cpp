@@ -82,11 +82,11 @@ void generate_tree(std::map<std::string, size_t> &configU, std::map<std::string,
     // FIXME: one of the main slow downs of bulk loading in the NIR-Tree is going to be that
     // it looks for compression opportunities during the bulk load. This makes no sense because
     // we are guaranteed that each generated rectangle is disjoint.
-    nirtreedisk::NIRTreeDisk<5, 9, nirtreedisk::ExperimentalStrategy> *tree = new nirtreedisk::NIRTreeDisk<5, 9, nirtreedisk::ExperimentalStrategy>(
+    nirtreedisk::NIRTreeDisk<5, NIR_FANOUT, nirtreedisk::ExperimentalStrategy> *tree = new nirtreedisk::NIRTreeDisk<5, NIR_FANOUT, nirtreedisk::ExperimentalStrategy>(
             configU["buffer_pool_memory"], backing_file); //
     std::cout << "Bulk Loading..." << std::endl;
     std::cout << "Creating tree with " << configU["buffer_pool_memory"] << "bytes" << std::endl;
-    bulk_load_tree(tree, configU, all_points.begin(), all_points.begin() + cut_off_bulk_load, 9);
+    bulk_load_tree(tree, configU, all_points.begin(), all_points.begin() + cut_off_bulk_load, NIR_FANOUT);
     std::cout << "Created NIRTree." << std::endl;
     tree->stat(); // Print tree stats BEFORE repacking
 
@@ -96,7 +96,11 @@ void generate_tree(std::map<std::string, size_t> &configU, std::map<std::string,
 
     std::cout << "Repacking into consolidator..." << std::endl;
     std::chrono::high_resolution_clock::time_point begin_time = std::chrono::high_resolution_clock::now();
-    tree_node_handle new_root = nirtreedisk::repack_subtree<5, 9, nirtreedisk::ExperimentalStrategy>(tree->root, get_node_allocator(tree), consolidated_allocator.get());
+    tree_node_handle new_root = nirtreedisk::repack_subtree<5, NIR_FANOUT, nirtreedisk::ExperimentalStrategy>(
+      tree->root,
+      get_node_allocator(tree),
+      consolidated_allocator.get()
+    );
     std::chrono::high_resolution_clock::time_point end_time = std::chrono::high_resolution_clock::now();
     std::chrono::duration<double> delta = std::chrono::duration_cast<std::chrono::duration<double>>(end_time - begin_time);
     std::cout << "Repacking tree took: " << delta.count() << std::endl;

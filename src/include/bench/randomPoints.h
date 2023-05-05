@@ -810,7 +810,7 @@ static std::vector<Rectangle> generateZipfRectangles(
 
 static bool is_already_loaded(std::map<std::string, uint64_t> &configU, Index *spatial_index) {
   if (configU["tree"] == NIR_TREE) {
-    auto tree = (nirtreedisk::NIRTreeDisk<5, 9, nirtreedisk::ExperimentalStrategy> *) spatial_index;
+    auto tree = (nirtreedisk::NIRTreeDisk<5, NIR_FANOUT, nirtreedisk::ExperimentalStrategy> *) spatial_index;
     size_t existing_page_count = tree->node_allocator_->buffer_pool_.get_preexisting_page_count();
 
     if (existing_page_count > 0) {
@@ -875,7 +875,7 @@ runBench(PointGenerator<T> &pointGen, std::map<std::string, uint64_t> &configU, 
   } else if (configU["tree"] == NIR_TREE) {
     //spatialIndex = new nirtree::NIRTree(configU["minfanout"], configU["maxfanout"]);
     //spatialIndex = new nirtree::NIRTree(5,9);
-    spatialIndex = new nirtreedisk::NIRTreeDisk<5, 9, nirtreedisk::ExperimentalStrategy>(configU["buffer_pool_memory"], configS["db_file_name"]);
+    spatialIndex = new nirtreedisk::NIRTreeDisk<5, NIR_FANOUT, nirtreedisk::ExperimentalStrategy>(configU["buffer_pool_memory"], configS["db_file_name"]);
   } else if (configU["tree"] == QUAD_TREE) {
     spatialIndex = new quadtree::QuadTree();
   } else if (configU["tree"] == REVISED_R_STAR_TREE) {
