@@ -140,6 +140,7 @@ public:
 
   // Obnoxiously, this needs to have a +1 so we can overflow
   // by 1 entry and deal with it later.
+  // Brad: This is needed for R-star overflow insertion.
   typename std::array<Branch, max_branch_factor + 1> entries;
   unsigned cur_offset_;
   unsigned level;

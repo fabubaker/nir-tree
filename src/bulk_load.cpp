@@ -732,7 +732,7 @@ std::vector<uint64_t> find_bounding_lines(
 
   uint64_t count = stop - start;
   unsigned optimally_filled_branch = pow(branch_factor, length); // Total number of children starting from this level and below
-  unsigned min_branches = std::ceil((double)count / (double)optimally_filled_branch);
+  unsigned min_branches = std::ceil((double) count / (double) optimally_filled_branch);
   unsigned branches_per_partition = min_branches / partitions;
   unsigned remainder = min_branches % partitions;
 
@@ -757,13 +757,14 @@ std::vector<uint64_t> find_bounding_lines(
 }
 
 std::pair<tree_node_handle, Rectangle> quad_tree_style_load(
-    nirtreedisk::NIRTreeDisk<5, NIR_FANOUT, nirtreedisk::ExperimentalStrategy> *tree,
-    std::vector<Point>::iterator start,
-    std::vector<Point>::iterator stop,
-    unsigned branch_factor,
-    unsigned cur_depth,
-    unsigned max_depth,
-    tree_node_handle parent_handle) {
+  nirtreedisk::NIRTreeDisk<5, NIR_FANOUT, nirtreedisk::ExperimentalStrategy> *tree,
+  std::vector<Point>::iterator start,
+  std::vector<Point>::iterator stop,
+  unsigned branch_factor,
+  unsigned cur_depth,
+  unsigned max_depth,
+  tree_node_handle parent_handle
+) {
   uint64_t num_els = (stop - start);
   tree_node_allocator *allocator = tree->node_allocator_.get();
   if (cur_depth == max_depth) {
@@ -781,6 +782,7 @@ std::pair<tree_node_handle, Rectangle> quad_tree_style_load(
 
     auto leaf_node = alloc_data.first;
     auto leaf_handle = alloc_data.second;
+
     for (auto iter = start; iter != stop; iter++) {
       leaf_node->addPoint(*iter);
     }
@@ -836,7 +838,8 @@ std::pair<tree_node_handle, Rectangle> quad_tree_style_load(
           branch_factor,
           cur_depth + 1,
           max_depth,
-          branch_handle);
+          branch_handle
+      );
 
       tree_node_handle child_handle = ret.first;
       Rectangle bbox = ret.second;

@@ -109,6 +109,8 @@ class Point
 
 };
 
+static_assert(sizeof(Point) == sizeof(double) * dimensions);
+
 bool operator<(const Point &lhs, const Point &rhs);
 bool operator>(const Point &lhs, const Point &rhs);
 bool operator<=(const Point &lhs, const Point &rhs);

@@ -220,9 +220,7 @@ struct Branch {
       // This will write the polygon in direct, or allocate
       // space for it elsewhere using new_allocator and then
       // write that handle in.
-      offset += poly_pin->repack(buffer + offset,
-                                 cut_off_inline_rect_count,
-                                 new_allocator);
+      offset += poly_pin->repack(buffer + offset, cut_off_inline_rect_count, new_allocator);
 
       /*
                 if( truncate_rectangles ) {
@@ -290,16 +288,17 @@ struct Partition {
 };
 
 template <int min_branch_factor, int max_branch_factor, class strategy>
-requires(std::derived_from<strategy, BranchPartitionStrategy>) class LeafNode {
-
+requires(std::derived_from<strategy, BranchPartitionStrategy>)
+class LeafNode {
 public:
   NIRTreeDisk<min_branch_factor, max_branch_factor, strategy> *treeRef;
   tree_node_handle parent;
   unsigned cur_offset_; // Pointer into next free slot in "entries", essentially size of "entries"
   tree_node_handle self_handle_; // Why do we need this?
-  uint8_t level_;
 
   std::array<Point, max_branch_factor + 1> entries;
+
+  uint8_t level_;
 
   // Constructors and destructors
   LeafNode(
@@ -308,9 +307,10 @@ public:
       tree_node_handle self_handle,
       uint8_t level) : treeRef(treeRef), parent(parent), cur_offset_(0),
                        self_handle_(self_handle), level_(level) {
-    static_assert(sizeof(
-                      LeafNode<min_branch_factor, max_branch_factor, strategy>) <= PAGE_DATA_SIZE);
+
+    static_assert(sizeof(LeafNode<min_branch_factor, max_branch_factor, strategy>) <= PAGE_DATA_SIZE);
   }
+
   void deleteSubtrees();
 
   // Helper functions
@@ -356,29 +356,27 @@ public:
   tree_node_handle repack(tree_node_allocator *allocator);
 };
 
-template <int min_branch_factor, int max_branch_factor,
-          class strategy>
-requires(std::derived_from<strategy, BranchPartitionStrategy>) class BranchNode {
-
+template <int min_branch_factor, int max_branch_factor, class strategy>
+requires(std::derived_from<strategy, BranchPartitionStrategy>)
+class BranchNode {
 public:
   NIRTreeDisk<min_branch_factor, max_branch_factor, strategy> *treeRef;
   tree_node_handle parent;
   unsigned cur_offset_;
   tree_node_handle self_handle_;
-  uint8_t level_;
 
   std::array<Branch, max_branch_factor + 1> entries;
 
+  uint8_t level_;
+
   // Constructors and destructors
-  BranchNode(NIRTreeDisk<min_branch_factor, max_branch_factor, strategy> *treeRef, tree_node_handle parent,
-             tree_node_handle self_handle, uint8_t level) : treeRef(treeRef), parent(parent), cur_offset_(0),
-                                                            self_handle_(self_handle), level_(level) {
-    /*
-                    static_assert( sizeof(
-                                BranchNode<min_branch_factor,max_branch_factor,strategy>)
-                            <= PAGE_DATA_SIZE );
-                            */
+  BranchNode(
+    NIRTreeDisk<min_branch_factor, max_branch_factor, strategy> *treeRef, tree_node_handle parent,
+    tree_node_handle self_handle, uint8_t level
+  ): treeRef(treeRef), parent(parent), cur_offset_(0), self_handle_(self_handle), level_(level) {
+    static_assert(sizeof(BranchNode<min_branch_factor, max_branch_factor, strategy>) <= PAGE_DATA_SIZE);
   }
+
   void deleteSubtrees();
 
   // Helper functions
@@ -401,24 +399,19 @@ public:
     entries.at(this->cur_offset_++) = entry;
   }
 
-  tree_node_handle chooseNode(std::variant<Branch, Point>
-                                  &nodeEntry,
-                              uint8_t stopping_level);
+  tree_node_handle chooseNode(std::variant<Branch, Point> &nodeEntry, uint8_t stopping_level);
   tree_node_handle findLeaf(Point givenPoint);
   Partition partitionNode();
 
   template <class S = strategy>
-  Partition partitionBranchNode(typename std::enable_if<std::is_same<S, LineMinimizeDownsplits>::value, S>::type
-                                    * = 0) {
-    Partition defaultPartition;
+  Partition partitionBranchNode(typename std::enable_if<std::is_same<S, LineMinimizeDownsplits>::value, S>::type * = 0) {
+  Partition defaultPartition;
 
-    tree_node_allocator *allocator = get_node_allocator(
-        this->treeRef);
+  tree_node_allocator *allocator = get_node_allocator(this->treeRef);
     std::vector<Rectangle> all_branch_polys;
     for (unsigned i = 0; i < this->cur_offset_; i++) {
       Branch &b_i = entries.at(i);
-      all_branch_polys.push_back(b_i.get_summary_rectangle(
-          allocator));
+      all_branch_polys.push_back(b_i.get_summary_rectangle(allocator));
     }
 
     unsigned cut_off = min_branch_factor;
@@ -435,12 +428,12 @@ public:
                   });
 
         std::vector<double> partition_candidates;
+
         for (unsigned i = 0; i < all_branch_polys.size(); i++) {
-          partition_candidates.push_back(
-              all_branch_polys.at(i).lowerLeft[d]);
-          partition_candidates.push_back(
-              all_branch_polys.at(i).upperRight[d]);
+          partition_candidates.push_back(all_branch_polys.at(i).lowerLeft[d]);
+          partition_candidates.push_back(all_branch_polys.at(i).upperRight[d]);
         }
+
         for (double partition_candidate : partition_candidates) {
           double cost = 0;
           // starts at 1 cause first goes left
@@ -893,10 +886,7 @@ public:
 
   // Data structure interface functions
   void exhaustiveSearch(Point &requestedPoint, std::vector<Point> &accumulator);
-  tree_node_handle insert(std::variant<Branch, Point>
-                              &nodeEntry,
-                          std::vector<bool>
-                              &hasReinsertedOnLevel);
+  tree_node_handle insert(std::variant<Branch, Point> &nodeEntry, std::vector<bool> &hasReinsertedOnLevel);
   void reInsert(std::vector<bool> &hasReinsertedOnLevel);
   tree_node_handle remove(Point givenPoint);
 
@@ -909,16 +899,14 @@ public:
   unsigned height();
 
   std::pair<uint16_t, std::vector<std::optional<std::pair<char *, int>>>>
-  compute_packed_size(tree_node_allocator
-                          *existing_allocator,
-                      tree_node_allocator
-                          *new_allocator,
-                      unsigned
-                          &maximum_repacked_rect_size);
-  tree_node_handle repack(tree_node_allocator
-                              *existing_allocator,
-                          tree_node_allocator
-                              *new_allocator);
+  compute_packed_size(
+          tree_node_allocator *existing_allocator, tree_node_allocator *new_allocator,
+          unsigned &maximum_repacked_rect_size
+  );
+  tree_node_handle repack(
+          tree_node_allocator *existing_allocator,
+          tree_node_allocator *new_allocator
+  );
 };
 
 // Shorthand so I don't have to write this a billion times
