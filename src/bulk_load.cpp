@@ -974,8 +974,6 @@ void bulk_load_tree(
   std::vector<tree_node_handle> leaves = str_packing_leaf(tree, begin, end,max_branch_factor);
   std::vector<tree_node_handle> branches = str_packing_branch(tree, leaves, max_branch_factor);
 
-  std::cout << sizeof(rstartreedisk::BranchNode<5, R_STAR_FANOUT>) << std::endl;
-  std::cout << sizeof(Point) << std::endl;
   while (branches.size() > 1) {
     branches = str_packing_branch(tree, branches, max_branch_factor);
   }
