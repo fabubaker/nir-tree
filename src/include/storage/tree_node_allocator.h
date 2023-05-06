@@ -227,7 +227,6 @@ public:
         for (auto iter = free_list_.begin(); iter != free_list_.end(); iter++) {
             auto alloc_location = *iter;
 
-            std::cout << "alloc_location node size: " << alloc_location.second << std::endl;
             if (alloc_location.second < node_size) {
                 continue;
             }
