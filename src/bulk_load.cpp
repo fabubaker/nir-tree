@@ -811,6 +811,7 @@ std::pair<tree_node_handle, Rectangle> quad_tree_style_load(
 
   std::vector<std::pair<IsotheticPolygon, tree_node_handle>> branch_handles;
   branch_handles.reserve(NIR_FANOUT);
+
   for (uint64_t i = 0; i < x_lines.size() - 1; i++) {
     uint64_t x_start = x_lines.at(i);
     uint64_t x_end = x_lines.at(i + 1); /* not inclusive */

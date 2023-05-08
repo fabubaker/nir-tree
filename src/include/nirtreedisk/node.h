@@ -247,8 +247,7 @@ struct Branch {
       return offset;
     }
 
-    InlineBoundedIsotheticPolygon &poly =
-        std::get<InlineBoundedIsotheticPolygon>(boundingPoly);
+    InlineBoundedIsotheticPolygon &poly = std::get<InlineBoundedIsotheticPolygon>(boundingPoly);
 
     /*
             if( truncate_rectangles ) {
