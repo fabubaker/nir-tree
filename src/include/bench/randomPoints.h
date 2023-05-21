@@ -993,7 +993,7 @@ runBench(PointGenerator<T> &pointGen, std::map<std::string, uint64_t> &configU, 
 
 #endif
 
-#if 0
+#if 1
 	// Search for rectangles
 	unsigned rangeSearchChecksum = 0;
 	std::cout << "Beginning search for " << searchRectangles.size() << " rectangles..." << std::endl;
