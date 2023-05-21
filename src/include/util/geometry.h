@@ -732,12 +732,11 @@ class InlineUnboundedIsotheticPolygon {
         }
 
         size_t repack( char *buffer, unsigned cut_off_inline_rect_count, tree_node_allocator *new_allocator ) {
-            assert( total_rectangle_count_ <=
-                    maximum_possible_rectangles_on_first_page() );
-            assert( total_rectangle_count_ > 0 );
+            assert(total_rectangle_count_ <= maximum_possible_rectangles_on_first_page());
+            assert(total_rectangle_count_ > 0);
 
             // Inline oversize polygon into repacked node directly.
-            if( total_rectangle_count_ <= cut_off_inline_rect_count ) {
+            if(total_rectangle_count_ <= cut_off_inline_rect_count) {
                 size_t sz = 0;
                 * (unsigned *) buffer = total_rectangle_count_;
                 sz += sizeof( unsigned );

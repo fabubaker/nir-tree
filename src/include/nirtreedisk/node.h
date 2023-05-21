@@ -1935,21 +1935,21 @@ tree_node_handle LEAF_NODE_CLASS_TYPES::repack(tree_node_allocator *allocator) {
 }
 
 NODE_TEMPLATE_PARAMS
-tree_node_handle BRANCH_NODE_CLASS_TYPES::repack(tree_node_allocator
-                                                 *existing_allocator,
-                                                 tree_node_allocator *new_allocator) {
-
+tree_node_handle BRANCH_NODE_CLASS_TYPES::repack(
+        tree_node_allocator *existing_allocator, tree_node_allocator *new_allocator
+) {
   unsigned maximum_unpacked_rect_size = MAX_RECTANGLE_COUNT;
   auto packing_computation_result = compute_packed_size(
-          existing_allocator, new_allocator,
-          maximum_unpacked_rect_size);
+          existing_allocator, new_allocator, maximum_unpacked_rect_size
+  );
   uint16_t alloc_size = packing_computation_result.first;
   auto alloc_data = new_allocator->create_new_tree_node<packed_node>(
-          alloc_size, NodeHandleType(REPACKED_BRANCH_NODE));
-
+    alloc_size, NodeHandleType(REPACKED_BRANCH_NODE)
+  );
   char *buffer = alloc_data.first->buffer_;
   uint16_t offset = 0;
   offset += write_data_to_buffer(buffer + offset, &cur_offset_);
+
   for (unsigned i = 0; i < cur_offset_; i++) {
     Branch &b = entries.at(i);
     assert(b.child);
@@ -1959,10 +1959,12 @@ tree_node_handle BRANCH_NODE_CLASS_TYPES::repack(tree_node_allocator
                             new_allocator, maximum_unpacked_rect_size,
                             packing_computation_result.second.at(i));
   }
+
   unsigned true_size = offset;
   if (alloc_size != true_size) {
     abort();
   }
+
   assert(true_size == alloc_size);
   return alloc_data.second;
 }
