@@ -189,7 +189,7 @@ class IsotheticPolygon
 		std::vector<Rectangle> basicRectangles;
 
 		IsotheticPolygon();
-        void reset();
+    void reset();
 		explicit IsotheticPolygon(const Rectangle &baseRectangle);
 		IsotheticPolygon(const IsotheticPolygon &basePolygon);
 
@@ -572,13 +572,12 @@ class InlineUnboundedIsotheticPolygon {
             // Do operations there
 
             IsotheticPolygon polygon;
-            for( auto &rectangle : *this ) {
+            for (auto &rectangle : *this) {
                 polygon.basicRectangles.push_back( rectangle );
             }
 
-            polygon.boundingBox = Rectangle(Point::atInfinity,
-                    Point::atNegInfinity);
-            for( const auto &rectangle : polygon.basicRectangles ) {
+            polygon.boundingBox = Rectangle(Point::atInfinity, Point::atNegInfinity);
+            for (const auto &rectangle : polygon.basicRectangles) {
                 polygon.boundingBox.expand( rectangle );
             }
 
@@ -727,16 +726,16 @@ class InlineUnboundedIsotheticPolygon {
             return max_rects_on_first_page;
         }
 
-        size_t repack( char *buffer, unsigned cut_off_inline_rect_count, tree_node_allocator *new_allocator ) {
+        size_t repack(char *buffer, unsigned cut_off_inline_rect_count, tree_node_allocator *new_allocator) {
             assert(total_rectangle_count_ <= maximum_possible_rectangles_on_first_page());
             assert(total_rectangle_count_ > 0);
 
             // Inline oversize polygon into repacked node directly.
-            if(total_rectangle_count_ <= cut_off_inline_rect_count) {
+            if (total_rectangle_count_ <= cut_off_inline_rect_count) {
                 size_t sz = 0;
                 * (unsigned *) buffer = total_rectangle_count_;
                 sz += sizeof( unsigned );
-                for( auto iter = begin(); iter != end(); iter++ ) {
+                for (auto iter = begin(); iter != end(); iter++ ) {
                     * (Rectangle *) (buffer + sz) = (*iter);
                     sz += sizeof( Rectangle );
                 }
@@ -747,27 +746,31 @@ class InlineUnboundedIsotheticPolygon {
 
             // Write magic to signify out of band polygon
             size_t sz = 0;
-            * (unsigned *) buffer =
-                std::numeric_limits<unsigned>::max();
-            sz += sizeof( unsigned );
+            * (unsigned *) buffer = std::numeric_limits<unsigned>::max();
+            sz += sizeof(unsigned);
 
             // Compute exact size needed to represent this out of band
             // polygon, allocate it using the new allocator.
-            size_t precise_size_needed = sizeof(InlineUnboundedIsotheticPolygon) +
-                    (total_rectangle_count_-1)*sizeof(Rectangle);
+            size_t precise_size_needed =
+                    sizeof(InlineUnboundedIsotheticPolygon) + (total_rectangle_count_ - 1) * sizeof(Rectangle);
             auto alloc_data = new_allocator->create_new_tree_node<InlineUnboundedIsotheticPolygon>(
-                    precise_size_needed, NodeHandleType( 3 /* BIG POLYGON */ ) );
+                    precise_size_needed, NodeHandleType( 3 /* BIG POLYGON */)
+            );
 
             // N.B., our current polygon can actually be
             // overprovisioned, so we use total_rectangle_count to count
             // down size.
             new (&(*alloc_data.first)) InlineUnboundedIsotheticPolygon(
-                    new_allocator, total_rectangle_count_ );
+                    new_allocator, total_rectangle_count_
+            );
             IsotheticPolygon cur_poly = materialize_polygon();
-            assert( cur_poly.basicRectangles.size() == get_total_rectangle_count() );
+            assert(cur_poly.basicRectangles.size() == get_total_rectangle_count());
             alloc_data.first->push_polygon_to_disk( cur_poly );
-            assert( alloc_data.first->total_rectangle_count_ == get_total_rectangle_count() );
+            assert(alloc_data.first->total_rectangle_count_ == get_total_rectangle_count());
 
+            // Write summary rectangle here
+            * (Rectangle *) (buffer + sz) = alloc_data.first->summary_rectangle_;
+            sz += sizeof(Rectangle);
             * (tree_node_handle *) (buffer + sz) = alloc_data.second;
             sz += sizeof(tree_node_handle);
             return sz;
