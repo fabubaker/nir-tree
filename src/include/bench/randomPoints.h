@@ -808,6 +808,29 @@ static std::vector<Rectangle> generateZipfRectangles(
   return rectangles;
 }
 
+static std::vector<Rectangle> generateNYCTaxiRectangles(size_t numRectangles) {
+  Point ll;
+  Point ur;
+  std::vector<Rectangle> rectangles;
+  unsigned seed = 1317;
+  std::default_random_engine generator(seed);
+  // The coordinates below represent the most densely populated NYC area
+  std::uniform_real_distribution<double> xPoint(-114, 0);
+  std::uniform_real_distribution<double> yPoint(0, 60);
+
+  for (unsigned i = 0; i < numRectangles; i++) {
+    ll[0] = xPoint(generator);
+    ll[1] = yPoint(generator);
+    ur[0] = ll[0] + 2;
+    ur[1] = ll[1] + 2;
+
+    Rectangle rectangle(ll, ur);
+    rectangles.emplace_back(rectangle);
+  }
+
+  return rectangles;
+}
+
 static bool is_already_loaded(std::map<std::string, uint64_t> &configU, Index *spatial_index) {
   if (configU["tree"] == NIR_TREE) {
     auto tree = (nirtreedisk::NIRTreeDisk<5, NIR_FANOUT, nirtreedisk::ExperimentalStrategy> *) spatial_index;
@@ -916,6 +939,8 @@ runBench(PointGenerator<T> &pointGen, std::map<std::string, uint64_t> &configU, 
       configU["seed"], configU["rectanglescount"],
       configU["num_elements"]
     );
+  } else if (configU["distribution"] == NYCTAXI) {
+    searchRectangles = generateNYCTaxiRectangles(configU["rectanglescount"]);
   } else {
     // Do nothing, rectangle searches are disabled for now...
   }
