@@ -1020,8 +1020,8 @@ runBench(PointGenerator<T> &pointGen, std::map<std::string, uint64_t> &configU, 
   // Gather statistics
 
 #ifdef STAT
-  spatialIndex->stat();
-  std::cout << "Statistics OK." << std::endl;
+//  spatialIndex->stat();
+//  std::cout << "Statistics OK." << std::endl;
 #endif
 
   // Timing Statistics
