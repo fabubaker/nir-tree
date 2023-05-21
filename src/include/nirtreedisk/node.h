@@ -110,15 +110,12 @@ struct Branch {
 
   std::pair<bool, pinned_node_ptr<InlineUnboundedIsotheticPolygon>>
   should_repack_big_poly(
-      tree_node_handle poly_handle,
-      tree_node_allocator *existing_allocator,
-      tree_node_allocator *new_allocator,
-      unsigned maximum_repacked_rect_size) {
-    auto poly_pin =
-        existing_allocator->get_tree_node<InlineUnboundedIsotheticPolygon>(
-            poly_handle);
-    if (poly_pin->get_total_rectangle_count() <=
-        maximum_repacked_rect_size) {
+      tree_node_handle poly_handle, tree_node_allocator *existing_allocator,
+      tree_node_allocator *new_allocator, unsigned maximum_repacked_rect_size
+  ) {
+    auto poly_pin = existing_allocator->get_tree_node<InlineUnboundedIsotheticPolygon>(poly_handle);
+
+    if (poly_pin->get_total_rectangle_count() <= maximum_repacked_rect_size) {
       return std::make_pair(true, poly_pin);
     }
 
@@ -126,10 +123,9 @@ struct Branch {
   }
 
   uint16_t compute_packed_size(
-      tree_node_allocator *existing_allocator,
-      tree_node_allocator *new_allocator,
-      unsigned maximum_repacked_rect_size,
-      bool truncate_polygons) {
+    tree_node_allocator *existing_allocator, tree_node_allocator *new_allocator,
+    unsigned maximum_repacked_rect_size, bool truncate_polygons
+  ) {
     uint16_t sz = sizeof(child);
     /*
             if( truncate_polygons ) {
@@ -138,26 +134,31 @@ struct Branch {
                 return sz;
             }
             */
-    if (std::holds_alternative<tree_node_handle>(boundingPoly)) {
 
+    // If the bounding polygon is stored out-of-line...
+    if (std::holds_alternative<tree_node_handle>(boundingPoly)) {
       auto should_pack_and_pin = should_repack_big_poly(
           std::get<tree_node_handle>(boundingPoly),
           existing_allocator,
           new_allocator,
-          maximum_repacked_rect_size);
+          maximum_repacked_rect_size
+      );
+
       if (should_pack_and_pin.first) {
         auto poly_pin = should_pack_and_pin.second;
         sz += sizeof(unsigned); // Rectangle count
-        sz += poly_pin->get_total_rectangle_count() * sizeof(
-                                                          Rectangle); //rectangles
+        sz += poly_pin->get_total_rectangle_count() * sizeof(Rectangle); //rectangles
         return sz;
       }
+
+      // sz += sizeof(Rectangle); // summary rectangle for out-of-line polygon
       sz += sizeof(unsigned); // magic rect count id
       sz += sizeof(tree_node_handle);
       return sz;
     }
-    InlineBoundedIsotheticPolygon &poly =
-        std::get<InlineBoundedIsotheticPolygon>(boundingPoly);
+
+    // The bounding polygon is stored in-line...
+    InlineBoundedIsotheticPolygon &poly = std::get<InlineBoundedIsotheticPolygon>(boundingPoly);
     unsigned rect_count = poly.get_rectangle_count();
     sz += sizeof(rect_count);
     sz += rect_count * sizeof(Rectangle);
@@ -1882,9 +1883,8 @@ uint16_t LEAF_NODE_CLASS_TYPES::compute_packed_size() {
 
 NODE_TEMPLATE_PARAMS
 std::pair<uint16_t, std::vector<std::optional<std::pair<char *, int>>>> BRANCH_NODE_CLASS_TYPES::compute_packed_size(
-        tree_node_allocator *existing_allocator,
-        tree_node_allocator *new_allocator,
-        unsigned &maximum_repacked_rect_size) {
+  tree_node_allocator *existing_allocator, tree_node_allocator *new_allocator, unsigned &maximum_repacked_rect_size
+) {
   do {
     uint16_t sz = 0;
     sz += sizeof(cur_offset_);
