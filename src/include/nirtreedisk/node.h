@@ -2472,30 +2472,30 @@ std::vector<Point> point_search(tree_node_handle start_point, Point &requestedPo
   while (not context.empty()) {
     tree_node_handle current_handle = context.top();
     context.pop();
+
     if (current_handle.get_type() == LEAF_NODE) {
       point_search_leaf_handle(current_handle, requestedPoint, accumulator);
 #ifdef STAT
       treeRef->stats.markLeafSearched();
 #endif
-
-      } else if (current_handle.get_type() == REPACKED_LEAF_NODE) {
-        point_search_packed_leaf_handle(current_handle, requestedPoint, accumulator);
+    } else if (current_handle.get_type() == REPACKED_LEAF_NODE) {
+      point_search_packed_leaf_handle(current_handle, requestedPoint, accumulator);
 #ifdef STAT
-          treeRef->stats.markLeafSearched();
+      treeRef->stats.markLeafSearched();
 #endif
-      } else if (current_handle.get_type() == BRANCH_NODE) {
-        point_search_branch_handle(current_handle, requestedPoint, context);
+    } else if (current_handle.get_type() == BRANCH_NODE) {
+      point_search_branch_handle(current_handle, requestedPoint, context);
 #ifdef STAT
-        treeRef->stats.markNonLeafNodeSearched();
+      treeRef->stats.markNonLeafNodeSearched();
 #endif
-      } else if (current_handle.get_type() == REPACKED_BRANCH_NODE) {
-        point_search_packed_branch_handle(current_handle, requestedPoint, context);
+    } else if (current_handle.get_type() == REPACKED_BRANCH_NODE) {
+      point_search_packed_branch_handle(current_handle, requestedPoint, context);
 #ifdef STAT
-        treeRef->stats.markNonLeafNodeSearched();
+      treeRef->stats.markNonLeafNodeSearched();
 #endif
-      } else {
-        assert(false);
-      }
+    } else {
+      assert(false);
+    }
   }
 #ifdef STAT
   treeRef->stats.resetSearchTracker(false);
