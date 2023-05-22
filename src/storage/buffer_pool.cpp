@@ -18,7 +18,6 @@
 
 
 buffer_pool::buffer_pool( size_t pool_size_bytes, std::string backing_file_name ) {
-
     max_mem_pages_ = pool_size_bytes / PAGE_SIZE;
     if ( pool_size_bytes % PAGE_SIZE != 0 ) {
         max_mem_pages_++;
@@ -116,11 +115,13 @@ page *buffer_pool::get_page( size_t page_id ) {
     if( search != page_index_.end() ) {
         page *page_ptr = search->second;
         page_ptr->header_.clock_active_ = true;
+        page_hits++;
         return page_ptr;
     }
 
     //std::this_thread::sleep_for(std::chrono::milliseconds(20));
     //std::cout << "Page miss." << std::endl;
+    page_misses++;
 
     // Step 2: It is not, so obtain a page
     // Will evict an old page if necessary
@@ -258,4 +259,9 @@ void buffer_pool::writeback_all_pages() {
         page *page_ptr = entry.second;
         writeback_page( page_ptr );
     }
+}
+
+void buffer_pool::stat() {
+  std::cout << "Page hits: " << page_hits << std::endl;
+  std::cout << "Page misses: " << page_misses << std::endl;
 }

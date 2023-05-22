@@ -21,6 +21,8 @@ public:
     void unpin_page( page *page_ptr );
     void writeback_all_pages();
 
+    void stat();
+
     inline size_t get_in_memory_page_count() { return max_mem_pages_; }
     inline size_t get_highest_allocated_page_id() { return
         highest_allocated_page_id_; }
@@ -53,4 +55,8 @@ protected:
     size_t clock_hand_pos_;
     int backing_file_fd_;
     size_t highest_allocated_page_id_;
+
+    // stats
+    size_t page_hits = 0;
+    size_t page_misses = 0;
 };

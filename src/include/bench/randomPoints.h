@@ -884,8 +884,12 @@ runBench(PointGenerator<T> &pointGen, std::map<std::string, uint64_t> &configU, 
   // Populate pointGen buffers with points
   pointGen.generate();
 
+  // Grab a reference to the buffer pool to print out stats
+  buffer_pool *bufferPool;
+
   // Initialize the index
   Index *spatialIndex;
+
   if (configU["tree"] == R_TREE) {
     //spatialIndex = new rtree::RTree(configU["minfanout"], configU["maxfanout"]);
     spatialIndex = new rtreedisk::RTreeDisk<3, 6>(configU["buffer_pool_memory"], configS["db_file_name"]);
@@ -894,11 +898,15 @@ runBench(PointGenerator<T> &pointGen, std::map<std::string, uint64_t> &configU, 
     //spatialIndex = new rplustree::RPlusTree(configU["minfanout"], configU["maxfanout"]);
   } else if (configU["tree"] == R_STAR_TREE) {
     //spatialIndex = new rstartree::RStarTree(configU["minfanout"], configU["maxfanout"]);
-    spatialIndex = new rstartreedisk::RStarTreeDisk<5, R_STAR_FANOUT>(configU["buffer_pool_memory"], configS["db_file_name"]);
+    auto tree = new rstartreedisk::RStarTreeDisk<5, R_STAR_FANOUT>(configU["buffer_pool_memory"], configS["db_file_name"]);
+    bufferPool = &(tree->node_allocator_->buffer_pool_);
+    spatialIndex = tree;
   } else if (configU["tree"] == NIR_TREE) {
     //spatialIndex = new nirtree::NIRTree(configU["minfanout"], configU["maxfanout"]);
     //spatialIndex = new nirtree::NIRTree(5,9);
-    spatialIndex = new nirtreedisk::NIRTreeDisk<5, NIR_FANOUT, nirtreedisk::ExperimentalStrategy>(configU["buffer_pool_memory"], configS["db_file_name"]);
+    auto tree = new nirtreedisk::NIRTreeDisk<5, NIR_FANOUT, nirtreedisk::ExperimentalStrategy>(configU["buffer_pool_memory"], configS["db_file_name"]);
+    bufferPool = &(tree->node_allocator_->buffer_pool_);
+    spatialIndex = tree;
   } else if (configU["tree"] == QUAD_TREE) {
     spatialIndex = new quadtree::QuadTree();
   } else if (configU["tree"] == REVISED_R_STAR_TREE) {
@@ -1021,6 +1029,7 @@ runBench(PointGenerator<T> &pointGen, std::map<std::string, uint64_t> &configU, 
 
 #ifdef STAT
 //  spatialIndex->stat();
+  bufferPool->stat();
 //  std::cout << "Statistics OK." << std::endl;
 #endif
 
