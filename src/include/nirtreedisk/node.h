@@ -2356,10 +2356,7 @@ void BRANCH_NODE_CLASS_TYPES::removeBranch(
         tree_node_handle *poly_handle = (tree_node_handle *)(buffer + offset);                   \
         offset += sizeof(tree_node_handle);                                                      \
         if (summary_rect->intersectsRectangle(requestedRectangle)) {                              \
-          auto poly_pin = allocator->get_tree_node<InlineUnboundedIsotheticPolygon>(*poly_handle); \
-          if (poly_pin->intersectsRectangle(requestedRectangle)) {                                 \
-            context.push(*child);                                                                  \
-          }                                                                                       \
+          context.push(*child);                                                                   \
         }                                                                                         \
       } else {                                                                                   \
         for (unsigned r = 0; r < rect_count; r++) {                                              \
