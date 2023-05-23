@@ -16,10 +16,12 @@ class Statistics {
 			histogramLeaves(1000000, 0),
 			histogramRangeSearch(1000000, 0),
 			histogramRangeLeaves(100000, 0),
-			histogramScatter( 100, 0 )
+			histogramScatter(100, 0),
+      histogramOutOfLine(100000, 0)
 		{
 			nodesSearched = 0;
 			leavesSearched = 0;
+      outOfLineSearched = 0;
 		}
 
 		inline void resetSearchTracker( bool isRange )
@@ -33,12 +35,20 @@ class Statistics {
 					histogramRangeLeaves.resize(2*leavesSearched);
 				}
 				histogramRangeLeaves[leavesSearched]++;
+
 				if (unlikely(nodesSearched >= histogramRangeSearch.size()))
 				{
 					// 2x so we don't have to resize these often
 					histogramRangeSearch.resize(2*nodesSearched);
 				}
 				histogramRangeSearch.at(nodesSearched)++;
+
+        if (unlikely(outOfLineSearched >= histogramOutOfLine.size()))
+        {
+          // 2x so we don't have to resize these often
+          histogramOutOfLine.resize(2*outOfLineSearched);
+        }
+        histogramOutOfLine[outOfLineSearched]++;
 			}
 			else
 			{
@@ -56,8 +66,10 @@ class Statistics {
 
 				histogramSearch[nodesSearched]++;
 			}
+
 			nodesSearched = 0;
 			leavesSearched = 0;
+      outOfLineSearched = 0;
 		}
 
 		inline void markLeafSearched()
@@ -74,6 +86,11 @@ class Statistics {
 		inline void recordScatter( unsigned scatter ) {
 			histogramScatter.at( scatter )++;
 		}
+
+    inline void recordOutOfLineSearched()
+    {
+      outOfLineSearched++;
+    }
 
 		friend std::ostream& operator<<(std::ostream &os, const Statistics &stats)
 		{
@@ -119,6 +136,15 @@ class Statistics {
 				}
 			}
 
+      os << "Histogram of Out of Line Follows:" << std::endl;
+      for (unsigned i = 0; i < stats.histogramOutOfLine.size(); i++)
+      {
+        if (stats.histogramOutOfLine[i] > 0)
+        {
+          os << "  " << i << " : " << stats.histogramOutOfLine[i] << std::endl;
+        }
+      }
+
 			return os;
 		}
 
@@ -128,8 +154,10 @@ class Statistics {
 		std::vector<unsigned> histogramRangeSearch;
 		std::vector<unsigned> histogramRangeLeaves;
 		std::vector<unsigned> histogramScatter;
+    std::vector<unsigned> histogramOutOfLine;
 		unsigned nodesSearched;
 		unsigned leavesSearched;
+    unsigned outOfLineSearched;
 };
 
 #ifdef STAT

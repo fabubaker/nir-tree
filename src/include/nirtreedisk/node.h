@@ -2339,6 +2339,7 @@ void BRANCH_NODE_CLASS_TYPES::removeBranch(
       unsigned rect_count = *(unsigned *)(buffer + offset);                                      \
       offset += sizeof(unsigned);                                                                \
       if (rect_count == std::numeric_limits<unsigned>::max()) {                                  \
+        treeRef->stats.recordOutOfLineSearched();                                                \
         tree_node_handle *poly_handle = (tree_node_handle *)(buffer + offset);                   \
         offset += sizeof(tree_node_handle);                                                      \
         auto poly_pin = allocator->get_tree_node<InlineUnboundedIsotheticPolygon>(*poly_handle); \
