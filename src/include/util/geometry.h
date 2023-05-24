@@ -267,25 +267,21 @@ bool operator!=(const IsotheticPolygon &lhs, const IsotheticPolygon &rhs);
 class InlineBoundedIsotheticPolygon {
 public:
         InlineBoundedIsotheticPolygon():
-            summary_rectangle_(
-                    Point(std::numeric_limits<double>::infinity()),
-                    Point(-std::numeric_limits<double>::infinity())
-            )
-        {
-            rectangle_count_ = 0;
-        }
+          rectangle_count_(0),
+          summary_rectangle_(
+                  Point(std::numeric_limits<double>::infinity()),
+                  Point(-std::numeric_limits<double>::infinity())
+          ) {}
 
-        InlineBoundedIsotheticPolygon( const Rectangle &rect ) {
+        InlineBoundedIsotheticPolygon(const Rectangle &rect) {
             rectangle_count_ = 1;
             basicRectangles[0] = rect;
             summary_rectangle_ = basicRectangles[0];
         }
 
-        InlineBoundedIsotheticPolygon( const
-                InlineBoundedIsotheticPolygon &other ) = default;
+        InlineBoundedIsotheticPolygon(const InlineBoundedIsotheticPolygon &other) = default;
 
-        InlineBoundedIsotheticPolygon &operator=( const
-                InlineBoundedIsotheticPolygon &other ) = default;
+        InlineBoundedIsotheticPolygon &operator=(const InlineBoundedIsotheticPolygon &other ) = default;
 
         using iterator = Rectangle *;
         using const_iterator = Rectangle const *;
