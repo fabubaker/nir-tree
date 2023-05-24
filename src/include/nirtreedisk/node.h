@@ -223,42 +223,10 @@ struct Branch {
       // write that handle in.
       offset += poly_pin->repack(buffer + offset, cut_off_inline_rect_count, new_allocator);
 
-      /*
-                if( truncate_rectangles ) {
-                    unsigned rect_count = 1;
-                    offset += write_data_to_buffer( buffer + offset, &rect_count );
-                    Rectangle rect = poly_pin->get_summary_rectangle();
-                    offset += write_data_to_buffer( buffer + offset, &rect );
-                } else {
-                    std::cout << "Poly dump done." << std::endl;
-                    offset += poly_pin->repack( buffer + offset, cut_off_inline_rect_count, new_allocator );
-                }
-                */
-
-      // FIXME: Free the old polygon ??
-      // Is it still used? Can we destroy it?
-      /*
-                poly_pin->free_subpages( existing_allocator );
-                existing_allocator->free(
-                        std::get<tree_node_handle>( boundingPoly ),
-                    compute_sizeof_inline_unbounded_polygon(
-                        poly_pin->get_max_rectangle_count_on_first_page()
-                        ) );
-                */
       return offset;
     }
 
     InlineBoundedIsotheticPolygon &poly = std::get<InlineBoundedIsotheticPolygon>(boundingPoly);
-
-    /*
-            if( truncate_rectangles ) {
-                unsigned rect_count = 1;
-                offset += write_data_to_buffer( buffer + offset, &rect_count );
-                Rectangle rect = poly.get_summary_rectangle();
-                offset += write_data_to_buffer( buffer + offset, &rect );
-                return offset;
-            }
-            */
 
     unsigned rect_count = poly.get_rectangle_count();
     offset += write_data_to_buffer(buffer + offset, &rect_count);
