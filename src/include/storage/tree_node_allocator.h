@@ -205,6 +205,8 @@ class tree_node_allocator {
 public:
     tree_node_allocator( size_t memory_budget, std::string backing_file );
 
+    size_t out_of_line_nodes_size = 0;
+
     inline void initialize() {
         buffer_pool_.initialize();
     }

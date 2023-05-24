@@ -954,6 +954,7 @@ void bulk_load_tree(
       max_branch_factor, 0, max_depth, nullptr
   );
   tree->root = ret.first;
+  std::cout << "Out of line size: " << tree->node_allocator_.get()->out_of_line_nodes_size << std::endl;
   std::chrono::high_resolution_clock::time_point end_time = std::chrono::high_resolution_clock::now();
   std::chrono::duration<double> delta = std::chrono::duration_cast<std::chrono::duration<double>>(end_time - begin_time);
   std::cout << "Bulk loading NIRTree took: " << delta.count() << std::endl;

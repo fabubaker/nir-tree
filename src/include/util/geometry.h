@@ -756,6 +756,7 @@ class InlineUnboundedIsotheticPolygon {
             auto alloc_data = new_allocator->create_new_tree_node<InlineUnboundedIsotheticPolygon>(
                     precise_size_needed, NodeHandleType( 3 /* BIG POLYGON */)
             );
+            new_allocator->out_of_line_nodes_size += precise_size_needed;
 
             // N.B., our current polygon can actually be
             // overprovisioned, so we use total_rectangle_count to count
