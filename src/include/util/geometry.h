@@ -766,7 +766,7 @@ class InlineUnboundedIsotheticPolygon {
             assert(alloc_data.first->total_rectangle_count_ == get_total_rectangle_count());
 
             // Write summary rectangle here
-            * (Rectangle *) (buffer + sz) = alloc_data.first->summary_rectangle_;
+            * (Rectangle *) (buffer + sz) = cur_poly.boundingBox;
             sz += sizeof(Rectangle);
             * (tree_node_handle *) (buffer + sz) = alloc_data.second;
             sz += sizeof(tree_node_handle);
