@@ -121,7 +121,6 @@ page *buffer_pool::get_page( size_t page_id ) {
 
     //std::this_thread::sleep_for(std::chrono::milliseconds(20));
     //std::cout << "Page miss." << std::endl;
-    page_misses++;
 
     // Step 2: It is not, so obtain a page
     // Will evict an old page if necessary
@@ -216,6 +215,9 @@ page *buffer_pool::obtain_clean_page() {
         allocated_pages_.emplace_back( std::move(page_ptr) );
         return raw_page_ptr;
     }
+
+    // No free pages, have to evict
+    page_misses++;
 
     size_t orig_clock_hand_pos_ = clock_hand_pos_;
     bool looped_over_everything_once = false;
