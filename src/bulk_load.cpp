@@ -990,6 +990,7 @@ void bulk_load_tree(
 
   auto tree_ptr = (rstartreedisk::RStarTreeDisk<5, R_STAR_FANOUT> *) tree;
   std::string fname = "repacked_rstar.txt";
+  unlink(fname.c_str());
 
   auto new_file_allocator = std::make_unique<tree_node_allocator>(configU["buffer_pool_memory"],fname);
   new_file_allocator->initialize();

@@ -17,7 +17,7 @@ constexpr size_t PAGE_DATA_SIZE = PAGE_SIZE - sizeof(page_header);
 
 typedef struct alignas(512) page {
     page_header header_;
-    char data_[PAGE_DATA_SIZE];
+    char data_[PAGE_DATA_SIZE] = {0};
 } page;
 
 

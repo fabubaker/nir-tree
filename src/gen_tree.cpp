@@ -91,7 +91,9 @@ void generate_tree(std::map<std::string, size_t> &configU, std::map<std::string,
     tree->stat(); // Print tree stats BEFORE repacking
 
     std::cout << "Creating consolidator..." << std::endl;
-    auto consolidated_allocator = std::make_unique<tree_node_allocator>(configU["buffer_pool_memory"], "consolidated_nirtree.txt");
+    std::string consolidated_file_name = "consolidated_nirtree.txt";
+    unlink(consolidated_file_name.c_str());
+    auto consolidated_allocator = std::make_unique<tree_node_allocator>(configU["buffer_pool_memory"], consolidated_file_name);
     consolidated_allocator->initialize();
 
     std::cout << "Repacking into consolidator..." << std::endl;
