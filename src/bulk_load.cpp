@@ -773,15 +773,10 @@ std::pair<tree_node_handle, Rectangle> quad_tree_style_load(
     }
     assert(num_els <= branch_factor);
     num_els = (stop - start);
-    auto alloc_data =
-        allocator->create_new_tree_node<nirtreedisk::LeafNode<5, NIR_FANOUT, nirtreedisk::ExperimentalStrategy>>(
-            NodeHandleType(LEAF_NODE));
-    new (&(*(alloc_data.first)))
-        nirtreedisk::LeafNode<5, NIR_FANOUT, nirtreedisk::ExperimentalStrategy>(
-            tree, parent_handle, alloc_data.second, 0);
 
-    auto leaf_node = alloc_data.first;
-    auto leaf_handle = alloc_data.second;
+    auto leaf_node = new nirtreedisk::LeafNode<5, NIR_FANOUT, nirtreedisk::ExperimentalStrategy>(
+          tree, parent_handle, parent_handle, 0
+    );
 
     for (auto iter = start; iter != stop; iter++) {
       leaf_node->addPoint(*iter);
@@ -789,21 +784,14 @@ std::pair<tree_node_handle, Rectangle> quad_tree_style_load(
 
     auto repacked_handle = leaf_node->repack(allocator);
     Rectangle bbox = leaf_node->boundingBox();
-    allocator->free(leaf_handle, sizeof(nirtreedisk::LeafNode<5, NIR_FANOUT, nirtreedisk::ExperimentalStrategy>));
     return std::make_pair(repacked_handle, bbox);
   }
 
   // Return a tree node handle with pointers to all of its necessary
   // children.
-  auto alloc_data =
-      allocator->create_new_tree_node<nirtreedisk::BranchNode<5, NIR_FANOUT, nirtreedisk::ExperimentalStrategy>>(
-          NodeHandleType(BRANCH_NODE));
-  new (&(*(alloc_data.first)))
-      nirtreedisk::BranchNode<5, NIR_FANOUT, nirtreedisk::ExperimentalStrategy>(
-          tree, parent_handle, alloc_data.second, (max_depth - cur_depth));
-
-  auto branch_node = alloc_data.first;
-  tree_node_handle branch_handle = alloc_data.second;
+  auto branch_node = new nirtreedisk::BranchNode<5, NIR_FANOUT, nirtreedisk::ExperimentalStrategy>(
+        tree, parent_handle, parent_handle, (max_depth - cur_depth)
+  );
 
   uint64_t tiles = std::floor(sqrt(branch_factor));
   std::vector<uint64_t> x_lines = find_bounding_lines(start, stop, 0, branch_factor, tiles, std::floor(branch_factor / tiles), max_depth - cur_depth);
@@ -839,7 +827,7 @@ std::pair<tree_node_handle, Rectangle> quad_tree_style_load(
           branch_factor,
           cur_depth + 1,
           max_depth,
-          branch_handle
+          parent_handle
       );
 
       tree_node_handle child_handle = ret.first;
@@ -928,7 +916,6 @@ std::pair<tree_node_handle, Rectangle> quad_tree_style_load(
   assert(repacked_handle);
 
   Rectangle bbox = branch_node->boundingBox();
-  allocator->free(branch_handle, sizeof(nirtreedisk::BranchNode<5, NIR_FANOUT, nirtreedisk::ExperimentalStrategy>));
   return std::make_pair(repacked_handle, bbox);
 }
 
