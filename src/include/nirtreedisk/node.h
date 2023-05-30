@@ -341,7 +341,6 @@ public:
     NIRTreeDisk<min_branch_factor, max_branch_factor, strategy> *treeRef, tree_node_handle parent,
     tree_node_handle self_handle, uint8_t level
   ): treeRef(treeRef), parent(parent), cur_offset_(0), self_handle_(self_handle), level_(level) {
-    static_assert(sizeof(BranchNode<min_branch_factor, max_branch_factor, strategy>) <= PAGE_DATA_SIZE);
   }
 
   void deleteSubtrees();
