@@ -1014,6 +1014,7 @@ runBench(PointGenerator<T> &pointGen, std::map<std::string, uint64_t> &configU, 
 		std::chrono::high_resolution_clock::time_point end = std::chrono::high_resolution_clock::now();
     std::cout << "Points: " << v.size() << std::endl;
 		std::chrono::duration<double> delta = std::chrono::duration_cast<std::chrono::duration<double>>(end - begin);
+    std::cout << "Latency: " << delta.count() << "s" << std::endl;
 
     totalTimeRangeSearches += delta.count();
 		totalRangeSearches += 1;

@@ -904,6 +904,7 @@ std::pair<tree_node_handle, Rectangle> quad_tree_style_load(
     nirtreedisk::Branch b;
     b.child = branch_handles.at(i).second;
     IsotheticPolygon &constructed_poly = branch_handles.at(i).first;
+
     if (constructed_poly.basicRectangles.size() <= MAX_RECTANGLE_COUNT) {
       b.boundingPoly = InlineBoundedIsotheticPolygon();
       std::get<InlineBoundedIsotheticPolygon>(b.boundingPoly).push_polygon_to_disk(constructed_poly);
@@ -942,7 +943,7 @@ void bulk_load_tree(
   // Keep in mind there is a 0th level, so floor is correct
   uint64_t num_els = (end - begin);
   std::cout << "Num els: " << num_els << std::endl;
-  uint64_t max_depth = std::floor(log(num_els - 1) / log(max_branch_factor));
+  uint64_t max_depth = std::floor(log(num_els) / log(max_branch_factor));
   std::cout << "Max depth required: " << max_depth << std::endl;
   intersection_count = 0;
 
