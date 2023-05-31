@@ -722,7 +722,10 @@ class InlineUnboundedIsotheticPolygon {
             return max_rects_on_first_page;
         }
 
-        size_t repack(char *buffer, unsigned cut_off_inline_rect_count, tree_node_allocator *new_allocator) {
+        size_t repack(
+                char *buffer, unsigned cut_off_inline_rect_count,
+                tree_node_allocator *new_allocator, tree_node_handle poly_handle
+          ) {
             assert(total_rectangle_count_ <= maximum_possible_rectangles_on_first_page());
             assert(total_rectangle_count_ > 0);
 
@@ -749,26 +752,16 @@ class InlineUnboundedIsotheticPolygon {
             // polygon, allocate it using the new allocator.
             size_t precise_size_needed =
                     sizeof(InlineUnboundedIsotheticPolygon) + (total_rectangle_count_ - 1) * sizeof(Rectangle);
-            auto alloc_data = new_allocator->create_new_tree_node<InlineUnboundedIsotheticPolygon>(
-                    precise_size_needed, NodeHandleType( 3 /* BIG POLYGON */)
-            );
             new_allocator->out_of_line_nodes_size += precise_size_needed;
 
             // N.B., our current polygon can actually be
             // overprovisioned, so we use total_rectangle_count to count
             // down size.
-            new (&(*alloc_data.first)) InlineUnboundedIsotheticPolygon(
-                    new_allocator, total_rectangle_count_
-            );
-            IsotheticPolygon cur_poly = materialize_polygon();
-            assert(cur_poly.basicRectangles.size() == get_total_rectangle_count());
-            alloc_data.first->push_polygon_to_disk( cur_poly );
-            assert(alloc_data.first->total_rectangle_count_ == get_total_rectangle_count());
 
             // Write summary rectangle here
-            * (Rectangle *) (buffer + sz) = cur_poly.boundingBox;
+            * (Rectangle *) (buffer + sz) = summary_rectangle_;
             sz += sizeof(Rectangle);
-            * (tree_node_handle *) (buffer + sz) = alloc_data.second;
+            * (tree_node_handle *) (buffer + sz) = poly_handle;
             sz += sizeof(tree_node_handle);
             return sz;
         }

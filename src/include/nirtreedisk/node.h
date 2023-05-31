@@ -213,15 +213,16 @@ struct Branch {
 
     uint16_t offset = write_data_to_buffer(buffer, &child);
     if (std::holds_alternative<tree_node_handle>(boundingPoly)) {
+      tree_node_handle poly_handle = std::get<tree_node_handle>(boundingPoly);
       auto poly_pin = existing_allocator->get_tree_node<InlineUnboundedIsotheticPolygon>(
-        std::get<tree_node_handle>(boundingPoly)
+        poly_handle
       );
       assert(poly_pin->get_total_rectangle_count() > 0);
 
       // This will write the polygon in direct, or allocate
       // space for it elsewhere using new_allocator and then
       // write that handle in.
-      offset += poly_pin->repack(buffer + offset, cut_off_inline_rect_count, new_allocator);
+      offset += poly_pin->repack(buffer + offset, cut_off_inline_rect_count, new_allocator, poly_handle);
 
       return offset;
     }
