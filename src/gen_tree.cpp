@@ -90,37 +90,7 @@ void generate_tree(std::map<std::string, size_t> &configU, std::map<std::string,
     std::cout << "Created NIRTree." << std::endl;
     tree->stat(); // Print tree stats BEFORE repacking
 
-    std::cout << "Creating consolidator..." << std::endl;
-    std::string consolidated_file_name = "consolidated_nirtree.txt";
-    unlink(consolidated_file_name.c_str());
-    auto consolidated_allocator = std::make_unique<tree_node_allocator>(configU["buffer_pool_memory"], consolidated_file_name);
-    consolidated_allocator->initialize();
-
-    std::cout << "Repacking into consolidator..." << std::endl;
-    std::chrono::high_resolution_clock::time_point begin_time = std::chrono::high_resolution_clock::now();
-    tree_node_handle new_root = nirtreedisk::repack_subtree<5, NIR_FANOUT, nirtreedisk::ExperimentalStrategy>(
-      tree->root,
-      get_node_allocator(tree),
-      consolidated_allocator.get()
-    );
-    std::chrono::high_resolution_clock::time_point end_time = std::chrono::high_resolution_clock::now();
-    std::chrono::duration<double> delta = std::chrono::duration_cast<std::chrono::duration<double>>(end_time - begin_time);
-    std::cout << "Repacking tree took: " << delta.count() << std::endl;
-    std::cout << "Done." << std::endl;
-
-    std::cout << "Swapping out allocator..." << std::endl;
-    tree->node_allocator_ = std::move(consolidated_allocator);
-    tree->root = new_root;
-    tree->write_metadata();
-    tree->stat(); // Print tree stats AFTER repacking
-
-//    nirtreedisk::tree_validate_recursive(tree->root, tree->node_allocator_.get());
     exit(0);
-    /*
-        if( !tree->validate() ) {
-            std::cout << "Tree Validation Failed" << std::endl;
-        }
-        */
     spatialIndex = tree;
   } else if (configU["tree"] == R_STAR_TREE) {
     rstartreedisk::RStarTreeDisk<5, R_STAR_FANOUT> *tree = new rstartreedisk::RStarTreeDisk<5, R_STAR_FANOUT>(configU["buffer_pool_memory"], backing_file);
