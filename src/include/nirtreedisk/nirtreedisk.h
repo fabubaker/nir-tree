@@ -56,11 +56,14 @@ public:
 
     hasReinsertedOnLevel = {false};
     // If this is a fresh tree, we need a root
+    // Update: We disable this for bulk-loading since the repacked root node
+    // will be created anyways.
     if (existing_page_count == 0) {
-      auto alloc = node_allocator_->create_new_tree_node<LeafNode<min_branch_factor, max_branch_factor, strategy>>(NodeHandleType(LEAF_NODE));
-      root = alloc.second;
 
-      new (&(*(alloc.first))) LeafNode<min_branch_factor, max_branch_factor, strategy>(this, tree_node_handle(nullptr), root, 0);
+//      auto alloc = node_allocator_->create_new_tree_node<LeafNode<min_branch_factor, max_branch_factor, strategy>>(NodeHandleType(LEAF_NODE));
+//      root = alloc.second;
+//
+//      new (&(*(alloc.first))) LeafNode<min_branch_factor, max_branch_factor, strategy>(this, tree_node_handle(nullptr), root, 0);
 
       return;
     }
