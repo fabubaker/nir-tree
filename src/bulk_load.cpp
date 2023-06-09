@@ -985,6 +985,8 @@ void bulk_load_tree(
   auto new_file_allocator = std::make_unique<tree_node_allocator>(configU["buffer_pool_memory"],fname);
   new_file_allocator->initialize();
 
+  std::cout << "Repacking..." << std::endl;
+
   /* Start measuring repack time */
   begin_time = std::chrono::high_resolution_clock::now();
 
