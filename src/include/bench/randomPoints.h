@@ -815,14 +815,15 @@ static std::vector<Rectangle> generateNYCTaxiRectangles(size_t numRectangles) {
   unsigned seed = 1317;
   std::default_random_engine generator(seed);
   // The coordinates below represent the most densely populated NYC area
-  std::uniform_real_distribution<double> xPoint(-114, 0);
-  std::uniform_real_distribution<double> yPoint(0, 60);
+  std::uniform_real_distribution<double> xPoint(-74.2, -73.5);
+  std::uniform_real_distribution<double> yPoint(40.5, 41.1);
+
 
   for (unsigned i = 0; i < numRectangles; i++) {
     ll[0] = xPoint(generator);
     ll[1] = yPoint(generator);
-    ur[0] = ll[0] + 2;
-    ur[1] = ll[1] + 2;
+    ur[0] = ll[0] + 0.01;
+    ur[1] = ll[1] + 0.01;
 
     Rectangle rectangle(ll, ur);
     rectangles.emplace_back(rectangle);
