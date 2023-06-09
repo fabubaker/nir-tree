@@ -936,6 +936,8 @@ void bulk_load_tree(
 
   auto tree_ptr = tree;
 
+  std::cout << "Size of inline unbounded polygon: "
+            << compute_sizeof_inline_unbounded_polygon(MAX_RECTANGLE_COUNT) << std::endl;
   std::chrono::high_resolution_clock::time_point begin_time = std::chrono::high_resolution_clock::now();
   auto ret = quad_tree_style_load(
   tree_ptr, begin, end,
