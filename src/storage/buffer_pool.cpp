@@ -125,9 +125,6 @@ page *buffer_pool::get_page( size_t page_id ) {
         return page_ptr;
     }
 
-    //std::this_thread::sleep_for(std::chrono::milliseconds(20));
-    //std::cout << "Page miss." << std::endl;
-
     // Step 2: It is not, so obtain a page
     // Will evict an old page if necessary
     page *page_ptr = obtain_clean_page();
@@ -272,4 +269,9 @@ void buffer_pool::writeback_all_pages() {
 void buffer_pool::stat() {
   std::cout << "Page hits: " << page_hits << std::endl;
   std::cout << "Page misses: " << page_misses << std::endl;
+}
+
+void buffer_pool::resetStat() {
+  page_hits = 0;
+  page_misses = 0;
 }

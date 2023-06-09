@@ -22,6 +22,7 @@ public:
     void writeback_all_pages();
 
     void stat();
+    void resetStat();
 
     inline size_t get_in_memory_page_count() { return max_mem_pages_; }
     inline size_t get_highest_allocated_page_id() { return
