@@ -37,6 +37,7 @@ static const unsigned GaiaDataSize = 18084053;
 static const unsigned GaiaQuerySize = 5000;
 static const unsigned MicrosoftBuildingsDataSize = 752704741;
 static const unsigned NYCTaxiDataSize = 81616580;
+static const unsigned TweetsDataSize = 15598403;
 
 enum BenchType { UNIFORM,
                  SKEW,
@@ -49,7 +50,8 @@ enum BenchType { UNIFORM,
                  MICROSOFTBUILDINGS,
                  ZIPF,
                  GAUSS,
-                 NYCTAXI };
+                 NYCTAXI,
+                 TWEETS};
 enum TreeType { R_TREE,
                 R_PLUS_TREE,
                 R_STAR_TREE,
@@ -163,6 +165,13 @@ public:
   static constexpr unsigned dimensions = 2;
   static constexpr char fileName[] = "/hdd1/nir-tree++/data/NYCTaxi.csv";
 };
+class Tweets : public Benchmark {
+public:
+    static constexpr size_t size = TweetsDataSize;
+    static constexpr unsigned querySize = 0;
+    static constexpr unsigned dimensions = 2;
+    static constexpr char fileName[] = "/hdd1/nir-tree++/data/tweets.csv";
+};
 }; // namespace BenchTypeClasses
 
 // Mappings from each benchmark type to its tag
@@ -202,6 +211,9 @@ struct getBenchTag<BenchTypeClasses::MicrosoftBuildings> : BenchTag::FileBackedR
 
 template <>
 struct getBenchTag<BenchTypeClasses::NYCTaxi> : BenchTag::FileBackedReadAll {};
+
+template <>
+struct getBenchTag<BenchTypeClasses::Tweets> : BenchTag::FileBackedReadAll {};
 } // namespace BenchDetail
 
 template <typename T>
@@ -832,6 +844,30 @@ static std::vector<Rectangle> generateNYCTaxiRectangles(size_t numRectangles) {
   return rectangles;
 }
 
+static std::vector<Rectangle> generateTweetsRectangles(size_t numRectangles) {
+  Point ll;
+  Point ur;
+  std::vector<Rectangle> rectangles;
+  unsigned seed = 1317;
+  std::default_random_engine generator(seed);
+
+// The coordinates below represent the most densely populated tweets area (USA)
+  std::uniform_real_distribution<double> xPoint(-125, -70);
+  std::uniform_real_distribution<double> yPoint(25, 50);
+
+  for (unsigned i = 0; i < numRectangles; i++) {
+    ll[0] = xPoint(generator);
+    ll[1] = yPoint(generator);
+    ur[0] = ll[0] + 1;
+    ur[1] = ll[1] + 1;
+
+    Rectangle rectangle(ll, ur);
+    rectangles.emplace_back(rectangle);
+  }
+
+  return rectangles;
+}
+
 static bool is_already_loaded(std::map<std::string, uint64_t> &configU, Index *spatial_index) {
   if (configU["tree"] == NIR_TREE) {
     auto tree = (nirtreedisk::NIRTreeDisk<5, NIR_FANOUT, nirtreedisk::ExperimentalStrategy> *) spatial_index;
@@ -950,6 +986,8 @@ runBench(PointGenerator<T> &pointGen, std::map<std::string, uint64_t> &configU, 
     );
   } else if (configU["distribution"] == NYCTAXI) {
     searchRectangles = generateNYCTaxiRectangles(configU["rectanglescount"]);
+  } else if (configU["distribution"] == TWEETS) {
+    searchRectangles = generateTweetsRectangles(configU["rectanglescount"]);
   } else {
     // Do nothing, rectangle searches are disabled for now...
   }

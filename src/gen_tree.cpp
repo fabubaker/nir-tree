@@ -10,7 +10,8 @@ void parameters(std::map<std::string, uint64_t> &configU, std::map<std::string, 
   };
   std::string benchTypes[] = {
           "UNIFORM", "SKEW", "CLUSTER", "CALIFORNIA", "BIOLOGICAL", "FOREST",
-          "CANADA", "GAIA", "MICROSOFTBUILDINGS", "ZIPF", "GAUSS", "NYCTAXI"};
+          "CANADA", "GAIA", "MICROSOFTBUILDINGS", "ZIPF", "GAUSS", "NYCTAXI",
+          "TWEETS"};
 
   std::cout << "### GEN TREE PARAMETERS ###" << std::endl;
   std::cout << "  tree = " << treeTypes[configU["tree"]] << std::endl;
@@ -67,6 +68,11 @@ void generate_tree(std::map<std::string, size_t> &configU, std::map<std::string,
     }
   } else if (configU["distribution"] == NYCTAXI) {
     PointGenerator<BenchTypeClasses::NYCTaxi> points;
+    while ((next = points.nextPoint())) {
+      all_points.push_back(next.value());
+    }
+  } else if (configU["distribution"] == TWEETS) {
+    PointGenerator<BenchTypeClasses::Tweets> points;
     while ((next = points.nextPoint())) {
       all_points.push_back(next.value());
     }
