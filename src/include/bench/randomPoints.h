@@ -917,6 +917,8 @@ runBench(PointGenerator<T> &pointGen, std::map<std::string, uint64_t> &configU, 
   unsigned totalSearches = 0;
   double totalRangeSearches = 0.0;
   unsigned totalDeletes = 0.0;
+  unsigned totalPageHits = 0;
+  unsigned totalPageMisses = 0;
 
   // Populate pointGen buffers with points
   pointGen.generate();
@@ -1026,6 +1028,8 @@ runBench(PointGenerator<T> &pointGen, std::map<std::string, uint64_t> &configU, 
     std::chrono::duration<double> delta = std::chrono::duration_cast<std::chrono::duration<double>>(end - begin);
     totalTimeSearches += delta.count();
     totalSearches += 1;
+    totalPageHits += bufferPool->page_hits;
+    totalPageMisses += bufferPool->page_misses;
 
     if (totalSearches % 10000 == 0) {
       std::cout << "Point[" << totalSearches << "] queried. " << delta.count() << " s" << std::endl;
@@ -1058,6 +1062,8 @@ runBench(PointGenerator<T> &pointGen, std::map<std::string, uint64_t> &configU, 
     std::cout << "Points: " << v.size() << std::endl;
 		std::chrono::duration<double> delta = std::chrono::duration_cast<std::chrono::duration<double>>(end - begin);
     std::cout << "Latency: " << delta.count() << "s" << std::endl;
+    totalPageHits += bufferPool->page_hits;
+    totalPageMisses += bufferPool->page_misses;
     bufferPool->stat();
     bufferPool->resetStat();
 
@@ -1066,9 +1072,6 @@ runBench(PointGenerator<T> &pointGen, std::map<std::string, uint64_t> &configU, 
     totalTimeRangeSearches += delta.count();
 		totalRangeSearches += 1;
 		rangeSearchChecksum += v.size();
-		// std::cout << "searchRectangles[" << i << "] queried. " << delta.count() << " s" << std::endl;
-		// std::cout << "searchRectangles[" << i << "] returned " << v.size() << " points" << std::endl;
-
 	}
 	std::cout << "Range search OK. Checksum = " << rangeSearchChecksum << std::endl;
 
@@ -1090,6 +1093,8 @@ runBench(PointGenerator<T> &pointGen, std::map<std::string, uint64_t> &configU, 
   std::cout << "Avg time to range search: " << totalTimeRangeSearches / totalRangeSearches << "s" << std::endl;
   std::cout << "Total time to delete: " << totalTimeDeletes << "s" << std::endl;
   std::cout << "Avg time to delete: " << totalTimeDeletes / (double)totalDeletes << "s" << std::endl;
+  std::cout << "Total page hits: " << totalPageHits << std::endl;
+  std::cout << "Total page misses: " << totalPageMisses << std::endl;
 
   // Generate visualization
   if (configU["visualization"]) {

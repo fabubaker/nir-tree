@@ -38,6 +38,10 @@ public:
         return existing_page_count_;
     }
 
+    // stats
+    size_t page_hits = 0;
+    size_t page_misses = 0;
+
 protected:
     page *obtain_clean_page();
     void evict( std::unique_ptr<page> &page );
@@ -56,8 +60,4 @@ protected:
     size_t clock_hand_pos_;
     int backing_file_fd_;
     size_t highest_allocated_page_id_;
-
-    // stats
-    size_t page_hits = 0;
-    size_t page_misses = 0;
 };
