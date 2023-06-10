@@ -46,8 +46,6 @@ public:
   std::unique_ptr<tree_node_allocator> node_allocator_;
   std::vector<bool> hasReinsertedOnLevel;
 
-  Statistics stats;
-
   // Constructors and destructors
   NIRTreeDisk(size_t memory_budget, std::string backing_file) : node_allocator_(std::make_unique<tree_node_allocator>(memory_budget, backing_file)) {
     node_allocator_->initialize();

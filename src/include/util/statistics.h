@@ -87,6 +87,10 @@ class Statistics {
 			histogramScatter.at( scatter )++;
 		}
 
+    inline void recordIntersectionCount(unsigned intersection_count) {
+      intersectionCount += intersection_count;
+    }
+
     inline void recordOutOfLineSearched()
     {
       outOfLineSearched++;
@@ -147,6 +151,8 @@ class Statistics {
 
 			return os;
 		}
+
+  size_t intersectionCount = 0;
 
 	private:
 		std::vector<unsigned> histogramSearch;

@@ -1095,6 +1095,7 @@ runBench(PointGenerator<T> &pointGen, std::map<std::string, uint64_t> &configU, 
   std::cout << "Avg time to delete: " << totalTimeDeletes / (double)totalDeletes << "s" << std::endl;
   std::cout << "Total page hits: " << totalPageHits << std::endl;
   std::cout << "Total page misses: " << totalPageMisses << std::endl;
+  std::cout << "Total intersections: " << spatialIndex->stats.intersectionCount << std::endl;
 
   // Generate visualization
   if (configU["visualization"]) {

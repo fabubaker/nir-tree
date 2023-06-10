@@ -21,6 +21,8 @@ class Index
 		virtual void print() = 0;
 		virtual void visualize() = 0;
     virtual void write_metadata() {}
+
+    Statistics stats;
 };
 
 #endif

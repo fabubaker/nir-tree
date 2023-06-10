@@ -766,10 +766,11 @@ class InlineUnboundedIsotheticPolygon {
             return sz;
         }
 
+    unsigned total_rectangle_count_;
+
 protected:
         // Total rectangle count across all of the polygons
         unsigned max_rectangle_count_on_first_page_;
-        unsigned total_rectangle_count_;
         unsigned cur_overflow_pages_;
         tree_node_allocator *allocator_;
         Rectangle summary_rectangle_;

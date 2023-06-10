@@ -2134,6 +2134,7 @@ void BRANCH_NODE_CLASS_TYPES::removeBranch(
   char *buffer = packed_branch->buffer_;                                                         \
   decode_entry_count_and_offset_packed_node(buffer);                                             \
   unsigned matching_branch_counter = 0;                                                          \
+  unsigned intersection_count = 0;                                                             \
   for (unsigned i = 0; i < count; i++) {                                                         \
     tree_node_handle *child = (tree_node_handle *)(buffer + offset);                             \
     offset += sizeof(tree_node_handle);                                                          \
@@ -2145,9 +2146,11 @@ void BRANCH_NODE_CLASS_TYPES::removeBranch(
         offset += sizeof(Rectangle);                                                             \
         tree_node_handle *poly_handle = (tree_node_handle *)(buffer + offset);                   \
         offset += sizeof(tree_node_handle);                                                      \
+        intersection_count++;                                                                   \
         if (summary_rect->containsPoint(requestedPoint)) {                                       \
           auto poly_pin = allocator->get_tree_node<InlineUnboundedIsotheticPolygon>(*poly_handle); \
-          if (poly_pin->containsPoint(requestedPoint)) {                                           \
+          if (poly_pin->containsPoint(requestedPoint)) {                                         \
+            intersection_count += poly_pin->total_rectangle_count_;                               \
             context.push(*child);                                                                  \
             matching_branch_counter++;                                                             \
             break;                                                                                 \
@@ -2158,6 +2161,7 @@ void BRANCH_NODE_CLASS_TYPES::removeBranch(
         for (unsigned r = 0; r < rect_count; r++) {                                              \
           Rectangle *rect = (Rectangle *)(buffer + offset);                                      \
           offset += sizeof(Rectangle);                                                           \
+          intersection_count++;                                                                \
           if (rect->containsPoint(requestedPoint)) {                                             \
             context.push(*child);                                                                \
             matching_branch_counter++;                                                           \
@@ -2181,7 +2185,8 @@ void BRANCH_NODE_CLASS_TYPES::removeBranch(
       offset += new_offset;                                                                      \
     }                                                                                            \
   }                                                                                              \
-  treeRef->stats.recordScatter(matching_branch_counter);
+  treeRef->stats.recordScatter(matching_branch_counter);                                         \
+  treeRef->stats.recordIntersectionCount(intersection_count);
 #else
 #define point_search_packed_branch_handle(handle, requestedPoint, context)                       \
   auto packed_branch = allocator->get_tree_node<packed_node>(handle);                            \
@@ -2311,6 +2316,7 @@ void BRANCH_NODE_CLASS_TYPES::removeBranch(
   auto packed_branch = allocator->get_tree_node<packed_node>(handle);                            \
   char *buffer = packed_branch->buffer_;                                                         \
   decode_entry_count_and_offset_packed_node(buffer);                                             \
+  unsigned intersection_count = 0;                                                             \
   for (unsigned i = 0; i < count; i++) {                                                         \
     tree_node_handle *child = (tree_node_handle *)(buffer + offset);                             \
     offset += sizeof(tree_node_handle);                                                          \
@@ -2323,6 +2329,7 @@ void BRANCH_NODE_CLASS_TYPES::removeBranch(
         offset += sizeof(Rectangle);                                                             \
         tree_node_handle *poly_handle = (tree_node_handle *)(buffer + offset);                   \
         offset += sizeof(tree_node_handle);                                                      \
+        intersection_count++;                                                                   \
         if (summary_rect->intersectsRectangle(requestedRectangle)) {                              \
           context.push(*child);                                                                   \
         }                                                                                         \
@@ -2330,6 +2337,7 @@ void BRANCH_NODE_CLASS_TYPES::removeBranch(
         for (unsigned r = 0; r < rect_count; r++) {                                              \
           Rectangle *rect = (Rectangle *)(buffer + offset);                                      \
           offset += sizeof(Rectangle);                                                           \
+          intersection_count++;                                                                 \
           if (rect->intersectsRectangle(requestedRectangle)) {                                   \
             context.push(*child);                                                                \
             offset += (rect_count - r - 1) * sizeof(Rectangle);                                  \
@@ -2345,7 +2353,8 @@ void BRANCH_NODE_CLASS_TYPES::removeBranch(
       }                                                                                          \
       offset += new_offset;                                                                      \
     }                                                                                            \
-  }
+  }                                                                                              \
+  treeRef->stats.recordIntersectionCount(intersection_count);
 
 template <int min_branch_factor, int max_branch_factor, class strategy, typename functor>
 void treeWalker(NIRTreeDisk<min_branch_factor, max_branch_factor, strategy> *treeRef, tree_node_handle root, functor &f) {

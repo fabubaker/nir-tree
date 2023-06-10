@@ -22,7 +22,6 @@ public:
   static constexpr float p = 0.3; // For reinsertion entries. 0.3 by default
 
   tree_node_handle root;
-  Statistics stats;
   std::unique_ptr<tree_node_allocator> node_allocator_;
   std::string backing_file_;
 

@@ -1180,15 +1180,18 @@ for (unsigned i = 0; i < current_node->cur_offset_; i++) {              \
   char *buffer = packed_branch->buffer_;                                   \
   decode_entry_count_and_offset_packed_node(buffer);                       \
   unsigned matching_branch_counter = 0;                                    \
+  unsigned intersection_count = 0;                                          \
   for (size_t i = 0; i < count; i++) {                                     \
     Branch *b = (Branch *)(buffer + offset);                               \
     offset += sizeof(Branch);                                              \
+    intersection_count++;                                                 \
     if (b->boundingBox.containsPoint(requestedPoint)) {                    \
       context.push(b->child);                                              \
       matching_branch_counter++;                                           \
     }                                                                      \
   }                                                                        \
-  treeRef->stats.recordScatter(matching_branch_counter);
+  treeRef->stats.recordScatter(matching_branch_counter);                   \
+  treeRef->stats.recordIntersectionCount(intersection_count);
 #else
 #define point_search_packed_branch_handle(handle, requestedPoint, context) \
   auto packed_branch = allocator->get_tree_node<packed_node>(handle);      \
@@ -1278,13 +1281,16 @@ for (size_t i = 0; i < current_node->cur_offset_; i++) {                    \
   auto packed_branch = allocator->get_tree_node<packed_node>(handle);              \
   char *buffer = packed_branch->buffer_;                                           \
   decode_entry_count_and_offset_packed_node(buffer);                               \
+  unsigned intersection_count = 0;                                                 \
   for (size_t i = 0; i < count; i++) {                                             \
     Branch *b = (Branch *)(buffer + offset);                                       \
     offset += sizeof(Branch);                                                      \
+    intersection_count++;                                                          \
     if (b->boundingBox.intersectsRectangle(requestedRectangle)) {                  \
       context.push(b->child);                                                      \
     }                                                                              \
-  }
+  }                                                                                \
+  treeRef->stats.recordIntersectionCount(intersection_count);
 
 NODE_TEMPLATE_PARAMS
 std::vector<Point> rectangle_search(
