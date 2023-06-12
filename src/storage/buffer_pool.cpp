@@ -158,6 +158,12 @@ page *buffer_pool::get_page( size_t page_id ) {
     return page_ptr;
 }
 
+bool buffer_pool::is_cached(size_t page_id) {
+  auto search = page_index_.find(page_id);
+  return search != page_index_.end();
+}
+
+
 void buffer_pool::pin_page( page *page_ptr ) {
     page_ptr->header_.pin_count_++;
 }

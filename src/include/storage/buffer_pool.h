@@ -15,6 +15,7 @@ public:
 
     page *get_page( size_t page_id );
     page *create_new_page();
+    bool is_cached(size_t page_id);
 
     void writeback_page( size_t page_id );
     void pin_page( page *page_ptr );

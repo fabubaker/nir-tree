@@ -308,6 +308,10 @@ public:
         return pinned_node_ptr(buffer_pool_, obj_ptr, page_ptr);
     }
 
+    bool is_cached(tree_node_handle *node_ptr) {
+      return buffer_pool_.is_cached(node_ptr->get_page_id());
+    }
+
     buffer_pool buffer_pool_;
 
 protected:
