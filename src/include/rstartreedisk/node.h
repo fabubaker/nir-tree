@@ -1165,6 +1165,22 @@ for (unsigned i = 0; i < current_node->cur_offset_; i++) {              \
   auto packed_leaf = allocator->get_tree_node<packed_node>(handle);          \
   point_search_packed_leaf_node(packed_leaf, requestedPoint, accumulator);
 
+#ifdef STAT
+#define point_search_branch_handle(handle, requestedPoint, context) \
+  auto current_node = treeRef->get_branch_node(handle);             \
+  unsigned matching_branch_counter = 0;                              \
+  unsigned intersection_count = 0;                                   \
+  for (size_t i = 0; i < current_node->cur_offset_; i++) {          \
+    Branch &b = current_node->entries.at(i);                        \
+    intersection_count++;                                            \
+    if (b.boundingBox.containsPoint(requestedPoint)) {              \
+      context.push(b.child);                                        \
+      matching_branch_counter++;                                    \
+    }                                                               \
+  }                                                                 \
+  treeRef->stats.recordScatter(matching_branch_counter);            \
+  treeRef->stats.recordIntersectionCount(intersection_count);
+#else
 #define point_search_branch_handle(handle, requestedPoint, context) \
   auto current_node = treeRef->get_branch_node(handle);             \
   for (size_t i = 0; i < current_node->cur_offset_; i++) {          \
@@ -1173,6 +1189,7 @@ for (unsigned i = 0; i < current_node->cur_offset_; i++) {              \
       context.push(b.child);                                        \
     }                                                               \
   }
+#endif
 
 #ifdef STAT
 #define point_search_packed_branch_handle(handle, requestedPoint, context) \
