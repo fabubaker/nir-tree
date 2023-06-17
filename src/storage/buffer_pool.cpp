@@ -47,6 +47,8 @@ void buffer_pool::initialize() {
         std::unique_ptr<page> page_ptr = std::make_unique<page>();
         int rc = read( backing_file_fd_, (char *) page_ptr.get(), PAGE_SIZE );
         if ( rc == PAGE_SIZE ) {
+            page_ptr->header_.clock_active_ = false;
+            page_ptr->header_.pin_count_ = 0;
             page *raw_page_ptr = page_ptr.get();
 
             // Construct metadata and record it 
