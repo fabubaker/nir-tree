@@ -198,6 +198,88 @@ void fill_branch(
   }
 }
 
+template <>
+tree_node_handle fill_branch_special(
+        rstartreedisk::RStarTreeDisk<5, R_STAR_FANOUT> *treeRef,
+        rstartreedisk::BranchNode<5, R_STAR_FANOUT> *branch_node,
+        tree_node_handle node_handle,
+        std::vector<std::pair<Point, tree_node_handle>> &node_point_pairs,
+        uint64_t &point_offset,
+        unsigned branch_factor,
+        rstartreedisk::LeafNode<5, R_STAR_FANOUT> *leaf_type) {
+  using LN = rstartreedisk::LeafNode<5, R_STAR_FANOUT>;
+  using BN = rstartreedisk::BranchNode<5, R_STAR_FANOUT>;
+
+  std::vector<std::pair<Rectangle, tree_node_handle>> bb_and_handles;
+  tree_node_allocator *allocator = treeRef->node_allocator_.get();
+
+  // Add up to branch factor items to it
+  for (uint64_t i = 0; i < branch_factor; i++) {
+    tree_node_handle child_handle = node_point_pairs[point_offset++].second;
+    Rectangle bbox;
+
+    if (child_handle.get_type() == REPACKED_LEAF_NODE) {
+      auto child = allocator->get_tree_node<packed_node>(child_handle);
+      char *data = child->buffer_;
+      unsigned offset = 0;
+      unsigned count = *(unsigned *)(data + offset);
+      offset += sizeof(unsigned);
+
+      Point *p = (Point *)(data + offset);
+      bbox = Rectangle(*p, Point::closest_larger_point(*p));
+      offset += sizeof(Point);
+
+      for (unsigned i = 1; i < count; i++) {
+        Point *p = (Point *)(data + offset);
+        bbox.expand(*p);
+        offset += sizeof(Point);
+      }
+    } else {
+      auto child = allocator->get_tree_node<packed_node>(child_handle);
+      char *data = child->buffer_;
+      unsigned offset = 0;
+      unsigned count = *(unsigned *)(data + offset);
+      offset += sizeof(unsigned);
+
+      rstartreedisk::Branch *b = (rstartreedisk::Branch *)(data + offset);
+      offset += sizeof(rstartreedisk::Branch);
+      bbox = b->boundingBox;
+
+      for (size_t i = 1; i < count; i++) {
+        rstartreedisk::Branch *b = (rstartreedisk::Branch *)(data + offset);
+        offset += sizeof(rstartreedisk::Branch);
+        bbox.expand(b->boundingBox);
+      }
+    }
+
+    bb_and_handles.push_back(std::make_pair(bbox, child_handle));
+
+    rstartreedisk::Branch b;
+    b.child = child_handle;
+    b.boundingBox = bbox;
+    branch_node->addBranchToNode(b);
+
+    if (point_offset == node_point_pairs.size()) {
+      break;
+    }
+  }
+
+  return branch_node->repack(allocator);
+}
+
+template <>
+tree_node_handle fill_branch_special(
+        nirtreedisk::NIRTreeDisk<5, NIR_FANOUT, nirtreedisk::ExperimentalStrategy> *treeRef,
+        nirtreedisk::BranchNode<5, NIR_FANOUT, nirtreedisk::ExperimentalStrategy> *branch_node,
+        tree_node_handle node_handle,
+        std::vector<std::pair<Point, tree_node_handle>> &node_point_pairs,
+        uint64_t &offset,
+        unsigned branch_factor,
+        nirtreedisk::LeafNode<5, NIR_FANOUT, nirtreedisk::ExperimentalStrategy> *leaf_type) {
+  tree_node_handle dummy;
+  return dummy;
+}
+
 template <typename T, typename LN, typename BN>
 std::vector<tree_node_handle> str_packing_branch(
     T *tree,
@@ -215,12 +297,38 @@ std::vector<tree_node_handle> str_packing_branch(
   for (tree_node_handle &child_handle : child_nodes) {
     Rectangle bbox;
 
-    if (child_handle.get_type() == LEAF_NODE) {
-      auto child = allocator->get_tree_node<LN>(child_handle);
-      bbox = child->boundingBox();
+    if (child_handle.get_type() == REPACKED_LEAF_NODE) {
+      auto child = allocator->get_tree_node<packed_node>(child_handle);
+      char *data = child->buffer_;
+      unsigned offset = 0;
+      unsigned count = *(unsigned *)(data + offset);
+      offset += sizeof(unsigned);
+
+      Point *p = (Point *)(data + offset);
+      bbox = Rectangle(*p, Point::closest_larger_point(*p));
+      offset += sizeof(Point);
+
+      for (unsigned i = 1; i < count; i++) {
+        Point *p = (Point *)(data + offset);
+        bbox.expand(*p);
+        offset += sizeof(Point);
+      }
     } else {
-      auto child = allocator->get_tree_node<BN>(child_handle);
-      bbox = child->boundingBox();
+      auto child = allocator->get_tree_node<packed_node>(child_handle);
+      char *data = child->buffer_;
+      unsigned offset = 0;
+      unsigned count = *(unsigned *)(data + offset);
+      offset += sizeof(unsigned);
+
+      rstartreedisk::Branch *b = (rstartreedisk::Branch *)(data + offset);
+      offset += sizeof(rstartreedisk::Branch);
+      bbox = b->boundingBox;
+
+      for (size_t i = 1; i < count; i++) {
+        rstartreedisk::Branch *b = (rstartreedisk::Branch *)(data + offset);
+        offset += sizeof(rstartreedisk::Branch);
+        bbox.expand(b->boundingBox);
+      }
     }
     node_point_pairs.push_back(std::make_pair(bbox.centrePoint(), child_handle));
   }
@@ -258,17 +366,13 @@ std::vector<tree_node_handle> str_packing_branch(
 
   while (offset < node_point_pairs.size()) {
     // Create the branch node
-    auto alloc_data = allocator->create_new_tree_node<BN>(NodeHandleType(BRANCH_NODE));
+    auto branch_node = new BN(tree, nullptr, nullptr, 1);
+    tree_node_handle dummy_handle;
 
-    new (&(*alloc_data.first)) BN(tree, nullptr, alloc_data.second, 1);
-
-    auto branch_node = alloc_data.first;
-    tree_node_handle branch_handle = alloc_data.second;
-
-    fill_branch(
+    auto branch_handle = fill_branch_special(
         tree,
         branch_node,
-        branch_handle,
+        dummy_handle,
         node_point_pairs,
         offset,
         branch_factor,
@@ -560,12 +664,8 @@ std::vector<tree_node_handle> str_packing_leaf(
   uint64_t offset = 0;
 
   while (offset < count) {
-    auto alloc_data = allocator->create_new_tree_node<LN>(NodeHandleType(LEAF_NODE));
+    auto leaf_node = new LN(tree, nullptr, nullptr, 0);
 
-    new (&(*alloc_data.first)) LN(tree, nullptr, alloc_data.second, 0);
-
-    auto leaf_node = alloc_data.first;
-    tree_node_handle leaf_handle = alloc_data.second;
     for (uint64_t i = 0; i < branch_factor; i++) {
       leaf_node->addPoint(*(begin + offset));
       offset++;
@@ -573,6 +673,8 @@ std::vector<tree_node_handle> str_packing_leaf(
         break;
       }
     }
+
+    auto leaf_handle = leaf_node->repack(allocator);
     leaves.push_back(leaf_handle);
   }
 
@@ -949,6 +1051,7 @@ void bulk_load_tree(
   std::chrono::duration<double> delta = std::chrono::duration_cast<std::chrono::duration<double>>(end_time - begin_time);
   std::cout << "Bulk loading NIRTree took: " << delta.count() << std::endl;
   std::cout << "Completed with " << intersection_count << " intersections" << std::endl;
+  std::cout << "Total pages occupied: " << tree->node_allocator_->buffer_pool_.get_highest_allocated_page_id() << std::endl;
 
   tree->write_metadata();
 }
@@ -976,31 +1079,7 @@ void bulk_load_tree(
   std::cout << "Bulk loading tree took: " << delta.count() << std::endl;
   /* End measuring bulk load time */
 
-  tree->stat(); // Print tree stats BEFORE repacking
-
-  auto tree_ptr = (rstartreedisk::RStarTreeDisk<5, R_STAR_FANOUT> *) tree;
-  std::string fname = "repacked_rstar.txt";
-  unlink(fname.c_str());
-
-  auto new_file_allocator = std::make_unique<tree_node_allocator>(configU["buffer_pool_memory"],fname);
-  new_file_allocator->initialize();
-
-  std::cout << "Repacking..." << std::endl;
-
-  /* Start measuring repack time */
-  begin_time = std::chrono::high_resolution_clock::now();
-
-  auto repacked_handle = rstartreedisk::repack_subtree<5, R_STAR_FANOUT>(
-    tree_ptr->root, tree_ptr->node_allocator_.get(), new_file_allocator.get()
-  );
-  tree_ptr->root = repacked_handle;
-
-  end_time = std::chrono::high_resolution_clock::now();
-  delta = std::chrono::duration_cast<std::chrono::duration<double>>(end_time - begin_time);
-  std::cout << "Repacking done in: " << delta.count() << "s" << std::endl;
-  /* End measuring repack time */
-
-  // This evicts all the old pages, which is painful.
-  tree_ptr->node_allocator_ = std::move(new_file_allocator);
+  tree->stat();
+  std::cout << "Total pages occupied: " << tree->node_allocator_->buffer_pool_.get_highest_allocated_page_id() << std::endl;
   tree->write_metadata();
 }

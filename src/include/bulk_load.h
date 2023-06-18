@@ -47,6 +47,36 @@ void fill_branch(
     unsigned branch_factor,
     rstartreedisk::LeafNode<5, R_STAR_FANOUT> *leaf_type);
 
+template <typename T, typename LN, typename BN>
+tree_node_handle fill_branch_special(
+        T *treeRef,
+        BN *branch_node,
+        tree_node_handle node_handle,
+        std::vector<std::pair<Point, tree_node_handle>> &node_point_pairs,
+        uint64_t &offset,
+        unsigned branch_factor,
+        LN *leaf_type);
+
+template <>
+tree_node_handle fill_branch_special(
+        rstartreedisk::RStarTreeDisk<5, R_STAR_FANOUT> *treeRef,
+        rstartreedisk::BranchNode<5, R_STAR_FANOUT> *branch_node,
+        tree_node_handle node_handle,
+        std::vector<std::pair<Point, tree_node_handle>> &node_point_pairs,
+        uint64_t &offset,
+        unsigned branch_factor,
+        rstartreedisk::LeafNode<5, R_STAR_FANOUT> *leaf_type);
+
+template <>
+tree_node_handle fill_branch_special(
+        nirtreedisk::NIRTreeDisk<5, NIR_FANOUT, nirtreedisk::ExperimentalStrategy> *treeRef,
+        nirtreedisk::BranchNode<5, NIR_FANOUT, nirtreedisk::ExperimentalStrategy> *branch_node,
+        tree_node_handle node_handle,
+        std::vector<std::pair<Point, tree_node_handle>> &node_point_pairs,
+        uint64_t &offset,
+        unsigned branch_factor,
+        nirtreedisk::LeafNode<5, NIR_FANOUT, nirtreedisk::ExperimentalStrategy> *leaf_type);
+
 template <typename T>
 std::vector<tree_node_handle> str_packing_branch(
     T *tree,
