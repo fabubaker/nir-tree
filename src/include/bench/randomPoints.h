@@ -1013,6 +1013,11 @@ runBench(PointGenerator<T> &pointGen, std::map<std::string, uint64_t> &configU, 
   std::cout << "Beginning search." << std::endl;
   pointGen.reset();
 
+  std::mt19937 g;
+  g.seed(0);
+
+  std::shuffle(pointGen.pointBuffer.begin(), pointGen.pointBuffer.end(), g);
+
 #if 1
   while ((nextPoint = pointGen.nextPoint()) /* Intentional = not == */) {
     // Search
