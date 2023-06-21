@@ -12,10 +12,9 @@ def parse_input_file(file_path):
         for line in file:
             line = line.strip()
 
-            if line.startswith('('):
-                # Parse points
-                x, y = line.strip('()').split(',')
-                points.append((float(x), float(y)))
+            # Parse points
+            x, y = line.split('\t')
+            points.append((float(x), float(y)))
 
             count += 1
             if count % 1000000 == 0:
