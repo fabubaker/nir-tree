@@ -245,14 +245,14 @@ public:
             // Can't use that symbol here because it would be recursive
             // includes. So instead I static assert it in that file and
             // use the constant here.
-            if (remainder >= 176) {
-                uint16_t new_offset = alloc_location.first.get_offset() + node_size;
-                tree_node_handle split_handle(
-                        alloc_location.first.get_page_id(), new_offset,
-                      type_code
-                );
-                free_list_.push_back( std::make_pair( split_handle,remainder));
-            }
+//            if (remainder >= 176) {
+//                uint16_t new_offset = alloc_location.first.get_offset() + node_size;
+//                tree_node_handle split_handle(
+//                        alloc_location.first.get_page_id(), new_offset,
+//                      type_code
+//                );
+//                free_list_.push_back( std::make_pair( split_handle,remainder));
+//            }
 
             return std::make_pair(pinned_node_ptr( buffer_pool_,obj_ptr, page_ptr), alloc_location.first);
         }
