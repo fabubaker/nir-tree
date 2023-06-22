@@ -52,6 +52,7 @@ void make_all_rects_disjoint(
         std::cout << poly1 << std::endl;
 
         assert(false);
+        abort();
       }
       assert(poly1.disjoint(poly2));
 
