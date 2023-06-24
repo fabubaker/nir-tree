@@ -850,16 +850,28 @@ static std::vector<Rectangle> generateTweetsRectangles(size_t numRectangles) {
   std::vector<Rectangle> rectangles;
   unsigned seed = 1317;
   std::default_random_engine generator(seed);
+  unsigned lengthSeed = 2454;
+  std::default_random_engine lengthGenerator(lengthSeed);
 
 // The coordinates below represent the most densely populated tweets area (USA)
-  std::uniform_real_distribution<double> xPoint(-125, -70);
-  std::uniform_real_distribution<double> yPoint(25, 50);
+  double xmin = -125;
+  double xmax = -70;
+  double ymin = 25;
+  double ymax = 50;
+  std::uniform_real_distribution<double> xPoint(xmin, xmax);
+  std::uniform_real_distribution<double> yPoint(ymin, ymax);
+  std::uniform_real_distribution<double> xLength(0.01, 0.05);
+  std::uniform_real_distribution<double> yLength(0.01, 0.05);
 
   for (unsigned i = 0; i < numRectangles; i++) {
     ll[0] = xPoint(generator);
     ll[1] = yPoint(generator);
-    ur[0] = ll[0] + 1;
-    ur[1] = ll[1] + 1;
+    ur[0] = ll[0] + xLength(lengthGenerator);
+    ur[1] = ll[1] + yLength(lengthGenerator);
+
+    // If 'ur' is outside of the MBR, clip it.
+    ur[0] = ur[0] < xmax ? ur[0] : xmax;
+    ur[1] = ur[1] < ymax ? ur[1] : ymax;
 
     Rectangle rectangle(ll, ur);
     rectangles.emplace_back(rectangle);
