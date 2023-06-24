@@ -331,6 +331,7 @@ std::vector<tree_node_handle> str_packing_branch(
         bbox.expand(b->boundingBox);
       }
     }
+
     node_point_pairs.push_back(std::make_pair(bbox.centrePoint(), child_handle));
   }
 
