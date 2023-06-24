@@ -36,7 +36,7 @@ static const unsigned CanadaQuerySize = 5000;
 static const unsigned GaiaDataSize = 18084053;
 static const unsigned GaiaQuerySize = 5000;
 static const unsigned MicrosoftBuildingsDataSize = 752704741;
-static const unsigned NYCTaxiDataSize = 81616580;
+static const unsigned PoisDataSize = 146677454;
 static const unsigned TweetsDataSize = 15598403;
 
 enum BenchType { UNIFORM,
@@ -50,7 +50,7 @@ enum BenchType { UNIFORM,
                  MICROSOFTBUILDINGS,
                  ZIPF,
                  GAUSS,
-                 NYCTAXI,
+                 POIS,
                  TWEETS};
 enum TreeType { R_TREE,
                 R_PLUS_TREE,
@@ -158,12 +158,12 @@ public:
   static constexpr unsigned dimensions = 2;
   static constexpr char fileName[] = "/home/bjglasbe/Documents/code/nir-tree/data/microsoftbuildings";
 };
-class NYCTaxi : public Benchmark {
+class Pois : public Benchmark {
 public:
-  static constexpr size_t size = NYCTaxiDataSize;
+  static constexpr size_t size = PoisDataSize;
   static constexpr unsigned querySize = 0;
   static constexpr unsigned dimensions = 2;
-  static constexpr char fileName[] = "/hdd1/nir-tree++/data/NYCTaxi.csv";
+  static constexpr char fileName[] = "/hdd1/nir-tree++/data/pois.csv";
 };
 class Tweets : public Benchmark {
 public:
@@ -210,7 +210,7 @@ template <>
 struct getBenchTag<BenchTypeClasses::MicrosoftBuildings> : BenchTag::FileBackedReadChunksAtATime {};
 
 template <>
-struct getBenchTag<BenchTypeClasses::NYCTaxi> : BenchTag::FileBackedReadAll {};
+struct getBenchTag<BenchTypeClasses::Pois> : BenchTag::FileBackedReadAll {};
 
 template <>
 struct getBenchTag<BenchTypeClasses::Tweets> : BenchTag::FileBackedReadAll {};
@@ -820,7 +820,7 @@ static std::vector<Rectangle> generateZipfRectangles(
   return rectangles;
 }
 
-static std::vector<Rectangle> generateNYCTaxiRectangles(size_t numRectangles) {
+static std::vector<Rectangle> generatePoisRectangles(size_t numRectangles) {
   Point ll;
   Point ur;
   std::vector<Rectangle> rectangles;
@@ -998,8 +998,8 @@ runBench(PointGenerator<T> &pointGen, std::map<std::string, uint64_t> &configU, 
       configU["seed"], configU["rectanglescount"],
       configU["num_elements"]
     );
-  } else if (configU["distribution"] == NYCTAXI) {
-    searchRectangles = generateNYCTaxiRectangles(configU["rectanglescount"]);
+  } else if (configU["distribution"] == POIS) {
+    searchRectangles = generatePoisRectangles(configU["rectanglescount"]);
   } else if (configU["distribution"] == TWEETS) {
     searchRectangles = generateTweetsRectangles(configU["rectanglescount"]);
   } else {

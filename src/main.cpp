@@ -13,7 +13,7 @@ void parameters(std::map<std::string, uint64_t> &configU, std::map<std::string, 
   std::string treeTypes[] = {"R_TREE", "R_PLUS_TREE", "R_STAR_TREE", "NIR_TREE", "QUAD_TREE", "REVISED_R_STAR_TREE"};
   std::string benchTypes[] = {
       "UNIFORM", "SKEW", "CLUSTER", "CALIFORNIA", "BIOLOGICAL", "FOREST",
-      "CANADA", "GAIA", "MICROSOFTBUILDINGS", "ZIPF", "GAUSS", "NYCTAXI",
+      "CANADA", "GAIA", "MICROSOFTBUILDINGS", "ZIPF", "GAUSS", "POIS",
       "TWEETS"};
 
   std::cout << "### BENCHMARK PARAMETERS ###" << std::endl;
@@ -93,8 +93,8 @@ void randomPoints(std::map<std::string, uint64_t> &configU, std::map<std::string
     runBench(pointGen, configU, configD, configS);
     break;
   }
-  case NYCTAXI: {
-    PointGenerator<BenchTypeClasses::NYCTaxi> pointGen;
+  case POIS: {
+    PointGenerator<BenchTypeClasses::Pois> pointGen;
     runBench(pointGen, configU, configD, configS);
     break;
   }
