@@ -198,19 +198,8 @@ struct Branch {
       char *buffer,
       tree_node_allocator *existing_allocator,
       tree_node_allocator *new_allocator,
-      unsigned cut_off_inline_rect_count,
-      std::optional<std::pair<char *, int>> compressed_poly_data
+      unsigned cut_off_inline_rect_count
   ) {
-    if (compressed_poly_data.has_value()) {
-      child.set_associated_poly_is_compressed();
-      uint16_t offset = write_data_to_buffer(buffer, &child);
-      auto &cpd = compressed_poly_data.value();
-      memcpy(buffer + offset, cpd.first, cpd.second);
-      offset += cpd.second;
-      free(cpd.first);
-      return offset;
-    }
-
     uint16_t offset = write_data_to_buffer(buffer, &child);
     if (std::holds_alternative<tree_node_handle>(boundingPoly)) {
       tree_node_handle poly_handle = std::get<tree_node_handle>(boundingPoly);
@@ -1861,16 +1850,8 @@ std::pair<uint16_t, std::vector<std::optional<std::pair<char *, int>>>> BRANCH_N
     for (unsigned i = 0; i < cur_offset_; i++) {
       uint16_t unpacked_size = 0;
       unpacked_size = entries.at(i).compute_packed_size(existing_allocator, new_allocator, maximum_repacked_rect_size, false);
-      auto compression_result = std::optional<std::pair<char *, int>>(std::nullopt);
-//      auto compression_result = entries.at(i).compute_compression_data(existing_allocator);
 
-      if (compression_result.has_value()) {
-        sz += compression_result.value().second + sizeof(tree_node_handle);
-      } else {
-        sz += unpacked_size;
-      }
-
-      branch_compression_data.push_back(compression_result);
+      sz += unpacked_size;
     }
 
     if (sz <= PAGE_DATA_SIZE) {
@@ -1923,8 +1904,7 @@ tree_node_handle BRANCH_NODE_CLASS_TYPES::repack(
     // N.B.: This will also set "compressed" status on the child handle
     // if we chose to compress its associated polygon per compute_packed_size.
     offset += b.repack_into(buffer + offset, existing_allocator,
-                            new_allocator, maximum_unpacked_rect_size,
-                            packing_computation_result.second.at(i));
+                            new_allocator, maximum_unpacked_rect_size);
   }
 
   unsigned true_size = offset;
