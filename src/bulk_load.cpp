@@ -274,11 +274,119 @@ tree_node_handle fill_branch_special(
         nirtreedisk::BranchNode<5, NIR_FANOUT, nirtreedisk::ExperimentalStrategy> *branch_node,
         tree_node_handle node_handle,
         std::vector<std::pair<Point, tree_node_handle>> &node_point_pairs,
-        uint64_t &offset,
+        uint64_t &point_offset,
         unsigned branch_factor,
-        nirtreedisk::LeafNode<5, NIR_FANOUT, nirtreedisk::ExperimentalStrategy> *leaf_type) {
-  tree_node_handle dummy;
-  return dummy;
+        nirtreedisk::LeafNode<5, NIR_FANOUT, nirtreedisk::ExperimentalStrategy> *leaf_type)
+{
+  std::vector<std::pair<IsotheticPolygon, tree_node_handle>> fixed_bb_and_handles;
+  tree_node_allocator *allocator = treeRef->node_allocator_.get();
+
+  // Add up to branch factor items to it
+  for (uint64_t i = 0; i < branch_factor; i++) {
+    tree_node_handle child_handle = node_point_pairs[point_offset++].second;
+    Rectangle bbox;
+    nirtreedisk::Branch b;
+
+    if (child_handle.get_type() == REPACKED_LEAF_NODE) {
+      auto child = allocator->get_tree_node<packed_node>(child_handle);
+      char *data = child->buffer_;
+      unsigned offset = 0;
+      unsigned count = *(unsigned *)(data + offset);
+      offset += sizeof(unsigned);
+
+      Point *p = (Point *)(data + offset);
+      bbox = Rectangle(*p, Point::closest_larger_point(*p));
+      offset += sizeof(Point);
+
+      for (unsigned i = 1; i < count; i++) {
+        Point *p = (Point *)(data + offset);
+        bbox.expand(*p);
+        offset += sizeof(Point);
+      }
+    } else {
+      auto child = allocator->get_tree_node<packed_node>(child_handle);
+      char *data = child->buffer_;
+      unsigned offset = 0;
+      unsigned count = *(unsigned *)(data + offset);
+      offset += sizeof(unsigned);
+
+      tree_node_handle *child_of_child_handle = (tree_node_handle *)(data + offset);
+      offset += sizeof(tree_node_handle);
+      unsigned rect_count = *(unsigned *)(data + offset);
+      offset += sizeof(unsigned);
+
+      if (rect_count == std::numeric_limits<unsigned>::max()) {
+        Rectangle *summary_rect = (Rectangle *)(data + offset);
+        offset += sizeof(Rectangle);
+        tree_node_handle *poly_handle = (tree_node_handle *)(data + offset);
+        offset += sizeof(tree_node_handle);
+
+        bbox = *summary_rect;
+      } else {
+        Rectangle *rect = (Rectangle *)(data + offset);
+        offset += sizeof(Rectangle);
+
+        bbox = *rect;
+
+        for (unsigned r = 1; r < rect_count; r++) {
+          Rectangle *rect = (Rectangle *)(data + offset);
+          offset += sizeof(Rectangle);
+
+          bbox.expand(*rect);
+        }
+      }
+    }
+
+    fixed_bb_and_handles.push_back(std::make_pair(IsotheticPolygon(bbox), child_handle));
+
+    if (point_offset == node_point_pairs.size()) {
+      break;
+    }
+  }
+
+  for (uint64_t i = 0; i < fixed_bb_and_handles.size(); i++) {
+    for (uint64_t j = i + 1; j < fixed_bb_and_handles.size(); j++) {
+
+      std::vector<Rectangle> &existing_rects_a = fixed_bb_and_handles.at(i).first.basicRectangles;
+      std::vector<Rectangle> &existing_rects_b = fixed_bb_and_handles.at(j).first.basicRectangles;
+      make_all_rects_disjoint(
+              treeRef,
+              existing_rects_a,
+              fixed_bb_and_handles.at(i).second,
+              existing_rects_b,
+              fixed_bb_and_handles.at(j).second
+      );
+    }
+  }
+
+  // Now we have made all the BoundingRegions disjoint.
+  // It is time to add our children
+  for (uint64_t i = 0; i < fixed_bb_and_handles.size(); i++) {
+    nirtreedisk::Branch b;
+    b.child = fixed_bb_and_handles.at(i).second;
+    IsotheticPolygon &constructed_poly = fixed_bb_and_handles.at(i).first;
+
+    if (constructed_poly.basicRectangles.size() <= MAX_RECTANGLE_COUNT) {
+      b.boundingPoly = InlineBoundedIsotheticPolygon();
+      std::get<InlineBoundedIsotheticPolygon>(b.boundingPoly).push_polygon_to_disk(constructed_poly);
+    } else {
+      unsigned rect_size = std::min(
+              InlineUnboundedIsotheticPolygon::maximum_possible_rectangles_on_first_page(),
+              constructed_poly.basicRectangles.size()
+      );
+      auto alloc_data = allocator->create_new_tree_node<InlineUnboundedIsotheticPolygon>(
+              compute_sizeof_inline_unbounded_polygon(rect_size),
+              NodeHandleType(BIG_POLYGON)
+      );
+
+      new (&(*alloc_data.first)) InlineUnboundedIsotheticPolygon(allocator, rect_size);
+      alloc_data.first->push_polygon_to_disk(constructed_poly);
+      b.boundingPoly = alloc_data.second;
+    }
+    branch_node->addBranchToNode(b);
+  }
+
+  return branch_node->repack(allocator, allocator);
 }
 
 template <typename T, typename LN, typename BN>
@@ -597,16 +705,130 @@ std::vector<tree_node_handle> str_packing_branch_euclidean(
   return branches;
 }
 
+std::vector<tree_node_handle> str_packing_branch_nir_tree(
+        nirtreedisk::NIRTreeDisk<5, NIR_FANOUT, nirtreedisk::ExperimentalStrategy> *tree,
+        std::vector<tree_node_handle> &child_nodes,
+        unsigned branch_factor)
+{
+  tree_node_allocator *allocator = tree->node_allocator_.get();
+  std::vector<std::pair<Point, tree_node_handle>> node_point_pairs;
+  node_point_pairs.reserve(child_nodes.size());
+
+  for (tree_node_handle &child_handle : child_nodes) {
+    Rectangle bbox;
+
+    if (child_handle.get_type() == REPACKED_LEAF_NODE) {
+      auto child = allocator->get_tree_node<packed_node>(child_handle);
+      char *data = child->buffer_;
+      unsigned offset = 0;
+      unsigned count = *(unsigned *)(data + offset);
+      offset += sizeof(unsigned);
+
+      Point *p = (Point *)(data + offset);
+      bbox = Rectangle(*p, Point::closest_larger_point(*p));
+      offset += sizeof(Point);
+
+      for (unsigned i = 1; i < count; i++) {
+        Point *p = (Point *)(data + offset);
+        bbox.expand(*p);
+        offset += sizeof(Point);
+      }
+    } else {
+      auto child = allocator->get_tree_node<packed_node>(child_handle);
+      char *data = child->buffer_;
+      unsigned offset = 0;
+      unsigned count = *(unsigned *)(data + offset);
+      offset += sizeof(unsigned);
+
+      tree_node_handle *child_of_child_handle = (tree_node_handle *)(data + offset);
+      offset += sizeof(tree_node_handle);
+      unsigned rect_count = *(unsigned *)(data + offset);
+      offset += sizeof(unsigned);
+
+      if (rect_count == std::numeric_limits<unsigned>::max()) {
+        Rectangle *summary_rect = (Rectangle *)(data + offset);
+        offset += sizeof(Rectangle);
+        tree_node_handle *poly_handle = (tree_node_handle *)(data + offset);
+        offset += sizeof(tree_node_handle);
+
+        bbox = *summary_rect;
+      } else {
+        Rectangle *rect = (Rectangle *)(data + offset);
+        offset += sizeof(Rectangle);
+
+        bbox = *rect;
+
+        for (unsigned r = 1; r < rect_count; r++) {
+          Rectangle *rect = (Rectangle *)(data + offset);
+          offset += sizeof(Rectangle);
+
+          bbox.expand(*rect);
+        }
+      }
+    }
+
+    node_point_pairs.push_back(std::make_pair(bbox.centrePoint(), child_handle));
+  }
+
+  uint64_t P = node_point_pairs.size() / branch_factor;
+
+  if (node_point_pairs.size() % branch_factor != 0) P++;
+
+  double S_dbl = std::ceil(sqrt(P));
+  uint64_t S = (uint64_t)S_dbl;
+
+  // Sort by X
+  std::sort(node_point_pairs.begin(), node_point_pairs.end(), [](std::pair<Point, tree_node_handle> &l, std::pair<Point, tree_node_handle> &r) { return l.first[0] < r.first[0]; });
+
+  // There are |S| vertical stripes.
+  // Each has |S|*branch_factor points
+  for (uint64_t i = 0; i < S; i++) {
+    uint64_t start_offset = i * (S * branch_factor);
+    uint64_t stop_offset = (i + 1) * (S * branch_factor);
+
+    if (stop_offset > node_point_pairs.size()) {
+      stop_offset = node_point_pairs.size();
+    }
+
+    auto start_point = node_point_pairs.begin() + start_offset;
+    auto stop_point = node_point_pairs.begin() + stop_offset;
+
+    std::sort(start_point, stop_point, [](std::pair<Point, tree_node_handle> &l, std::pair<Point, tree_node_handle> &r) { return l.first[1] < r.first[1]; });
+
+    if (stop_offset == node_point_pairs.size()) break;
+  }
+
+  std::vector<tree_node_handle> branches;
+  uint64_t offset = 0;
+
+  while (offset < node_point_pairs.size()) {
+    // Create the branch node
+    auto branch_node = new nirtreedisk::BranchNode<5, NIR_FANOUT, nirtreedisk::ExperimentalStrategy>(tree, nullptr, nullptr, 1);
+    tree_node_handle dummy_handle;
+
+    auto branch_handle = fill_branch_special(
+      tree,
+      branch_node,
+      dummy_handle,
+      node_point_pairs,
+      offset,
+      branch_factor,
+      (nirtreedisk::LeafNode<5, NIR_FANOUT, nirtreedisk::ExperimentalStrategy> *) nullptr
+    );
+
+    branches.push_back(branch_handle);
+  }
+
+//  return branches;
+}
+
 template <>
 std::vector<tree_node_handle> str_packing_branch(
     nirtreedisk::NIRTreeDisk<5, NIR_FANOUT, nirtreedisk::ExperimentalStrategy> *tree,
     std::vector<tree_node_handle> &child_nodes,
     unsigned branch_factor) {
-  nirtreedisk::LeafNode<5, NIR_FANOUT, nirtreedisk::ExperimentalStrategy> *targ = nullptr;
-  nirtreedisk::BranchNode<5, NIR_FANOUT, nirtreedisk::ExperimentalStrategy> *targ2 = nullptr;
-
-  return str_packing_branch(
-    tree, child_nodes, branch_factor, targ,targ2
+  return str_packing_branch_nir_tree(
+    tree, child_nodes, branch_factor
   );
 }
 
@@ -1083,5 +1305,32 @@ void bulk_load_tree(
 
   tree->stat();
   std::cout << "Total pages occupied: " << tree->node_allocator_->cur_page_ << std::endl;
+  tree->write_metadata();
+}
+
+void bulk_load_nir_tree_str(
+  nirtreedisk::NIRTreeDisk<5, NIR_FANOUT, nirtreedisk::ExperimentalStrategy> *tree,
+  std::map<std::string, size_t> &configU,
+  std::vector<Point>::iterator begin,
+  std::vector<Point>::iterator end,
+  unsigned max_branch_factor
+) {
+  /* Start measuring bulk load time */
+  std::chrono::high_resolution_clock::time_point begin_time = std::chrono::high_resolution_clock::now();
+  std::vector<tree_node_handle> leaves = str_packing_leaf(tree, begin, end,max_branch_factor);
+  std::vector<tree_node_handle> branches = str_packing_branch_nir_tree(tree, leaves, max_branch_factor);
+
+  while (branches.size() > 1) {
+    branches = str_packing_branch_nir_tree(tree, branches, max_branch_factor);
+  }
+  tree->root = branches.at(0);
+
+  std::chrono::high_resolution_clock::time_point end_time = std::chrono::high_resolution_clock::now();
+  std::chrono::duration<double> delta = std::chrono::duration_cast<std::chrono::duration<double>>(end_time - begin_time);
+  std::cout << "Bulk loading tree took: " << delta.count() << std::endl;
+  /* End measuring bulk load time */
+
+  tree->stat();
+  std::cout << "Total pages occupied: " << tree->node_allocator_->buffer_pool_.get_highest_allocated_page_id() << std::endl;
   tree->write_metadata();
 }

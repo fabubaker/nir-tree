@@ -192,3 +192,11 @@ void bulk_load_tree(
     std::vector<Point>::iterator begin,
     std::vector<Point>::iterator end,
     unsigned max_branch_factor);
+
+void bulk_load_nir_tree_str(
+        nirtreedisk::NIRTreeDisk<5, NIR_FANOUT, nirtreedisk::ExperimentalStrategy> *tree,
+        std::map<std::string, size_t> &configU,
+        std::vector<Point>::iterator begin,
+        std::vector<Point>::iterator end,
+        unsigned max_branch_factor
+);

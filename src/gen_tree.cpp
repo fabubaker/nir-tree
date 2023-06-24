@@ -92,7 +92,7 @@ void generate_tree(std::map<std::string, size_t> &configU, std::map<std::string,
             configU["buffer_pool_memory"], backing_file); //
     std::cout << "Bulk Loading..." << std::endl;
     std::cout << "Creating tree with " << configU["buffer_pool_memory"] << "bytes" << std::endl;
-    bulk_load_tree(tree, configU, all_points.begin(), all_points.begin() + cut_off_bulk_load, NIR_FANOUT);
+    bulk_load_nir_tree_str(tree, configU, all_points.begin(), all_points.begin() + cut_off_bulk_load, NIR_FANOUT);
     std::cout << "Created NIRTree." << std::endl;
     tree->stat(); // Print tree stats BEFORE repacking
     std::cout << "Spillover pages created: " << tree->node_allocator_->num_spillover_pages << std::endl;
