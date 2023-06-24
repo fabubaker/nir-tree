@@ -765,8 +765,6 @@ class InlineUnboundedIsotheticPolygon {
     unsigned total_rectangle_count_;
 
 protected:
-        // Total rectangle count across all of the polygons
-        uint8_t total_rectangle_count_;
         unsigned max_rectangle_count_on_first_page_;
         unsigned cur_overflow_pages_;
         tree_node_allocator *allocator_;
