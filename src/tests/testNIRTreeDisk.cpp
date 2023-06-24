@@ -1998,11 +1998,11 @@ TEST_CASE( "NIRTreeDisk: Some branches compressed" ) {
     REQUIRE( child->get_associated_poly_is_compressed() == false );
     offset += sizeof( tree_node_handle );
 
-    unsigned rect_count = * (unsigned *) (buffer+offset);
+    uint8_t rect_count = * (uint8_t *) (buffer+offset);
     REQUIRE( rect_count == branch_polygon2.basicRectangles.size() );
-    offset += sizeof( unsigned );
+    offset += sizeof(uint8_t);
 
-    for( unsigned i = 0; i < rect_count; i++ ) {
+    for (uint8_t i = 0; i < rect_count; i++) {
         Rectangle *rect = (Rectangle *) (buffer + offset);
         REQUIRE( *rect == branch_polygon2.basicRectangles.at(i));
         offset += sizeof( Rectangle );

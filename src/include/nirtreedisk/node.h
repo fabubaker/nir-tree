@@ -127,13 +127,6 @@ struct Branch {
     unsigned maximum_repacked_rect_size, bool truncate_polygons
   ) {
     uint16_t sz = sizeof(child);
-    /*
-            if( truncate_polygons ) {
-                sz += sizeof( unsigned ); // always 1
-                sz += sizeof( Rectangle ); // single rect
-                return sz;
-            }
-            */
 
     // If the bounding polygon is stored out-of-line...
     if (std::holds_alternative<tree_node_handle>(boundingPoly)) {
@@ -146,12 +139,12 @@ struct Branch {
 
       if (should_pack_and_pin.first) {
         auto poly_pin = should_pack_and_pin.second;
-        sz += sizeof(unsigned); // Rectangle count
+        sz += sizeof(uint8_t); // Rectangle count
         sz += poly_pin->get_total_rectangle_count() * sizeof(Rectangle); //rectangles
         return sz;
       }
 
-      sz += sizeof(unsigned); // magic rect count id
+      sz += sizeof(uint8_t); // magic rect count id
       sz += sizeof(Rectangle); // summary rectangle for out-of-line polygon
       sz += sizeof(tree_node_handle);
       return sz;
@@ -159,7 +152,7 @@ struct Branch {
 
     // The bounding polygon is stored in-line...
     InlineBoundedIsotheticPolygon &poly = std::get<InlineBoundedIsotheticPolygon>(boundingPoly);
-    unsigned rect_count = poly.get_rectangle_count();
+    uint8_t rect_count = poly.get_rectangle_count();
     sz += sizeof(rect_count);
     sz += rect_count * sizeof(Rectangle);
     return sz;
@@ -169,7 +162,7 @@ struct Branch {
     if (std::holds_alternative<tree_node_handle>(boundingPoly)) {
       tree_node_handle poly_handle = std::get<tree_node_handle>(boundingPoly);
       auto poly_pin = existing_allocator->get_tree_node<InlineUnboundedIsotheticPolygon>(poly_handle);
-      unsigned rect_count = poly_pin->get_total_rectangle_count();
+      uint8_t rect_count = poly_pin->get_total_rectangle_count();
       std::pair<char *, int> compression_result = compress_polygon(poly_pin->begin(),poly_pin->end(), rect_count);
       unsigned compressed_size = compression_result.second;
 
@@ -182,7 +175,7 @@ struct Branch {
     }
 
     InlineBoundedIsotheticPolygon &poly = std::get<InlineBoundedIsotheticPolygon>(boundingPoly);
-    unsigned rect_count = poly.get_rectangle_count();
+    uint8_t rect_count = poly.get_rectangle_count();
     std::pair<char *, int> compression_result = compress_polygon(poly.begin(), poly.end(), rect_count);
     unsigned compressed_size = compression_result.second;
 
@@ -218,7 +211,7 @@ struct Branch {
 
     InlineBoundedIsotheticPolygon &poly = std::get<InlineBoundedIsotheticPolygon>(boundingPoly);
 
-    unsigned rect_count = poly.get_rectangle_count();
+    uint8_t rect_count = (uint8_t) poly.get_rectangle_count();
     offset += write_data_to_buffer(buffer + offset, &rect_count);
     for (auto iter = poly.begin(); iter != poly.end(); iter++) {
       offset += write_data_to_buffer(buffer + offset, &(*iter));
@@ -1258,7 +1251,7 @@ void update_branch_polygon(
       }
     }
 
-    unsigned rect_count = force_create ? polygon_to_write.basicRectangles.size() : InlineUnboundedIsotheticPolygon::maximum_possible_rectangles_on_first_page();
+    uint8_t rect_count = force_create ? polygon_to_write.basicRectangles.size() : InlineUnboundedIsotheticPolygon::maximum_possible_rectangles_on_first_page();
 
     auto alloc_data =
             allocator->create_new_tree_node<InlineUnboundedIsotheticPolygon>(
@@ -2119,9 +2112,9 @@ void BRANCH_NODE_CLASS_TYPES::removeBranch(
     tree_node_handle *child = (tree_node_handle *)(buffer + offset);                             \
     offset += sizeof(tree_node_handle);                                                          \
     if (!child->get_associated_poly_is_compressed()) {                                           \
-      unsigned rect_count = *(unsigned *)(buffer + offset);                                      \
-      offset += sizeof(unsigned);                                                                \
-      if (rect_count == std::numeric_limits<unsigned>::max()) {                                  \
+      uint8_t rect_count = *(uint8_t *)(buffer + offset);                                      \
+      offset += sizeof(uint8_t);                                                                \
+      if (rect_count == std::numeric_limits<uint8_t>::max()) {                                  \
         Rectangle *summary_rect = (Rectangle *)(buffer + offset);                                \
         offset += sizeof(Rectangle);                                                             \
         tree_node_handle *poly_handle = (tree_node_handle *)(buffer + offset);                   \
@@ -2176,14 +2169,15 @@ void BRANCH_NODE_CLASS_TYPES::removeBranch(
     tree_node_handle *child = (tree_node_handle *)(buffer + offset);                             \
     offset += sizeof(tree_node_handle);                                                          \
     if (!child->get_associated_poly_is_compressed()) {                                           \
-      unsigned rect_count = *(unsigned *)(buffer + offset);                                      \
-      offset += sizeof(unsigned);                                                                \
-      if (rect_count == std::numeric_limits<unsigned>::max()) {                                  \
+      uint8_t rect_count = *(uint8_t *)(buffer + offset);                                      \
+      offset += sizeof(uint8_t);                                                                \
+      if (rect_count == std::numeric_limits<uint8_t>::max()) {                                  \
         Rectangle *summary_rect = (Rectangle *)(buffer + offset);                                \
         offset += sizeof(Rectangle);                                                             \
         tree_node_handle *poly_handle = (tree_node_handle *)(buffer + offset);                   \
         offset += sizeof(tree_node_handle);                                                      \
         if (summary_rect->containsPoint(requestedPoint)) {                                       \
+          treeRef->stats.recordOutOfLineSearched();                                                \                                                                                       \
           auto poly_pin = allocator->get_tree_node<InlineUnboundedIsotheticPolygon>(*poly_handle); \
           if (poly_pin->containsPoint(requestedPoint)) {                                           \
             context.push(*child);                                                                  \
@@ -2225,9 +2219,9 @@ void BRANCH_NODE_CLASS_TYPES::removeBranch(
     tree_node_handle *child = (tree_node_handle *)(buffer + offset);                             \
     offset += sizeof(tree_node_handle);                                                          \
     if (!child->get_associated_poly_is_compressed()) {                                           \
-      unsigned rect_count = *(unsigned *)(buffer + offset);                                      \
-      offset += sizeof(unsigned);                                                                \
-      if (rect_count == std::numeric_limits<unsigned>::max()) {                                  \
+      uint8_t rect_count = *(uint8_t *)(buffer + offset);                                      \
+      offset += sizeof(uint8_t);                                                                \
+      if (rect_count == std::numeric_limits<uint8_t>::max()) {                                  \
         Rectangle *summary_rect = (Rectangle *)(buffer + offset);                                \
         offset += sizeof(Rectangle);                                                             \
         tree_node_handle *poly_handle = (tree_node_handle *)(buffer + offset);                   \
@@ -2301,9 +2295,9 @@ void BRANCH_NODE_CLASS_TYPES::removeBranch(
     tree_node_handle *child = (tree_node_handle *)(buffer + offset);                             \
     offset += sizeof(tree_node_handle);                                                          \
     if (!child->get_associated_poly_is_compressed()) {                                           \
-      unsigned rect_count = *(unsigned *)(buffer + offset);                                      \
-      offset += sizeof(unsigned);                                                                \
-      if (rect_count == std::numeric_limits<unsigned>::max()) {                                  \
+      uint8_t rect_count = *(uint8_t *)(buffer + offset);                                      \
+      offset += sizeof(uint8_t);                                                                \
+      if (rect_count == std::numeric_limits<uint8_t>::max()) {                                  \
         treeRef->stats.recordOutOfLineSearched();                                                \
         Rectangle *summary_rect = (Rectangle *)(buffer + offset);                                \
         offset += sizeof(Rectangle);                                                             \
@@ -2370,10 +2364,10 @@ void treeWalker(NIRTreeDisk<min_branch_factor, max_branch_factor, strategy> *tre
         context.push(*child);
         offset += sizeof(tree_node_handle);
 
-        unsigned rect_count = *(unsigned *)(buffer + offset);
-        offset += sizeof(unsigned);
+        uint8_t rect_count = *(uint8_t *)(buffer + offset);
+        offset += sizeof(uint8_t);
 
-        if (rect_count == std::numeric_limits<unsigned>::max()) {
+        if (rect_count == std::numeric_limits<uint8_t>::max()) {
           offset += sizeof(Rectangle); // summary rectangle
           offset += sizeof(tree_node_handle);
         } else {
@@ -2401,10 +2395,10 @@ void printPackedNodes(
       tree_node_handle *child = (tree_node_handle *)(data + offset);
       offset += sizeof(tree_node_handle);
 
-      unsigned rect_count = *(unsigned *)(data + offset);
-      offset += sizeof(unsigned);
+      uint8_t rect_count = *(uint8_t *)(data + offset);
+      offset += sizeof(uint8_t);
 
-      if (rect_count == std::numeric_limits<unsigned>::max()) {
+      if (rect_count == std::numeric_limits<uint8_t>::max()) {
         Rectangle *summary_rect = (Rectangle *)(data + offset);
         offset += sizeof(Rectangle);
         auto handle = *(tree_node_handle *)(data + offset);
@@ -2607,12 +2601,12 @@ tree_node_handle repack_subtree(tree_node_handle handle, tree_node_allocator *ex
       // whole sub-tree is repacked.
 
       // Node Format:
-      // NODE_ENTRY_COUNT (unsigned) | CHILD_HANDLE (tree_node_handle) | RECT_COUNT (unsigned)
+      // NODE_ENTRY_COUNT (unsigned) | CHILD_HANDLE (tree_node_handle) | RECT_COUNT (uint8_t)
       // | SUMMARY_RECTANGLE (Rectangle) | POLYGON_HANDLE (tree_node_handle) |
 
       // OR
 
-      // NODE_ENTRY_COUNT (unsigned) | CHILD_HANDLE (tree_node_handle) | RECT_COUNT (unsigned)
+      // NODE_ENTRY_COUNT (unsigned) | CHILD_HANDLE (tree_node_handle) | RECT_COUNT (uint8_t)
       // | POLYGON (Rectangle * RECT_COUNT )
 
       auto branch_node = existing_allocator->get_tree_node<packed_node>(handle);
@@ -2636,9 +2630,9 @@ tree_node_handle repack_subtree(tree_node_handle handle, tree_node_allocator *ex
 
         offset += sizeof(tree_node_handle);
         if (!child->get_associated_poly_is_compressed()) {
-          unsigned rect_count = *(unsigned *)(buffer + offset);
-          offset += sizeof(unsigned);
-          if (rect_count == std::numeric_limits<unsigned>::max()) {
+          uint8_t rect_count = *(uint8_t *)(buffer + offset);
+          offset += sizeof(uint8_t);
+          if (rect_count == std::numeric_limits<uint8_t>::max()) {
             Rectangle *summary_rect = (Rectangle *)(buffer + offset);
             offset += sizeof(Rectangle);
             tree_node_handle *poly_handle = (tree_node_handle *)(buffer + offset);
@@ -3927,11 +3921,11 @@ void stat_node(tree_node_handle start_handle, NIRTreeDisk<min_branch_factor, max
         memoryFootprint += sizeof(tree_node_handle);
 
         if (!child->get_associated_poly_is_compressed()) {
-          unsigned rect_count = *(unsigned *)(buffer + offset);
-          offset += sizeof(unsigned);
-          memoryFootprint += sizeof(unsigned);
+          uint8_t rect_count = *(uint8_t *)(buffer + offset);
+          offset += sizeof(uint8_t);
+          memoryFootprint += sizeof(uint8_t);
 
-          if (rect_count == std::numeric_limits<unsigned>::max()) {
+          if (rect_count == std::numeric_limits<uint8_t>::max()) {
             Rectangle *summary_rect = (Rectangle *)(buffer + offset);
             offset += sizeof(Rectangle);
             memoryFootprint += sizeof(Rectangle);
@@ -4439,10 +4433,10 @@ tree_node_handle unpack_branch(
       continue;
     }
 
-    unsigned rect_count = * (unsigned *)(buffer + offset);
-    offset += sizeof(unsigned);
+    uint8_t rect_count = * (uint8_t *)(buffer + offset);
+    offset += sizeof(uint8_t);
 
-    if (rect_count == std::numeric_limits<unsigned>::max()) {
+    if (rect_count == std::numeric_limits<uint8_t>::max()) {
       Rectangle *summary_rect = (Rectangle *)(buffer + offset);
       offset += sizeof(Rectangle);
       tree_node_handle *poly_handle = (tree_node_handle *)(buffer + offset);
@@ -4534,10 +4528,10 @@ static std::vector<Point> tree_validate_recursive(tree_node_handle current_handl
         child_pts = tree_validate_recursive(*child, allocator);
 
         if (!child->get_associated_poly_is_compressed()) {
-          unsigned rect_count = * (unsigned *)(buffer + offset);
-          offset += sizeof(unsigned);
+          uint8_t rect_count = * (uint8_t *)(buffer + offset);
+          offset += sizeof(uint8_t);
 
-          if (rect_count == std::numeric_limits<unsigned>::max()) {
+          if (rect_count == std::numeric_limits<uint8_t>::max()) {
             Rectangle *summary_rect = (Rectangle *)(buffer + offset);
             offset += sizeof(Rectangle);
             tree_node_handle *poly_handle = (tree_node_handle *)(buffer + offset);

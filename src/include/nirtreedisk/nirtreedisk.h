@@ -114,10 +114,10 @@ public:
         continue;
       }
 
-      unsigned rect_count = *(unsigned *)(buffer + offset);
-      offset += sizeof(unsigned);
+      uint8_t rect_count = *(uint8_t *)(buffer + offset);
+      offset += sizeof(uint8_t);
 
-      if (rect_count == std::numeric_limits<unsigned>::max()) {
+      if (rect_count == std::numeric_limits<uint8_t>::max()) {
         offset += sizeof(tree_node_handle);
       } else {
         for (unsigned r = 0; r < rect_count; r++) {

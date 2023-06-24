@@ -1686,12 +1686,13 @@ TEST_CASE( "Geometry: InlineBoundedIsotheticPolygon materialization" ) {
     Point two_two(2,2);
     Rectangle one_two_rect( one_one, two_two );
     IsotheticPolygon loc_poly;
-    loc_poly.basicRectangles = { one_two_rect, one_two_rect,
-        one_two_rect, one_two_rect, one_two_rect };
+    loc_poly.basicRectangles = {
+        one_two_rect, one_two_rect,
+        one_two_rect, one_two_rect, one_two_rect
+    };
     loc_poly.recomputeBoundingBox();
-    inline_poly.push_polygon_to_disk( loc_poly );
-    IsotheticPolygon materialized_rect =
-        inline_poly.materialize_polygon();
+    inline_poly.push_polygon_to_disk( loc_poly);
+    IsotheticPolygon materialized_rect = inline_poly.materialize_polygon();
     REQUIRE( materialized_rect.basicRectangles.size() == 5 );
     for( const auto &rect : materialized_rect.basicRectangles ) {
         REQUIRE( rect == one_two_rect );

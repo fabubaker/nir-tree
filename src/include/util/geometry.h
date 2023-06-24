@@ -369,7 +369,7 @@ public:
                 const InlineBoundedIsotheticPolygon &rhs);
 
 private:
-        unsigned rectangle_count_;
+        uint8_t rectangle_count_;
         Rectangle summary_rectangle_;
 		    std::array<Rectangle, MAX_RECTANGLE_COUNT> basicRectangles;
 };
@@ -382,7 +382,7 @@ bool operator!=(const InlineBoundedIsotheticPolygon &lhs, const
 
 struct PageableIsotheticPolygon {
     // Rectangles present in this polygon chunk
-    unsigned rectangle_count_;
+    uint8_t rectangle_count_;
 
     // The logical pointer to the next chunk of polygon data
     tree_node_handle next_;
@@ -526,15 +526,11 @@ class InlineUnboundedIsotheticPolygon {
             bool at_end_;
         };
 
-
-        InlineUnboundedIsotheticPolygon(
-                tree_node_allocator *allocator,
-                unsigned max_rectangle_count_on_first_page ) :
-            max_rectangle_count_on_first_page_(
-                    max_rectangle_count_on_first_page ),
-            total_rectangle_count_( 0 ),
-            cur_overflow_pages_( 0 ),
-            allocator_( allocator )
+        InlineUnboundedIsotheticPolygon(tree_node_allocator *allocator, unsigned max_rectangle_count_on_first_page ) :
+          total_rectangle_count_(0),
+          max_rectangle_count_on_first_page_(max_rectangle_count_on_first_page),
+          cur_overflow_pages_(0),
+          allocator_(allocator)
         {
             poly_data_.next_ = tree_node_handle( nullptr );
             poly_data_.rectangle_count_ = 0;
@@ -663,7 +659,7 @@ class InlineUnboundedIsotheticPolygon {
             */
         }
 
-        unsigned get_total_rectangle_count() const {
+        uint8_t get_total_rectangle_count() const {
             return total_rectangle_count_;
         }
 
@@ -732,8 +728,8 @@ class InlineUnboundedIsotheticPolygon {
             // Inline oversize polygon into repacked node directly.
             if (total_rectangle_count_ <= cut_off_inline_rect_count) {
                 size_t sz = 0;
-                * (unsigned *) buffer = total_rectangle_count_;
-                sz += sizeof( unsigned );
+                * (uint8_t *) buffer = total_rectangle_count_;
+                sz += sizeof(uint8_t);
                 for (auto iter = begin(); iter != end(); iter++ ) {
                     * (Rectangle *) (buffer + sz) = (*iter);
                     sz += sizeof( Rectangle );
@@ -745,8 +741,8 @@ class InlineUnboundedIsotheticPolygon {
 
             // Write magic to signify out of band polygon
             size_t sz = 0;
-            * (unsigned *) buffer = std::numeric_limits<unsigned>::max();
-            sz += sizeof(unsigned);
+            * (uint8_t *) buffer = std::numeric_limits<uint8_t>::max();
+            sz += sizeof(uint8_t);
 
             // Compute exact size needed to represent this out of band
             // polygon, allocate it using the new allocator.
@@ -770,6 +766,7 @@ class InlineUnboundedIsotheticPolygon {
 
 protected:
         // Total rectangle count across all of the polygons
+        uint8_t total_rectangle_count_;
         unsigned max_rectangle_count_on_first_page_;
         unsigned cur_overflow_pages_;
         tree_node_allocator *allocator_;
