@@ -110,19 +110,16 @@ public:
 
     tree_node_handle(uint32_t page_id, uint16_t offset, NodeHandleType type) :
         page_location_(std::in_place, page_id, offset),
-        type_(type.type_),
-        associated_poly_is_compressed_(0) {
+        type_(type.type_) {
     }
 
     tree_node_handle() :
         page_location_( std::nullopt ),
-        type_( 0 ),
-        associated_poly_is_compressed_( 0 ) {}
+        type_( 0 ) {}
 
     tree_node_handle( std::nullptr_t ) :
         page_location_( std::nullopt ),
-        type_( 0 ),
-        associated_poly_is_compressed_( 0 ) {}
+        type_( 0 ) {}
 
     operator bool() const {
         return page_location_.has_value();
@@ -161,11 +158,11 @@ public:
     }
 
     inline void set_associated_poly_is_compressed() {
-        associated_poly_is_compressed_ = 1;
+        return;
     }
 
     inline bool get_associated_poly_is_compressed() {
-        return associated_poly_is_compressed_ == 1;
+        return false;
     }
 
     inline void set_type( NodeHandleType type ) {
@@ -187,7 +184,6 @@ private:
     // Special bits to indicate what type of node is on the other
     // end of this handle.
     uint8_t type_;
-    uint8_t associated_poly_is_compressed_;
 };
 
 static_assert( sizeof(tree_node_handle) == 16 );
