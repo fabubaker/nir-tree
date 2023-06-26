@@ -313,11 +313,11 @@ public:
     }
 
     buffer_pool buffer_pool_;
+    uint32_t cur_page_;
 
 protected:
     page *get_page_to_alloc_on( uint16_t object_size );
 
     uint16_t space_left_in_cur_page_;
-    uint32_t cur_page_;
     std::list<std::pair<tree_node_handle,uint16_t>> free_list_;
 };

@@ -61,4 +61,6 @@ protected:
     size_t clock_hand_pos_;
     int backing_file_fd_;
     size_t highest_allocated_page_id_;
+
+    std::unordered_map<size_t, bool> clock_counters;
 };

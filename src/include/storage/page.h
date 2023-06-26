@@ -10,7 +10,6 @@ typedef struct page_header {
     // Should probably put the clock counter here
     size_t page_id_;
     size_t pin_count_;
-    bool clock_active_;
 } page_header;
 
 constexpr size_t PAGE_DATA_SIZE = PAGE_SIZE - sizeof(page_header);

@@ -47,9 +47,9 @@ void buffer_pool::initialize() {
         std::unique_ptr<page> page_ptr = std::make_unique<page>();
         int rc = read( backing_file_fd_, (char *) page_ptr.get(), PAGE_SIZE );
         if ( rc == PAGE_SIZE ) {
-            page_ptr->header_.clock_active_ = false;
-            page_ptr->header_.pin_count_ = 0;
             page *raw_page_ptr = page_ptr.get();
+            clock_counters[page_ptr->header_.page_id_] = false;
+            page_ptr->header_.pin_count_ = 0;
 
             // Construct metadata and record it 
             allocated_pages_.emplace_back(std::move(page_ptr));
@@ -101,7 +101,7 @@ void buffer_pool::initialize() {
         std::unique_ptr<page> page_ptr = std::make_unique<page>();
         page_ptr->header_.page_id_ = OFFSET_TO_PAGE_ID( file_offset );
         page_ptr->header_.pin_count_ = 0;
-        page_ptr->header_.clock_active_ = false;
+        clock_counters[page_ptr->header_.page_id_] = false;
         memset( page_ptr->data_, '\0', sizeof( page_ptr->data_ ) );
         writeback_page( page_ptr.get() );
 
@@ -123,7 +123,7 @@ page *buffer_pool::get_page( size_t page_id ) {
     auto search = page_index_.find( page_id );
     if( search != page_index_.end() ) {
         page *page_ptr = search->second;
-        page_ptr->header_.clock_active_ = true;
+        clock_counters[page_ptr->header_.page_id_] = true;
         page_hits++;
         return page_ptr;
     }
@@ -187,7 +187,7 @@ page *buffer_pool::create_new_page() {
     // Set the header
     page_ptr->header_.page_id_ = highest_allocated_page_id_;
     page_ptr->header_.pin_count_ = 0;
-    page_ptr->header_.clock_active_ = false;
+    clock_counters[page_ptr->header_.page_id_] = false;
 
     writeback_page( page_ptr );
     page_index_.insert( { highest_allocated_page_id_, page_ptr } );
@@ -239,15 +239,18 @@ page *buffer_pool::obtain_clean_page() {
         std::unique_ptr<page> &page = allocated_pages_[ clock_hand_pos_ ];
         // Move hand past
         clock_hand_pos_ = ( clock_hand_pos_ + 1 ) % allocated_pages_.size();
+        bool clock_active = clock_counters[page->header_.page_id_];
 
-        if (not page->header_.clock_active_ and not (page->header_.pin_count_> 0)) {
+        if (not clock_active and not (page->header_.pin_count_> 0)) {
             // Evict the page
-            page->header_.clock_active_ = true;
+            clock_counters[page->header_.page_id_] = true;
             evict( page );
             return page.get();
         }
+
         // Unset
-        page->header_.clock_active_ = false;
+        clock_counters[page->header_.page_id_] = false;
+
         if ( orig_clock_hand_pos_ == clock_hand_pos_ ) {
             // We should have unset all the in_use bits and found
             // something, every page is pinned

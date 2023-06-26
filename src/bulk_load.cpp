@@ -1053,7 +1053,7 @@ void bulk_load_tree(
   std::chrono::duration<double> delta = std::chrono::duration_cast<std::chrono::duration<double>>(end_time - begin_time);
   std::cout << "Bulk loading NIRTree took: " << delta.count() << std::endl;
   std::cout << "Completed with " << intersection_count << " intersections" << std::endl;
-  std::cout << "Total pages occupied: " << tree->node_allocator_->buffer_pool_.get_highest_allocated_page_id() << std::endl;
+  std::cout << "Total pages occupied: " << tree->node_allocator_->cur_page_ << std::endl;
 
   tree->write_metadata();
 }
