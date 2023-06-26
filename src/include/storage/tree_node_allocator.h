@@ -106,19 +106,28 @@ public:
         bool operator==( const page_location &other ) const {
             return page_id_ == other.page_id_ and offset_ == other.offset_;
         }
+
+        bool has_value() const {
+          return page_id_ != 0 && offset_ != 0;
+        }
+
+        void reset() {
+          page_id_ = 0;
+          offset_ = 0;
+        }
     };
 
     tree_node_handle(uint32_t page_id, uint16_t offset, NodeHandleType type) :
-        page_location_(std::in_place, page_id, offset),
+        page_location_(page_id, offset),
         type_(type.type_) {
     }
 
     tree_node_handle() :
-        page_location_( std::nullopt ),
+        page_location_(0, 0),
         type_( 0 ) {}
 
     tree_node_handle( std::nullptr_t ) :
-        page_location_( std::nullopt ),
+        page_location_(0, 0),
         type_( 0 ) {}
 
     operator bool() const {
@@ -146,11 +155,11 @@ public:
     }
 
     inline uint32_t get_page_id() {
-        return page_location_.value().page_id_;
+        return page_location_.page_id_;
     }
 
     inline uint16_t get_offset() {
-        return page_location_.value().offset_;
+        return page_location_.offset_;
     }
     
     inline uint8_t get_type() {
@@ -171,8 +180,8 @@ public:
 
     friend std::ostream& operator<<(std::ostream &os, const tree_node_handle &handle ) {
         if ( handle.page_location_.has_value() ) {
-            os << "{ PageID: " << handle.page_location_.value().page_id_
-                << ", Offset: " << handle.page_location_.value().offset_ << "}";
+            os << "{ PageID: " << handle.page_location_.page_id_
+                << ", Offset: " << handle.page_location_.offset_ << "}";
         } else {
             os << "{ nullptr }";
         }
@@ -180,13 +189,13 @@ public:
     }
 
 private:
-    std::optional<page_location> page_location_;
+    page_location page_location_;
     // Special bits to indicate what type of node is on the other
     // end of this handle.
     uint8_t type_;
 };
 
-static_assert( sizeof(tree_node_handle) == 16 );
+static_assert( sizeof(tree_node_handle) == 12 );
 
 template <typename T, typename U>
 pinned_node_ptr<U> reinterpret_handle_ptr( const pinned_node_ptr<T> &ptr )
