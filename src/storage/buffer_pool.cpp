@@ -84,11 +84,13 @@ void buffer_pool::initialize() {
     if( existing_page_count_ >= max_mem_pages_ ) {
         highest_allocated_page_id_ = existing_page_count_;
 
+#if 0
         // Evict pages from buffer pool so that we can run experiments with a cold cache
         std::cout << "Starting experiments with a cold buffer pool..." << std::endl;
         for (size_t page_id = 0; page_id <= highest_allocated_page_id_; page_id++) {
           page_index_.erase( page_id );
         }
+#endif
 
         return;
     }
