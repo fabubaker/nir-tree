@@ -1847,9 +1847,7 @@ std::pair<uint16_t, std::vector<std::optional<std::pair<char *, int>>>> BRANCH_N
       sz += unpacked_size;
     }
 
-    if (sz <= PAGE_DATA_SIZE) {
-      return std::make_pair(sz, branch_compression_data);
-    }
+    return std::make_pair(sz, branch_compression_data);
 
     assert(maximum_repacked_rect_size >= 1);
     maximum_repacked_rect_size /= 2;
