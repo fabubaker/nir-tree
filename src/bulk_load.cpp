@@ -1082,6 +1082,6 @@ void bulk_load_tree(
   /* End measuring bulk load time */
 
   tree->stat();
-  std::cout << "Total pages occupied: " << tree->node_allocator_->buffer_pool_.get_highest_allocated_page_id() << std::endl;
+  std::cout << "Total pages occupied: " << tree->node_allocator_->cur_page_ << std::endl;
   tree->write_metadata();
 }
