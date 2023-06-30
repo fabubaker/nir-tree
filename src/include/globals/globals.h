@@ -7,7 +7,7 @@
 
 const unsigned dimensions = DIM;
 
-const unsigned R_STAR_FANOUT = 80;
+const unsigned R_STAR_FANOUT = 84;
 const unsigned NIR_FANOUT = 81;
 
 #endif
