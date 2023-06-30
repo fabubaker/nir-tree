@@ -193,7 +193,9 @@ struct Branch {
       tree_node_allocator *new_allocator,
       unsigned cut_off_inline_rect_count
   ) {
+    // First write the child
     uint16_t offset = write_data_to_buffer(buffer, &child);
+
     if (std::holds_alternative<tree_node_handle>(boundingPoly)) {
       tree_node_handle poly_handle = std::get<tree_node_handle>(boundingPoly);
       auto poly_pin = existing_allocator->get_tree_node<InlineUnboundedIsotheticPolygon>(
@@ -847,7 +849,7 @@ public:
   void printTree(unsigned n = 0);
   unsigned height();
 
-  std::pair<uint16_t, std::vector<std::optional<std::pair<char *, int>>>>
+  std::pair<size_t, std::vector<std::optional<std::pair<char *, int>>>>
   compute_packed_size(
           tree_node_allocator *existing_allocator, tree_node_allocator *new_allocator,
           unsigned &maximum_repacked_rect_size
@@ -1831,17 +1833,17 @@ uint16_t LEAF_NODE_CLASS_TYPES::compute_packed_size() {
 }
 
 NODE_TEMPLATE_PARAMS
-std::pair<uint16_t, std::vector<std::optional<std::pair<char *, int>>>> BRANCH_NODE_CLASS_TYPES::compute_packed_size(
+std::pair<size_t, std::vector<std::optional<std::pair<char *, int>>>> BRANCH_NODE_CLASS_TYPES::compute_packed_size(
   tree_node_allocator *existing_allocator, tree_node_allocator *new_allocator, unsigned &maximum_repacked_rect_size
 ) {
   do {
-    uint16_t sz = 0;
+    size_t sz = 0;
     sz += sizeof(cur_offset_);
 
     std::vector<std::optional<std::pair<char *, int>>> branch_compression_data;
 
     for (unsigned i = 0; i < cur_offset_; i++) {
-      uint16_t unpacked_size = 0;
+      size_t unpacked_size = 0;
       unpacked_size = entries.at(i).compute_packed_size(existing_allocator, new_allocator, maximum_repacked_rect_size, false);
 
       sz += unpacked_size;
@@ -1881,29 +1883,90 @@ tree_node_handle BRANCH_NODE_CLASS_TYPES::repack(
   auto packing_computation_result = compute_packed_size(
           existing_allocator, new_allocator, maximum_unpacked_rect_size
   );
-  uint16_t alloc_size = packing_computation_result.first;
+  size_t branch_node_size = packing_computation_result.first;
+
+  // Create the initial page
+  size_t node_size = std::min(branch_node_size, PAGE_DATA_SIZE); // node can be larger than a page
   auto alloc_data = new_allocator->create_new_tree_node<packed_node>(
-    alloc_size, NodeHandleType(REPACKED_BRANCH_NODE)
+          node_size, NodeHandleType(REPACKED_BRANCH_NODE)
   );
   char *buffer = alloc_data.first->buffer_;
   uint16_t offset = 0;
+
+  // Write the total number of branches in this node
   offset += write_data_to_buffer(buffer + offset, &cur_offset_);
 
-  for (unsigned i = 0; i < cur_offset_; i++) {
-    Branch &b = entries.at(i);
-    assert(b.child);
-    // N.B.: This will also set "compressed" status on the child handle
-    // if we chose to compress its associated polygon per compute_packed_size.
-    offset += b.repack_into(buffer + offset, existing_allocator,
-                            new_allocator, maximum_unpacked_rect_size);
+  // If there's no need for spillover, then just write all branches rightaway
+  if (branch_node_size < PAGE_DATA_SIZE) {
+    for (unsigned i = 0; i < cur_offset_; i++) {
+      Branch &b = entries.at(i);
+      assert(b.child);
+      // N.B.: This will also set "compressed" status on the child handle
+      // if we chose to compress its associated polygon per compute_packed_size.
+      offset += b.repack_into(buffer + offset, existing_allocator,
+                              new_allocator, maximum_unpacked_rect_size);
+    }
+
+    if (offset != branch_node_size) {
+      abort();
+    }
+
+    return alloc_data.second;
   }
 
-  unsigned true_size = offset;
-  if (alloc_size != true_size) {
+  // We are spilling over, proceed to do page math
+  unsigned total_branches_written = 0;
+  size_t total_branch_bytes_written = sizeof(cur_offset_);
+  size_t space_left_in_cur_page = PAGE_DATA_SIZE - total_branch_bytes_written;
+
+  while (total_branches_written != cur_offset_) {
+    Branch &b = entries.at(total_branches_written);
+
+    // First, check if there is enough space in the page
+    size_t size_of_cur_branch = b.compute_packed_size(
+            existing_allocator, new_allocator,
+            maximum_unpacked_rect_size, false
+    );
+
+    if (space_left_in_cur_page >= sizeof(tree_node_handle) + size_of_cur_branch) {
+      // Proceed to write the branch
+
+      auto branch_size = b.repack_into(
+            buffer + offset, existing_allocator,
+            new_allocator, maximum_unpacked_rect_size
+      );
+
+      if (branch_size != size_of_cur_branch) {
+        abort();
+      }
+
+      offset += branch_size;
+      total_branch_bytes_written += branch_size;
+      total_branches_written++;
+      space_left_in_cur_page -= branch_size;
+    } else {
+      // Create a spillover page
+      node_size = branch_node_size - total_branch_bytes_written;
+      auto spillover_page = new_allocator->create_new_tree_node<packed_node>(
+              node_size, NodeHandleType(REPACKED_SPILLOVER_BRANCH_NODE)
+      );
+      tree_node_handle spillover_page_handle = spillover_page.second;
+
+      write_data_to_buffer(buffer + offset, &spillover_page_handle);
+      offset += sizeof(tree_node_handle);
+
+      // Reset the buffer and offset to point to the new page
+      buffer = spillover_page.first->buffer_;
+      offset = 0;
+
+      space_left_in_cur_page = PAGE_DATA_SIZE;
+    }
+  }
+
+  if (total_branch_bytes_written != branch_node_size) {
     abort();
   }
 
-  assert(true_size == alloc_size);
   return alloc_data.second;
 }
 
@@ -2109,6 +2172,13 @@ void BRANCH_NODE_CLASS_TYPES::removeBranch(
   for (unsigned i = 0; i < count; i++) {                                                         \
     tree_node_handle *child = (tree_node_handle *)(buffer + offset);                             \
     offset += sizeof(tree_node_handle);                                                          \
+    if (child->get_type() == REPACKED_SPILLOVER_BRANCH_NODE) {                                   \
+       packed_branch = allocator->get_tree_node<packed_node>(*child);                             \
+       buffer = packed_branch->buffer_;                                                          \
+       offset = 0;                                                                               \
+       i--;                                                                                          \
+       continue;                                                                                 \
+    }                                                                                             \
     if (!child->get_associated_poly_is_compressed()) {                                           \
       uint8_t rect_count = *(uint8_t *)(buffer + offset);                                      \
       offset += sizeof(uint8_t);                                                                \
@@ -2166,6 +2236,13 @@ void BRANCH_NODE_CLASS_TYPES::removeBranch(
   for (unsigned i = 0; i < count; i++) {                                                         \
     tree_node_handle *child = (tree_node_handle *)(buffer + offset);                             \
     offset += sizeof(tree_node_handle);                                                          \
+    if (child->get_type() == REPACKED_SPILLOVER_BRANCH_NODE) {                                   \
+       packed_branch = allocator->get_tree_node<packed_node>(*child);                             \
+       buffer = packed_branch->buffer_;                                                          \
+       offset = 0;                                                                               \
+       i--;                                                                                       \
+       continue;                                                                                 \
+    }                                                                                             \
     if (!child->get_associated_poly_is_compressed()) {                                           \
       uint8_t rect_count = *(uint8_t *)(buffer + offset);                                      \
       offset += sizeof(uint8_t);                                                                \
@@ -2175,7 +2252,7 @@ void BRANCH_NODE_CLASS_TYPES::removeBranch(
         tree_node_handle *poly_handle = (tree_node_handle *)(buffer + offset);                   \
         offset += sizeof(tree_node_handle);                                                      \
         if (summary_rect->containsPoint(requestedPoint)) {                                       \
-          treeRef->stats.recordOutOfLineSearched();                                                \                                                                                       \
+          treeRef->stats.recordOutOfLineSearched();                                                \
           auto poly_pin = allocator->get_tree_node<InlineUnboundedIsotheticPolygon>(*poly_handle); \
           if (poly_pin->containsPoint(requestedPoint)) {                                           \
             context.push(*child);                                                                  \
@@ -2292,6 +2369,13 @@ void BRANCH_NODE_CLASS_TYPES::removeBranch(
   for (unsigned i = 0; i < count; i++) {                                                         \
     tree_node_handle *child = (tree_node_handle *)(buffer + offset);                             \
     offset += sizeof(tree_node_handle);                                                          \
+    if (child->get_type() == REPACKED_SPILLOVER_BRANCH_NODE) {                                   \
+       packed_branch = allocator->get_tree_node<packed_node>(*child);                             \
+       buffer = packed_branch->buffer_;                                                          \
+       offset = 0;                                                                               \
+       i--;                                                                                      \
+       continue;                                                                                 \
+    }                                                                                             \
     if (!child->get_associated_poly_is_compressed()) {                                           \
       uint8_t rect_count = *(uint8_t *)(buffer + offset);                                      \
       offset += sizeof(uint8_t);                                                                \
@@ -3914,9 +3998,18 @@ void stat_node(tree_node_handle start_handle, NIRTreeDisk<min_branch_factor, max
 
       for (unsigned i = 0; i < count; i++) {
         tree_node_handle *child = (tree_node_handle *)(buffer + offset);
-        context.push(*child);
         offset += sizeof(tree_node_handle);
         memoryFootprint += sizeof(tree_node_handle);
+
+        if (child->get_type() == REPACKED_SPILLOVER_BRANCH_NODE) {
+          current_node = allocator->get_tree_node<packed_node>(*child);
+          buffer = current_node->buffer_;
+          offset = 0;
+          i--; // This handle isn't included in fanout
+          continue;
+        }
+
+        context.push(*child);
 
         if (!child->get_associated_poly_is_compressed()) {
           uint8_t rect_count = *(uint8_t *)(buffer + offset);
