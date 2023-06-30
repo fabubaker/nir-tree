@@ -259,6 +259,9 @@ class IsotheticPolygon
 		friend bool operator!=(const IsotheticPolygon &lhs, const IsotheticPolygon &rhs);
         IsotheticPolygon &operator=(const IsotheticPolygon &other) = default;
 		friend std::ostream& operator<<(std::ostream &os, const IsotheticPolygon &polygon);
+
+    bool containsPointWithMetrics(const Point &givenPoint, unsigned &intersectionCount) const;
+    bool intersectsRectangleWithMetrics(const Rectangle &givenRectangle, unsigned int &intersectionCount) const;
 };
 
 bool operator==(const IsotheticPolygon &lhs, const IsotheticPolygon &rhs);
@@ -688,6 +691,21 @@ class InlineUnboundedIsotheticPolygon {
             return false;
         }
 
+        bool containsPointWithMetrics(const Point &p, unsigned &intersectionCount) {
+          intersectionCount++;
+          if (!summary_rectangle_.containsPoint( p )) {
+            return false;
+          }
+
+          for (auto iter = begin(); iter != end(); iter++) {
+            intersectionCount++;
+            if (iter->containsPoint(p)) {
+              return true;
+            }
+          }
+          return false;
+        }
+
         bool intersectsRectangle( const Rectangle &rect ) {
             if( !summary_rectangle_.intersectsRectangle( rect ) ) {
                 return false;
@@ -698,6 +716,22 @@ class InlineUnboundedIsotheticPolygon {
                 }
             }
             return false;
+        }
+
+        bool intersectsRectangleWithMetrics(const Rectangle &rect, unsigned &intersectionCount) {
+          intersectionCount++;
+          if (!summary_rectangle_.intersectsRectangle(rect)) {
+            return false;
+          }
+
+          for (auto iter = begin(); iter != end(); iter++) {
+            intersectionCount++;
+            if (iter->intersectsRectangle( rect)) {
+              return true;
+            }
+          }
+
+          return false;
         }
 
         static pinned_node_ptr<InlineUnboundedIsotheticPolygon> read_polygon_from_disk(

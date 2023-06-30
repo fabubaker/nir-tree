@@ -2190,8 +2190,7 @@ void BRANCH_NODE_CLASS_TYPES::removeBranch(
         intersection_count++;                                                                   \
         if (summary_rect->containsPoint(requestedPoint)) {                                       \
           auto poly_pin = allocator->get_tree_node<InlineUnboundedIsotheticPolygon>(*poly_handle); \
-          if (poly_pin->containsPoint(requestedPoint)) {                                         \
-            intersection_count += poly_pin->total_rectangle_count_;                               \
+          if (poly_pin->containsPointWithMetrics(requestedPoint, intersection_count)) {          \
             context.push(*child);                                                                  \
             matching_branch_counter++;                                                             \
             break;                                                                                 \
