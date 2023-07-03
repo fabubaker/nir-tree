@@ -1080,6 +1080,7 @@ runBench(PointGenerator<T> &pointGen, std::map<std::string, uint64_t> &configU, 
 	{
 		// Search
     std::cout << "-------" << std::endl;
+    std::cout << "Range Search #" << totalRangeSearches << std::endl;
     std::cout << "Searching for: " << searchRectangles.at(i) << std::endl;
     std::chrono::high_resolution_clock::time_point begin = std::chrono::high_resolution_clock::now();
 		std::vector<Point> v = spatialIndex->search(searchRectangles[i]);
