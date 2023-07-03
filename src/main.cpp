@@ -205,6 +205,11 @@ int main(int argc, char *argv[]) {
         configS["db_file_name"] = optarg;
         break;
       }
+      case 'L': // length multiplier of search rectangles
+      {
+        configD["length_multiplier"] = std::stod(optarg);
+        break;
+      }
 
     default: {
       std::cout << "Bad option. Usage:" << std::endl;
