@@ -820,22 +820,28 @@ static std::vector<Rectangle> generateZipfRectangles(
   return rectangles;
 }
 
-static std::vector<Rectangle> generatePoisRectangles(size_t numRectangles) {
+static std::vector<Rectangle> generatePoisRectangles(size_t numRectangles, std::vector<Point> points, double lengthMultiplier) {
   Point ll;
   Point ur;
   std::vector<Rectangle> rectangles;
   unsigned seed = 1317;
   std::default_random_engine generator(seed);
-  // The coordinates below represent the most densely populated NYC area
-  std::uniform_real_distribution<double> xPoint(-74.2, -73.5);
-  std::uniform_real_distribution<double> yPoint(40.5, 41.1);
+  unsigned lengthSeed = 2454;
+  std::default_random_engine lengthGenerator(lengthSeed);
 
+  // Pick a random point, and add a random length to it to obtain a search rectangle
+  std::uniform_int_distribution<size_t> randomPointIdx(0, points.size());
+
+  double minLength = 1 * lengthMultiplier;
+  double maxLength = 5 * lengthMultiplier;
+  std::uniform_real_distribution<double> xLength(minLength, maxLength);
+  std::uniform_real_distribution<double> yLength(minLength, maxLength);
 
   for (unsigned i = 0; i < numRectangles; i++) {
-    ll[0] = xPoint(generator);
-    ll[1] = yPoint(generator);
-    ur[0] = ll[0] + 0.01;
-    ur[1] = ll[1] + 0.01;
+    auto idx = randomPointIdx(generator);
+    ll = points[idx];
+    ur[0] = ll[0] + xLength(lengthGenerator);
+    ur[1] = ll[1] + yLength(lengthGenerator);
 
     Rectangle rectangle(ll, ur);
     rectangles.emplace_back(rectangle);
@@ -844,7 +850,7 @@ static std::vector<Rectangle> generatePoisRectangles(size_t numRectangles) {
   return rectangles;
 }
 
-static std::vector<Rectangle> generateTweetsRectangles(size_t numRectangles) {
+static std::vector<Rectangle> generateTweetsRectangles(size_t numRectangles, double lengthMultiplier) {
   Point ll;
   Point ur;
   std::vector<Rectangle> rectangles;
@@ -858,10 +864,12 @@ static std::vector<Rectangle> generateTweetsRectangles(size_t numRectangles) {
   double xmax = -70;
   double ymin = 25;
   double ymax = 50;
+  double minLength = 1 * lengthMultiplier;
+  double maxLength = 5 * lengthMultiplier;
   std::uniform_real_distribution<double> xPoint(xmin, xmax);
   std::uniform_real_distribution<double> yPoint(ymin, ymax);
-  std::uniform_real_distribution<double> xLength(0.01, 0.05);
-  std::uniform_real_distribution<double> yLength(0.01, 0.05);
+  std::uniform_real_distribution<double> xLength(minLength, maxLength);
+  std::uniform_real_distribution<double> yLength(minLength, maxLength);
 
   for (unsigned i = 0; i < numRectangles; i++) {
     ll[0] = xPoint(generator);
@@ -999,9 +1007,9 @@ runBench(PointGenerator<T> &pointGen, std::map<std::string, uint64_t> &configU, 
       configU["num_elements"]
     );
   } else if (configU["distribution"] == POIS) {
-    searchRectangles = generatePoisRectangles(configU["rectanglescount"]);
+    searchRectangles = generatePoisRectangles(configU["rectanglescount"], pointGen.pointBuffer, configD["length_multiplier"]);
   } else if (configU["distribution"] == TWEETS) {
-    searchRectangles = generateTweetsRectangles(configU["rectanglescount"]);
+    searchRectangles = generateTweetsRectangles(configU["rectanglescount"], configD["length_multiplier"]);
   } else {
     // Do nothing, rectangle searches are disabled for now...
   }
