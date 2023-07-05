@@ -9,6 +9,7 @@
 #include <list>
 #include <cstdint>
 #include <limits>
+#include <util/repacking.h>
 
 template <typename T>
 class pinned_node_ptr {
@@ -237,6 +238,9 @@ public:
     std::pair<pinned_node_ptr<T>, tree_node_handle>
     create_new_tree_node( uint16_t node_size, NodeHandleType type_code ) {
         assert( node_size <= PAGE_DATA_SIZE );
+        if (type_code.type_ == REPACKED_SPILLOVER_BRANCH_NODE) {
+          num_spillover_pages++;
+        }
 
         for (auto iter = free_list_.begin(); iter != free_list_.end(); iter++) {
             auto alloc_location = *iter;
@@ -322,6 +326,7 @@ public:
 
     buffer_pool buffer_pool_;
     uint32_t cur_page_;
+    size_t num_spillover_pages = 0;
 
 protected:
     page *get_page_to_alloc_on( uint16_t object_size );

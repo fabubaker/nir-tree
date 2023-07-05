@@ -95,6 +95,7 @@ void generate_tree(std::map<std::string, size_t> &configU, std::map<std::string,
     bulk_load_tree(tree, configU, all_points.begin(), all_points.begin() + cut_off_bulk_load, NIR_FANOUT);
     std::cout << "Created NIRTree." << std::endl;
     tree->stat(); // Print tree stats BEFORE repacking
+    std::cout << "Spillover pages created: " << tree->node_allocator_->num_spillover_pages << std::endl;
 
     exit(0);
     spatialIndex = tree;
