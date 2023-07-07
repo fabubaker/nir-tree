@@ -108,13 +108,12 @@ public:
         }
 
         bool has_value() const {
-          return page_id_ != std::numeric_limits<uint32_t>::max() &&
-                 offset_ != std::numeric_limits<uint16_t>::max();
+          return page_id_ != 0 && offset_ != 0;
         }
 
         void reset() {
-          page_id_ = std::numeric_limits<uint32_t>::max();
-          offset_ = std::numeric_limits<uint16_t>::max();
+          page_id_ = 0;
+          offset_ = 0;
         }
     };
 
@@ -124,17 +123,11 @@ public:
     }
 
     tree_node_handle() :
-        page_location_(
-      std::numeric_limits<uint32_t>::max(),
-       std::numeric_limits<uint16_t>::max()
-        ),
+        page_location_(0, 0),
         type_( 0 ) {}
 
     tree_node_handle( std::nullptr_t ) :
-        page_location_(
-                std::numeric_limits<uint32_t>::max(),
-                std::numeric_limits<uint16_t>::max()
-        ),
+        page_location_(0, 0),
         type_( 0 ) {}
 
     operator bool() const {
