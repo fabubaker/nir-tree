@@ -96,9 +96,7 @@ void fill_branch(
     Rectangle bbox;
     // Adjust parent
     if (child_handle.get_type() == LEAF_NODE) {
-      auto node = allocator->get_tree_node<LN>(
-              child_handle
-      );
+      auto node = allocator->get_tree_node<LN>(child_handle);
       node->parent = node_handle;
       bbox = node->boundingBox();
     } else {
@@ -178,11 +176,9 @@ void fill_branch(
     // Adjust parent
     if (child_handle.get_type() == LEAF_NODE) {
       auto node = allocator->get_tree_node<LN>(child_handle);
-      node->parent = node_handle;
       bbox = node->boundingBox();
     } else {
       auto node = allocator->get_tree_node<BN>(child_handle);
-      node->parent = node_handle;
       bbox = node->boundingBox();
     }
     
@@ -298,38 +294,12 @@ std::vector<tree_node_handle> str_packing_branch(
   for (tree_node_handle &child_handle : child_nodes) {
     Rectangle bbox;
 
-    if (child_handle.get_type() == REPACKED_LEAF_NODE) {
-      auto child = allocator->get_tree_node<packed_node>(child_handle);
-      char *data = child->buffer_;
-      unsigned offset = 0;
-      unsigned count = *(unsigned *)(data + offset);
-      offset += sizeof(unsigned);
-
-      Point *p = (Point *)(data + offset);
-      bbox = Rectangle(*p, Point::closest_larger_point(*p));
-      offset += sizeof(Point);
-
-      for (unsigned i = 1; i < count; i++) {
-        Point *p = (Point *)(data + offset);
-        bbox.expand(*p);
-        offset += sizeof(Point);
-      }
+    if (child_handle.get_type() == LEAF_NODE) {
+      auto child = allocator->get_tree_node<LN>(child_handle);
+      bbox = child->boundingBox();
     } else {
-      auto child = allocator->get_tree_node<packed_node>(child_handle);
-      char *data = child->buffer_;
-      unsigned offset = 0;
-      unsigned count = *(unsigned *)(data + offset);
-      offset += sizeof(unsigned);
-
-      rstartreedisk::Branch *b = (rstartreedisk::Branch *)(data + offset);
-      offset += sizeof(rstartreedisk::Branch);
-      bbox = b->boundingBox;
-
-      for (size_t i = 1; i < count; i++) {
-        rstartreedisk::Branch *b = (rstartreedisk::Branch *)(data + offset);
-        offset += sizeof(rstartreedisk::Branch);
-        bbox.expand(b->boundingBox);
-      }
+      auto child = allocator->get_tree_node<BN>(child_handle);
+      bbox = child->boundingBox();
     }
 
     node_point_pairs.push_back(std::make_pair(bbox.centrePoint(), child_handle));
@@ -368,13 +338,17 @@ std::vector<tree_node_handle> str_packing_branch(
 
   while (offset < node_point_pairs.size()) {
     // Create the branch node
-    auto branch_node = new BN(tree, nullptr, nullptr, 1);
-    tree_node_handle dummy_handle;
+    auto alloc_data = allocator->create_new_tree_node<BN>(NodeHandleType(BRANCH_NODE));
 
-    auto branch_handle = fill_branch_special(
+    new (&(*alloc_data.first)) BN();
+
+    auto branch_node = alloc_data.first;
+    tree_node_handle branch_handle = alloc_data.second;
+
+    fill_branch(
         tree,
         branch_node,
-        dummy_handle,
+        branch_handle,
         node_point_pairs,
         offset,
         branch_factor,
@@ -478,7 +452,11 @@ std::vector<tree_node_handle> str_packing_leaf(
   uint64_t offset = 0;
 
   while (offset < count) {
-    auto leaf_node = new LN(tree, nullptr, nullptr, 0);
+    auto alloc_data = allocator->create_new_tree_node<LN>(NodeHandleType(LEAF_NODE));
+
+    new (&(*alloc_data.first)) LN();
+    auto leaf_node = alloc_data.first;
+    tree_node_handle leaf_handle = alloc_data.second;
 
     for (uint64_t i = 0; i < branch_factor; i++) {
       leaf_node->addPoint(*(begin + offset));
@@ -488,7 +466,6 @@ std::vector<tree_node_handle> str_packing_leaf(
       }
     }
 
-    auto leaf_handle = leaf_node->repack(allocator);
     leaves.push_back(leaf_handle);
   }
 
