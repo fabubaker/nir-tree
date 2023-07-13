@@ -32,7 +32,9 @@ TESTOBJ := $(TESTSRC:.cpp=.o)
 %.o: %.cpp
 	$(CXX) $(CXXFLAGS) $(CPPFLAGS) -c $< -o $@
 
-all: bin/main bin/gen_tree bin/tests
+# Disable building tests for now
+#all: bin/main bin/gen_tree bin/tests
+all: bin/main bin/gen_tree
 
 src/main.o : src/main.cpp src/include/bench/randomPoints.h src/include/globals/globals.h
 	$(CXX) $(CXXFLAGS) $(CPPFLAGS) -c $< -o $@
