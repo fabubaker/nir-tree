@@ -1194,13 +1194,13 @@ std::vector<Point> point_search(
 
     if (current_handle.get_type() == LEAF_NODE) {
       auto current_node = treeRef->get_leaf_node(current_handle);
-      point_search_leaf_node(current_node, requestedPoint, accumulator);
+      point_search_leaf_node(*current_node, requestedPoint, accumulator);
 #ifdef STAT
       treeRef->stats.markLeafSearched();
 #endif
     } else if (current_handle.get_type() == BRANCH_NODE) {
       auto current_node = treeRef->get_branch_node(current_handle);
-      point_search_branch_node(current_node, requestedPoint, context);
+      point_search_branch_node(*current_node, requestedPoint, context, treeRef);
 #ifdef STAT
       treeRef->stats.markNonLeafNodeSearched();
 #endif
@@ -1259,13 +1259,13 @@ std::vector<Point> rectangle_search(
 
     if (current_handle.get_type() == LEAF_NODE) {
       auto current_node = treeRef->get_leaf_node(current_handle);
-      rectangle_search_leaf_node(current_node, requestedRectangle, accumulator);
+      rectangle_search_leaf_node(*current_node, requestedRectangle, accumulator);
 #ifdef STAT
       treeRef->stats.markLeafSearched();
 #endif
     } else if (current_handle.get_type() == BRANCH_NODE) {
       auto current_node = treeRef->get_branch_node(current_handle);
-      rectangle_search_branch_node(current_node, requestedRectangle, context);
+      rectangle_search_branch_node(*current_node, requestedRectangle, context, treeRef);
 #ifdef STAT
       treeRef->stats.markNonLeafNodeSearched();
 #endif
@@ -1833,10 +1833,15 @@ tree_node_handle BranchNode<min_branch_factor, max_branch_factor>::overflowTreat
     //    std::endl;
     return reInsert(hasReinsertedOnLevel);
   }
+#endif
+
+  // Unsupported
+  abort();
 }
 
 template <int min_branch_factor, int max_branch_factor>
 tree_node_handle BranchNode<min_branch_factor, max_branch_factor>::insert(NodeEntry nodeEntry, std::vector<bool> &hasReinsertedOnLevel) {
+#if 0
   tree_node_allocator *allocator = get_node_allocator(treeRef);
   // Always called on root, this = root
   assert(!parent);
@@ -1964,11 +1969,16 @@ tree_node_handle BranchNode<min_branch_factor, max_branch_factor>::insert(NodeEn
     }
     return root_handle;
   }
+#endif
+
+  // Unsupported
+  abort();
 }
 
 // Always called on root, this = root
 template <int min_branch_factor, int max_branch_factor>
 tree_node_handle BranchNode<min_branch_factor, max_branch_factor>::remove(Point &givenPoint, std::vector<bool> hasReinsertedOnLevel) {
+#if 0
   assert(!parent);
 
   // D1 [Find node containing record]
@@ -2062,6 +2072,7 @@ void printPackedNodes(
         tree_node_handle node_handle,
         std::ofstream &printFile
   ) {
+#if 0
   tree_node_allocator *allocator = treeRef->node_allocator_.get();
   auto node = allocator->get_tree_node<packed_node>(node_handle);
   char *data = node->buffer_;
@@ -2086,6 +2097,7 @@ void printPackedNodes(
       offset += sizeof(Point);
     }
   }
+#endif
 }
 
 template <int min_branch_factor, int max_branch_factor>

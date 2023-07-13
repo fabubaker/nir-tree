@@ -45,9 +45,7 @@ public:
       auto node_type = NodeHandleType(LEAF_NODE);
       auto alloc = node_allocator_->create_new_tree_node<LeafNode<min_branch_factor, max_branch_factor>>(node_type);
       root = alloc.second;
-      new (&(*(alloc.first)))
-          LeafNode<min_branch_factor, max_branch_factor>(
-              this, root, tree_node_handle(nullptr), 0);
+      new (&(*(alloc.first))) LeafNode<min_branch_factor, max_branch_factor>();
       return;
     }
 
@@ -78,14 +76,12 @@ public:
   inline pinned_node_ptr<LeafNode<min_branch_factor, max_branch_factor>> get_leaf_node(tree_node_handle node_handle) {
     assert(node_handle.get_type() == LEAF_NODE);
     auto ptr = node_allocator_->get_tree_node<LeafNode<min_branch_factor, max_branch_factor>>(node_handle);
-    ptr->treeRef = this;
     return ptr;
   }
 
   inline pinned_node_ptr<BranchNode<min_branch_factor, max_branch_factor>> get_branch_node(tree_node_handle node_handle) {
     assert(node_handle.get_type() == BRANCH_NODE);
     auto ptr = node_allocator_->get_tree_node<BranchNode<min_branch_factor, max_branch_factor>>(node_handle);
-    ptr->treeRef = this;
     return ptr;
   }
 
