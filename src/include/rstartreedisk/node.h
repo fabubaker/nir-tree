@@ -20,24 +20,20 @@
 #include <fstream>
 
 namespace rstartreedisk {
-template <int min_branch_factor, int max_branch_factor>
-class RStarTreeDisk;
+template <int min_branch_factor, int max_branch_factor> class RStarTreeDisk;
 
 template <int min_branch_factor, int max_branch_factor>
-tree_node_allocator *get_node_allocator(
-    RStarTreeDisk<min_branch_factor, max_branch_factor> *treeRef) {
+tree_node_allocator *get_node_allocator(RStarTreeDisk<min_branch_factor, max_branch_factor> *treeRef) {
   return treeRef->node_allocator_.get();
 }
 
 template <int min_branch_factor, int max_branch_factor>
-float get_p_value(
-    RStarTreeDisk<min_branch_factor, max_branch_factor> *treeRef) {
+float get_p_value(RStarTreeDisk<min_branch_factor, max_branch_factor> *treeRef) {
   return treeRef->p;
 }
 
 template <int min_branch_factor, int max_branch_factor>
-tree_node_handle get_root_handle(
-    RStarTreeDisk<min_branch_factor, max_branch_factor> *treeRef) {
+tree_node_handle get_root_handle(RStarTreeDisk<min_branch_factor, max_branch_factor> *treeRef) {
   return treeRef->root;
 }
 
@@ -65,23 +61,14 @@ private:
   void searchSub(const Rectangle &rectangle, std::vector<Point> &accumulator);
 
 public:
-  RStarTreeDisk<min_branch_factor, max_branch_factor> *treeRef;
-  tree_node_handle parent;
-  tree_node_handle self_handle_;
   unsigned cur_offset_;
-  unsigned level;
 
   // Obnoxiously, this needs to have a +1 so we can overflow
   // by 1 entry and deal with it later.
-  std::array<Point, max_branch_factor + 1> entries;
+  std::array<Point, max_branch_factor> entries;
 
   // Constructors and destructors
-  LeafNode(RStarTreeDisk<min_branch_factor, max_branch_factor> *treeRef,
-           tree_node_handle self_handle,
-           tree_node_handle parent, unsigned level = 0) : treeRef(treeRef),
-                                                          parent(parent),
-                                                          self_handle_(self_handle),
-                                                          level(level) {
+  LeafNode() {
     cur_offset_ = 0;
   }
 
@@ -134,24 +121,14 @@ private:
   void searchSub(const Rectangle &rectangle, std::vector<Point> &accumulator);
 
 public:
-  RStarTreeDisk<min_branch_factor, max_branch_factor> *treeRef;
-  tree_node_handle parent;
-  tree_node_handle self_handle_;
-
   // Obnoxiously, this needs to have a +1 so we can overflow
   // by 1 entry and deal with it later.
   // Brad: This is needed for R-star overflow insertion.
-  typename std::array<Branch, max_branch_factor + 1> entries;
+  std::array<Branch, max_branch_factor> entries;
   unsigned cur_offset_;
-  unsigned level;
 
   // Constructors and destructors
-  BranchNode(RStarTreeDisk<min_branch_factor, max_branch_factor> *treeRef,
-             tree_node_handle self_handle,
-             tree_node_handle parent, unsigned level = 0) : treeRef(treeRef),
-                                                            parent(parent),
-                                                            self_handle_(self_handle),
-                                                            level(level) {
+  BranchNode() {
     cur_offset_ = 0;
   }
 
@@ -172,9 +149,7 @@ public:
   unsigned chooseSplitAxis();
   unsigned chooseSplitIndex(unsigned axis);
   tree_node_handle splitNode();
-  tree_node_handle adjustTree(
-      tree_node_handle siblingLeaf,
-      std::vector<bool> &hasReinsertedOnLevel);
+  tree_node_handle adjustTree(tree_node_handle siblingLeaf, std::vector<bool> &hasReinsertedOnLevel);
   tree_node_handle reInsert(std::vector<bool> &hasReinsertedOnLevel);
   tree_node_handle overflowTreatment(std::vector<bool> &hasReinsertedOnLevel);
   tree_node_handle condenseTree(std::vector<bool> &hasReinsertedOnLevel);
@@ -192,9 +167,6 @@ public:
   void printTree() const;
   unsigned height() const;
 
-  uint16_t compute_packed_size();
-  tree_node_handle repack(tree_node_allocator *allocator);
-
   // Operators
   bool operator<(const BranchNode &otherNode) const;
 };
@@ -202,7 +174,8 @@ public:
 template <class NE, class B, int N>
 double computeOverlapGrowth(unsigned index, const std::array<B, N + 1> &entries,
                             unsigned els_to_consider,
-                            const Rectangle &givenBox) {
+                            const Rectangle &givenBox)
+{
   // We cannot be a leaf
   assert(els_to_consider > 0);
 
@@ -226,20 +199,12 @@ double computeOverlapGrowth(unsigned index, const std::array<B, N + 1> &entries,
     }
 
     overlapDiff +=
-        (newRectangle.computeIntersectionArea(entry.boundingBox) - origRectangle.computeIntersectionArea(entry.boundingBox));
+        (newRectangle.computeIntersectionArea(entry.boundingBox) -
+        origRectangle.computeIntersectionArea(entry.boundingBox));
   }
 
   return overlapDiff;
 }
-
-#define NODE_TEMPLATE_PARAMS template <int min_branch_factor, int max_branch_factor>
-#define LEAF_NODE_CLASS_TYPES LeafNode<min_branch_factor, max_branch_factor>
-#define BRANCH_NODE_CLASS_TYPES BranchNode<min_branch_factor, max_branch_factor>
-
-#define decode_entry_count_and_offset_packed_node(data) \
-  size_t offset = sizeof(unsigned);                     \
-  (void) offset;                                         \
-  size_t count = *(unsigned *)(data);
 
 template <int min_branch_factor, int max_branch_factor, typename functor>
 void treeWalker(RStarTreeDisk<min_branch_factor, max_branch_factor> *treeRef, tree_node_handle root, functor &f) {
@@ -258,27 +223,17 @@ void treeWalker(RStarTreeDisk<min_branch_factor, max_branch_factor> *treeRef, tr
       for (unsigned i = 0; i < node->cur_offset_; i++) {
         context.push(node->entries.at(i).child);
       }
-    } else if (currentContext.get_type() == REPACKED_BRANCH_NODE) {
-      tree_node_allocator *allocator = treeRef->node_allocator_.get();
-      auto node = allocator->get_tree_node<packed_node>(currentContext);
-      char *buffer = node->buffer_;
-      decode_entry_count_and_offset_packed_node(buffer);
-      for (unsigned i = 0; i < count; i++) {
-        Branch *b = (Branch *)(buffer + offset);
-        offset += sizeof(Branch);
-        context.push(b->child);
-      }
     }
   }
 }
 
-NODE_TEMPLATE_PARAMS
-void LEAF_NODE_CLASS_TYPES::deleteSubtrees() {
+template <int min_branch_factor, int max_branch_factor>
+void LeafNode<min_branch_factor, max_branch_factor>::deleteSubtrees() {
   return;
 }
 
-NODE_TEMPLATE_PARAMS
-Rectangle LEAF_NODE_CLASS_TYPES::boundingBox() const {
+template <int min_branch_factor, int max_branch_factor>
+Rectangle LeafNode<min_branch_factor, max_branch_factor>::boundingBox() const {
   assert(cur_offset_ > 0);
   Rectangle boundingBox(entries[0], Point::closest_larger_point(entries[0]));
 
@@ -289,8 +244,8 @@ Rectangle LEAF_NODE_CLASS_TYPES::boundingBox() const {
   return boundingBox;
 }
 
-NODE_TEMPLATE_PARAMS
-void LEAF_NODE_CLASS_TYPES::removePoint(const Point &givenPoint) {
+template <int min_branch_factor, int max_branch_factor>
+void LeafNode<min_branch_factor, max_branch_factor>::removePoint(const Point &givenPoint) {
   unsigned i = 0;
   for (; i < cur_offset_; i++) {
     if (entries.at(i) == givenPoint) {
@@ -303,8 +258,8 @@ void LEAF_NODE_CLASS_TYPES::removePoint(const Point &givenPoint) {
   cur_offset_--;
 }
 
-NODE_TEMPLATE_PARAMS
-void LEAF_NODE_CLASS_TYPES::exhaustiveSearch(const Point &requestedPoint, std::vector<Point> &accumulator) const {
+template <int min_branch_factor, int max_branch_factor>
+void LeafNode<min_branch_factor, max_branch_factor>::exhaustiveSearch(const Point &requestedPoint, std::vector<Point> &accumulator) const {
   for (unsigned i = 0; i < cur_offset_; i++) {
     const Point &p = entries.at(i);
 
@@ -314,26 +269,31 @@ void LEAF_NODE_CLASS_TYPES::exhaustiveSearch(const Point &requestedPoint, std::v
   }
 }
 
-NODE_TEMPLATE_PARAMS
-tree_node_handle LEAF_NODE_CLASS_TYPES::chooseSubtree(const NodeEntry &givenNodeEntry) {
+template <int min_branch_factor, int max_branch_factor>
+tree_node_handle LeafNode<min_branch_factor, max_branch_factor>::chooseSubtree(const NodeEntry &givenNodeEntry) {
   //    std::cout << "ChooseSubTree for point: " << std::get<Point>(
   //           givenNodeEntry ) << std::endl;
-  return self_handle_;
+
+  // Unsupported
+  abort();
 }
 
-NODE_TEMPLATE_PARAMS
-tree_node_handle LEAF_NODE_CLASS_TYPES::findLeaf(const Point &givenPoint) {
-  for (unsigned i = 0; i < cur_offset_; i++) {
-    if (entries.at(i) == givenPoint) {
-      return self_handle_;
-    }
-  }
+template <int min_branch_factor, int max_branch_factor>
+tree_node_handle LeafNode<min_branch_factor, max_branch_factor>::findLeaf(const Point &givenPoint) {
+//  for (unsigned i = 0; i < cur_offset_; i++) {
+//    if (entries.at(i) == givenPoint) {
+//      return self_handle_;
+//    }
+//  }
+//
+//  return tree_node_handle(nullptr);
 
-  return tree_node_handle(nullptr);
+// Unsupported
+  abort();
 }
 
-NODE_TEMPLATE_PARAMS
-unsigned LEAF_NODE_CLASS_TYPES::chooseSplitLeafAxis() {
+template <int min_branch_factor, int max_branch_factor>
+unsigned LeafNode<min_branch_factor, max_branch_factor>::chooseSplitLeafAxis() {
   unsigned optimalAxis = 0;
   double optimalMargin = std::numeric_limits<double>::infinity();
 
@@ -399,8 +359,8 @@ unsigned LEAF_NODE_CLASS_TYPES::chooseSplitLeafAxis() {
 //  that we keep in a loop -> and the just compare to the others?
 // 	We can first call a helper function that returns an array of all possible distributions for it?
 // CSA2: Return the Axis that has the minimum total sum of all the distributions
-NODE_TEMPLATE_PARAMS
-unsigned LEAF_NODE_CLASS_TYPES::chooseSplitAxis() {
+template <int min_branch_factor, int max_branch_factor>
+unsigned LeafNode<min_branch_factor, max_branch_factor>::chooseSplitAxis() {
   return chooseSplitLeafAxis();
 }
 
@@ -408,8 +368,8 @@ unsigned LEAF_NODE_CLASS_TYPES::chooseSplitAxis() {
 // 	group all the entries into multiple groups and choose the one that has the least
 // 	overlap value; resolve ties with the minimum area
 // 	returns tuple of best distribution group indices
-NODE_TEMPLATE_PARAMS
-unsigned LEAF_NODE_CLASS_TYPES::chooseSplitIndex(unsigned axis) {
+template <int min_branch_factor, int max_branch_factor>
+unsigned LeafNode<min_branch_factor, max_branch_factor>::chooseSplitIndex(unsigned axis) {
   // We assume this is called after we have sorted this->data according to axis.
 
   const auto groupABegin = entries.begin();
@@ -477,9 +437,10 @@ unsigned LEAF_NODE_CLASS_TYPES::chooseSplitIndex(unsigned axis) {
   return splitIndex;
 }
 
-NODE_TEMPLATE_PARAMS
-tree_node_handle LEAF_NODE_CLASS_TYPES::splitNode() {
-  using NodeType = LEAF_NODE_CLASS_TYPES;
+template <int min_branch_factor, int max_branch_factor>
+tree_node_handle LeafNode<min_branch_factor, max_branch_factor>::splitNode() {
+#if 0
+  using NodeType = LeafNode<min_branch_factor, max_branch_factor>;
   // S1: Call chooseSplitAxis to determine the axis perpendicular to which the split is performed
   // S2: Invoke chooseSplitIndex given the axis to determine the best distribution along this axis
   // S3: Distribute the entries among these two groups
@@ -551,6 +512,10 @@ tree_node_handle LEAF_NODE_CLASS_TYPES::splitNode() {
 
   // Return our newly minted sibling
   return sibling_handle;
+#endif
+
+  // Unsupported
+  abort();
 }
 
 template <class NT>
@@ -558,8 +523,8 @@ std::pair<tree_node_handle, tree_node_handle> adjustTreeBottomHalf(
         NT node,
         NT sibling,
         std::vector<bool> &hasReinsertedOnLevel,
-        int max_branch_factor) {
-
+        int max_branch_factor)
+{
   auto *tree_ref_backup = node->treeRef;
 
   tree_node_handle parent_handle = node->parent;
@@ -632,7 +597,7 @@ tree_node_handle adjustTreeSub(
         break;
       }
 
-      pinned_node_ptr<LEAF_NODE_CLASS_TYPES>
+      pinned_node_ptr<LeafNode<min_branch_factor, max_branch_factor>>
               sibling_node(treeRef->node_allocator_->buffer_pool_, nullptr,
                            nullptr);
       assert(sibling_node == nullptr);
@@ -654,7 +619,7 @@ tree_node_handle adjustTreeSub(
       if (!node->parent) {
         break;
       }
-      pinned_node_ptr<BRANCH_NODE_CLASS_TYPES>
+      pinned_node_ptr<BranchNode<min_branch_factor, max_branch_factor>>
               sibling_node(treeRef->node_allocator_->buffer_pool_, nullptr,
                            nullptr);
       assert(sibling_node == nullptr);
@@ -680,18 +645,25 @@ tree_node_handle adjustTreeSub(
   return sibling_handle;
 }
 
-NODE_TEMPLATE_PARAMS
-tree_node_handle LEAF_NODE_CLASS_TYPES::adjustTree(tree_node_handle sibling_handle, std::vector<bool> &hasReinsertedOnLevel) {
-  return adjustTreeSub(self_handle_, sibling_handle, hasReinsertedOnLevel, treeRef);
+template <int min_branch_factor, int max_branch_factor>
+tree_node_handle LeafNode<min_branch_factor, max_branch_factor>::adjustTree(tree_node_handle sibling_handle, std::vector<bool> &hasReinsertedOnLevel) {
+//  return adjustTreeSub(self_handle_, sibling_handle, hasReinsertedOnLevel, treeRef);
+
+  // Unsupported
+  abort();
 }
 
-NODE_TEMPLATE_PARAMS
-tree_node_handle BRANCH_NODE_CLASS_TYPES::adjustTree(tree_node_handle sibling_handle, std::vector<bool> &hasReinsertedOnLevel) {
-  return adjustTreeSub(self_handle_, sibling_handle, hasReinsertedOnLevel, treeRef);
+template <int min_branch_factor, int max_branch_factor>
+tree_node_handle BranchNode<min_branch_factor, max_branch_factor>::adjustTree(tree_node_handle sibling_handle, std::vector<bool> &hasReinsertedOnLevel) {
+//  return adjustTreeSub(self_handle_, sibling_handle, hasReinsertedOnLevel, treeRef);
+
+  // Unsupported
+  abort();
 }
 
-NODE_TEMPLATE_PARAMS
-tree_node_handle LEAF_NODE_CLASS_TYPES::reInsert(std::vector<bool> &hasReinsertedOnLevel) {
+template <int min_branch_factor, int max_branch_factor>
+tree_node_handle LeafNode<min_branch_factor, max_branch_factor>::reInsert(std::vector<bool> &hasReinsertedOnLevel) {
+#if 0
   // 1. RI1 Compute distance between each of the points and the bounding box containing them.
   // 2. RI2 Sort the entries by DECREASING index -> ok let's define an
   // 		extra helper function that gets to do this and pass it into sort
@@ -782,11 +754,16 @@ tree_node_handle LEAF_NODE_CLASS_TYPES::reInsert(std::vector<bool> &hasReinserte
   }
 
   return tree_node_handle(nullptr);
+#endif
+
+  // Unsupported
+  abort();
 }
 
 // Overflow treatement for dealing with a node that is too big (overflow)
-NODE_TEMPLATE_PARAMS
-tree_node_handle LEAF_NODE_CLASS_TYPES::overflowTreatment(std::vector<bool> &hasReinsertedOnLevel) {
+template <int min_branch_factor, int max_branch_factor>
+tree_node_handle LeafNode<min_branch_factor, max_branch_factor>::overflowTreatment(std::vector<bool> &hasReinsertedOnLevel) {
+#if 0
   assert(hasReinsertedOnLevel.size() > level);
 
   if (hasReinsertedOnLevel.at(level)) {
@@ -799,10 +776,15 @@ tree_node_handle LEAF_NODE_CLASS_TYPES::overflowTreatment(std::vector<bool> &has
     //    std::endl;
     return reInsert(hasReinsertedOnLevel);
   }
+#endif
+
+  // Unsupported
+  abort();
 }
 
-NODE_TEMPLATE_PARAMS
-tree_node_handle LEAF_NODE_CLASS_TYPES::insert(Point nodeEntry, std::vector<bool> &hasReinsertedOnLevel) {
+template <int min_branch_factor, int max_branch_factor>
+tree_node_handle LeafNode<min_branch_factor, max_branch_factor>::insert(Point nodeEntry, std::vector<bool> &hasReinsertedOnLevel) {
+#if 0
   tree_node_allocator *allocator = get_node_allocator(treeRef);
 
   // Always called on root, this = root
@@ -838,7 +820,7 @@ tree_node_handle LEAF_NODE_CLASS_TYPES::insert(Point nodeEntry, std::vector<bool
 
     assert(!parent);
     auto alloc_data =
-            allocator->create_new_tree_node<BRANCH_NODE_CLASS_TYPES>(
+            allocator->create_new_tree_node<BranchNode<min_branch_factor, max_branch_factor>>(
                     NodeHandleType(BRANCH_NODE));
     auto newRoot = alloc_data.first;
 
@@ -846,7 +828,7 @@ tree_node_handle LEAF_NODE_CLASS_TYPES::insert(Point nodeEntry, std::vector<bool
     auto sibling = treeRef->get_leaf_node(sibling_handle);
 
     new (&(*(newRoot)))
-            BRANCH_NODE_CLASS_TYPES(treeRef, root_handle,
+            BranchNode<min_branch_factor, max_branch_factor>(treeRef, root_handle,
                                     tree_node_handle(nullptr), this->level + 1);
 
     this->parent = root_handle;
@@ -895,11 +877,16 @@ tree_node_handle LEAF_NODE_CLASS_TYPES::insert(Point nodeEntry, std::vector<bool
     }
     return root_handle;
   }
+#endif
+
+  // Unsupported
+  abort();
 }
 
 // To be called on a leaf
-NODE_TEMPLATE_PARAMS
-tree_node_handle LEAF_NODE_CLASS_TYPES::condenseTree(std::vector<bool> &hasReinsertedOnLevel) {
+template <int min_branch_factor, int max_branch_factor>
+tree_node_handle LeafNode<min_branch_factor, max_branch_factor>::condenseTree(std::vector<bool> &hasReinsertedOnLevel) {
+#if 0
   // CT1 [Initialize]
   tree_node_handle node_handle = self_handle_;
 
@@ -976,11 +963,16 @@ tree_node_handle LEAF_NODE_CLASS_TYPES::condenseTree(std::vector<bool> &hasReins
   }
 
   return node_handle;
+#endif
+
+  // Unsupported
+  abort();
 }
 
 // Always called on root, this = root
-NODE_TEMPLATE_PARAMS
-tree_node_handle LEAF_NODE_CLASS_TYPES::remove(Point &givenPoint, std::vector<bool> hasReinsertedOnLevel) {
+template <int min_branch_factor, int max_branch_factor>
+tree_node_handle LeafNode<min_branch_factor, max_branch_factor>::remove(Point &givenPoint, std::vector<bool> hasReinsertedOnLevel) {
+#if 0
   removePoint(givenPoint);
 
   // D3 [Propagate changes]
@@ -1017,16 +1009,20 @@ tree_node_handle LEAF_NODE_CLASS_TYPES::remove(Point &givenPoint, std::vector<bo
     }
   }
   return root_handle;
+#endif
+
+  // Unsupported
+  abort();
 }
 
-NODE_TEMPLATE_PARAMS
-void LEAF_NODE_CLASS_TYPES::print() const {
+template <int min_branch_factor, int max_branch_factor>
+void LeafNode<min_branch_factor, max_branch_factor>::print() const {
 
   std::string indentation(4, ' ');
   std::cout << indentation << "Node " << (void *)this << std::endl;
   std::cout << indentation << "{" << std::endl;
   std::cout << indentation << "    BoundingBox: " << boundingBox() << std::endl;
-  std::cout << indentation << "    Parent: " << parent << std::endl;
+//  std::cout << indentation << "    Parent: " << parent << std::endl;
   std::cout << indentation << "    Entries: " << std::endl;
 
   for (unsigned i = 0; i < cur_offset_; i++) {
@@ -1036,13 +1032,13 @@ void LEAF_NODE_CLASS_TYPES::print() const {
             << indentation << "}" << std::endl;
 }
 
-NODE_TEMPLATE_PARAMS
-void LEAF_NODE_CLASS_TYPES::printTree() const {
+template <int min_branch_factor, int max_branch_factor>
+void LeafNode<min_branch_factor, max_branch_factor>::printTree() const {
   // No op
 }
 
-NODE_TEMPLATE_PARAMS
-unsigned LEAF_NODE_CLASS_TYPES::checksum() const {
+template <int min_branch_factor, int max_branch_factor>
+unsigned LeafNode<min_branch_factor, max_branch_factor>::checksum() const {
   unsigned checksum = 0;
   for (unsigned i = 0; i < cur_offset_; i++) {
     auto &p = entries.at(i);
@@ -1054,15 +1050,19 @@ unsigned LEAF_NODE_CLASS_TYPES::checksum() const {
   return checksum;
 }
 
-NODE_TEMPLATE_PARAMS
-unsigned LEAF_NODE_CLASS_TYPES::height() const {
-  assert(parent == nullptr);
-  return level + 1;
+template <int min_branch_factor, int max_branch_factor>
+unsigned LeafNode<min_branch_factor, max_branch_factor>::height() const {
+//  assert(parent == nullptr);
+//  return level + 1;
+
+// Unsupported
+  abort();
 }
 
 //// BRANCH STARTS
-NODE_TEMPLATE_PARAMS
-void BRANCH_NODE_CLASS_TYPES::deleteSubtrees() {
+template <int min_branch_factor, int max_branch_factor>
+void BranchNode<min_branch_factor, max_branch_factor>::deleteSubtrees() {
+#if 0
   for (unsigned i = 0; i < cur_offset_; i++) {
     const Branch &b = entries.at(i);
     tree_node_handle child_handle = b.child;
@@ -1074,10 +1074,11 @@ void BRANCH_NODE_CLASS_TYPES::deleteSubtrees() {
       child->deleteSubtrees();
     }
   }
+#endif
 }
 
-NODE_TEMPLATE_PARAMS
-Rectangle BRANCH_NODE_CLASS_TYPES::boundingBox() const {
+template <int min_branch_factor, int max_branch_factor>
+Rectangle BranchNode<min_branch_factor, max_branch_factor>::boundingBox() const {
   assert(cur_offset_ > 0);
   Rectangle boundingBox = entries.at(0).boundingBox;
 
@@ -1088,8 +1089,8 @@ Rectangle BRANCH_NODE_CLASS_TYPES::boundingBox() const {
   return boundingBox;
 }
 
-NODE_TEMPLATE_PARAMS
-bool BRANCH_NODE_CLASS_TYPES::updateBoundingBox(tree_node_handle child, Rectangle updatedBoundingBox) {
+template <int min_branch_factor, int max_branch_factor>
+bool BranchNode<min_branch_factor, max_branch_factor>::updateBoundingBox(tree_node_handle child, Rectangle updatedBoundingBox) {
 
   //std::cout << "Updating bounding box for to " <<
   //    updatedBoundingBox << std::endl;
@@ -1110,8 +1111,8 @@ bool BRANCH_NODE_CLASS_TYPES::updateBoundingBox(tree_node_handle child, Rectangl
   return false;
 }
 
-NODE_TEMPLATE_PARAMS
-void BRANCH_NODE_CLASS_TYPES::removeChild(tree_node_handle child) {
+template <int min_branch_factor, int max_branch_factor>
+void BranchNode<min_branch_factor, max_branch_factor>::removeChild(tree_node_handle child) {
   unsigned i = 0;
   for (; i < cur_offset_; i++) {
     if (entries.at(i).child == child) {
@@ -1123,8 +1124,9 @@ void BRANCH_NODE_CLASS_TYPES::removeChild(tree_node_handle child) {
   cur_offset_--;
 }
 
-NODE_TEMPLATE_PARAMS
-void BRANCH_NODE_CLASS_TYPES::exhaustiveSearch(const Point &requestedPoint, std::vector<Point> &accumulator) const {
+template <int min_branch_factor, int max_branch_factor>
+void BranchNode<min_branch_factor, max_branch_factor>::exhaustiveSearch(const Point &requestedPoint, std::vector<Point> &accumulator) const {
+#if 0
   for (unsigned i = 0; i < cur_offset_; i++) {
     tree_node_handle child_handle = entries.at(i).child;
     if (child_handle.get_type() == LEAF_NODE) {
@@ -1135,96 +1137,51 @@ void BRANCH_NODE_CLASS_TYPES::exhaustiveSearch(const Point &requestedPoint, std:
       child->exhaustiveSearch(requestedPoint, accumulator);
     }
   }
-}
-
-#define point_search_leaf_node(current_node, requestedPoint, accumulator) \
-for (unsigned i = 0; i < current_node->cur_offset_; i++) {              \
-  const Point &p = current_node->entries.at(i);                         \
-  if (p == requestedPoint) {                                            \
-    accumulator.push_back(p);                                           \
-  }                                                                     \
-}
-
-#define point_search_leaf_handle(handle, requestedPoint, accumulator) \
-  auto current_node = treeRef->get_leaf_node(handle);                 \
-  point_search_leaf_node(current_node, requestedPoint, accumulator);
-
-#define point_search_packed_leaf_node(packed_leaf, requestedPoint, accumulator) \
-  char *data = packed_leaf->buffer_;                                            \
-  decode_entry_count_and_offset_packed_node(data);                              \
-  for (size_t i = 0; i < count; i++) {                                          \
-    Point *p = (Point *)(data + offset);                                        \
-    if (*p == requestedPoint) {                                                 \
-      accumulator.push_back(requestedPoint);                                    \
-    }                                                                           \
-    offset += sizeof(Point);                                                    \
-  }
-
-#define point_search_packed_leaf_handle(handle, requestedPoint, accumulator) \
-  assert(handle.get_type() == REPACKED_LEAF_NODE);                           \
-  auto packed_leaf = allocator->get_tree_node<packed_node>(handle);          \
-  point_search_packed_leaf_node(packed_leaf, requestedPoint, accumulator);
-
-#ifdef STAT
-#define point_search_branch_handle(handle, requestedPoint, context) \
-  auto current_node = treeRef->get_branch_node(handle);             \
-  unsigned matching_branch_counter = 0;                              \
-  unsigned intersection_count = 0;                                   \
-  for (size_t i = 0; i < current_node->cur_offset_; i++) {          \
-    Branch &b = current_node->entries.at(i);                        \
-    intersection_count++;                                            \
-    if (b.boundingBox.containsPoint(requestedPoint)) {              \
-      context.push(b.child);                                        \
-      matching_branch_counter++;                                    \
-    }                                                               \
-  }                                                                 \
-  treeRef->stats.recordScatter(matching_branch_counter);            \
-  treeRef->stats.recordIntersectionCount(intersection_count);
-#else
-#define point_search_branch_handle(handle, requestedPoint, context) \
-  auto current_node = treeRef->get_branch_node(handle);             \
-  for (size_t i = 0; i < current_node->cur_offset_; i++) {          \
-    Branch &b = current_node->entries.at(i);                        \
-    if (b.boundingBox.containsPoint(requestedPoint)) {              \
-      context.push(b.child);                                        \
-    }                                                               \
-  }
 #endif
 
-#ifdef STAT
-#define point_search_packed_branch_handle(handle, requestedPoint, context) \
-  auto packed_branch = allocator->get_tree_node<packed_node>(handle);      \
-  char *buffer = packed_branch->buffer_;                                   \
-  decode_entry_count_and_offset_packed_node(buffer);                       \
-  unsigned matching_branch_counter = 0;                                    \
-  unsigned intersection_count = 0;                                          \
-  for (size_t i = 0; i < count; i++) {                                     \
-    Branch *b = (Branch *)(buffer + offset);                               \
-    offset += sizeof(Branch);                                              \
-    intersection_count++;                                                 \
-    if (b->boundingBox.containsPoint(requestedPoint)) {                    \
-      context.push(b->child);                                              \
-      matching_branch_counter++;                                           \
-    }                                                                      \
-  }                                                                        \
-  treeRef->stats.recordScatter(matching_branch_counter);                   \
-  treeRef->stats.recordIntersectionCount(intersection_count);
-#else
-#define point_search_packed_branch_handle(handle, requestedPoint, context) \
-  auto packed_branch = allocator->get_tree_node<packed_node>(handle);      \
-  char *buffer = packed_branch->buffer_;                                   \
-  decode_entry_count_and_offset_packed_node(buffer);                       \
-  for (size_t i = 0; i < count; i++) {                                     \
-    Branch *b = (Branch *)(buffer + offset);                               \
-    offset += sizeof(Branch);                                              \
-    if (b->boundingBox.containsPoint(requestedPoint)) {                    \
-      context.push(b->child);                                              \
-    }                                                                      \
-  }
-#endif
+  // Unsupported
+  abort();
+}
 
 template <int min_branch_factor, int max_branch_factor>
-std::vector<Point> point_search(tree_node_handle start_point, Point &requestedPoint, RStarTreeDisk<min_branch_factor, max_branch_factor> *treeRef) {
+void point_search_leaf_node(LeafNode<min_branch_factor, max_branch_factor> &node,
+                            Point &requestedPoint,
+                            std::vector<Point> &accumulator)
+{
+  for (unsigned i = 0; i < node.cur_offset_; i++) {
+    const Point &p = node.entries.at(i);
+    if (p == requestedPoint) {
+      accumulator.push_back(p);
+    }
+  }
+}
+
+template <int min_branch_factor, int max_branch_factor>
+void point_search_branch_node(BranchNode<min_branch_factor, max_branch_factor> &node,
+                              Point &requestedPoint,
+                              std::stack<tree_node_handle> &context,
+                              RStarTreeDisk<min_branch_factor, max_branch_factor> *treeRef)
+{
+  unsigned matching_branch_counter = 0;
+  unsigned intersection_count = 0;
+  for (size_t i = 0; i < node.cur_offset_; i++) {
+    Branch &b = node.entries.at(i);
+    intersection_count++;
+    if (b.boundingBox.containsPoint(requestedPoint)) {
+      context.push(b.child);
+      matching_branch_counter++;
+    }
+  }
+  treeRef->stats.recordScatter(matching_branch_counter);
+  treeRef->stats.recordIntersectionCount(intersection_count);
+}
+
+template <int min_branch_factor, int max_branch_factor>
+std::vector<Point> point_search(
+        tree_node_handle start_point,
+        Point &requestedPoint,
+        RStarTreeDisk<min_branch_factor, max_branch_factor> *treeRef)
+{
   std::vector<Point> accumulator;
   std::stack<tree_node_handle> context;
   tree_node_allocator *allocator = treeRef->node_allocator_.get();
@@ -1234,25 +1191,17 @@ std::vector<Point> point_search(tree_node_handle start_point, Point &requestedPo
   while (!context.empty()) {
     tree_node_handle current_handle = context.top();
     context.pop();
+
     if (current_handle.get_type() == LEAF_NODE) {
-      point_search_leaf_handle(current_handle, requestedPoint, accumulator);
-#ifdef STAT
-      treeRef->stats.markLeafSearched();
-#endif
-    } else if (current_handle.get_type() == REPACKED_LEAF_NODE) {
-      point_search_packed_leaf_handle(current_handle, requestedPoint, accumulator);
+      auto current_node = treeRef->get_leaf_node(current_handle);
+      point_search_leaf_node(current_node, requestedPoint, accumulator);
 #ifdef STAT
       treeRef->stats.markLeafSearched();
 #endif
     } else if (current_handle.get_type() == BRANCH_NODE) {
-      point_search_branch_handle(current_handle, requestedPoint, context);
+      auto current_node = treeRef->get_branch_node(current_handle);
+      point_search_branch_node(current_node, requestedPoint, context);
 #ifdef STAT
-      treeRef->stats.markNonLeafNodeSearched();
-#endif
-    } else if (current_handle.get_type() == REPACKED_BRANCH_NODE) {
-      point_search_packed_branch_handle(current_handle, requestedPoint, context);
-#ifdef STAT
-
       treeRef->stats.markNonLeafNodeSearched();
 #endif
     } else {
@@ -1265,55 +1214,39 @@ std::vector<Point> point_search(tree_node_handle start_point, Point &requestedPo
   return accumulator;
 }
 
-#define rectangle_search_leaf_handle(handle, requestedRectangle, accumulator) \
-auto current_node = treeRef->get_leaf_node(handle);                         \
-for (size_t i = 0; i < current_node->cur_offset_; i++) {                    \
-  if (requestedRectangle.containsPoint(current_node->entries.at(i))) {      \
-    accumulator.push_back(current_node->entries.at(i));                     \
-  }                                                                         \
+template <int min_branch_factor, int max_branch_factor>
+void rectangle_search_leaf_node(LeafNode<min_branch_factor, max_branch_factor> &node,
+                            Rectangle &requestedRectangle,
+                            std::vector<Point> &accumulator)
+{
+  for (unsigned i = 0; i < node.cur_offset_; i++) {
+    const Point &p = node.entries.at(i);
+    if (requestedRectangle.containsPoint(p)) {
+      accumulator.push_back(p);
+    }
+  }
 }
 
-#define rectangle_search_packed_leaf_handle(handle, requestedRectangle, accumulator)   \
-  auto packed_leaf = allocator->get_tree_node<packed_node>(handle);                    \
-  char *data = packed_leaf->buffer_;                                                   \
-  decode_entry_count_and_offset_packed_node(data)                                      \
-  for (size_t i = 0; i < count; i++) {                                               \
-    Point *p = (Point *)(data + offset);                                               \
-    if (requestedRectangle.containsPoint(*p)) {                                        \
-      accumulator.push_back(*p);                                                       \
-    }                                                                                  \
-    offset += sizeof(Point);                                                           \
+template <int min_branch_factor, int max_branch_factor>
+void rectangle_search_branch_node(BranchNode<min_branch_factor, max_branch_factor> &node,
+                                Rectangle &requestedRectangle,
+                                std::stack<tree_node_handle> &context,
+                                RStarTreeDisk<min_branch_factor, max_branch_factor> *treeRef)
+{
+  for (size_t i = 0; i < node.cur_offset_; i++) {
+    Branch &b = node.entries.at(i);
+    if (b.boundingBox.intersectsRectangle(requestedRectangle)) {
+      context.push(b.child);
+    }
   }
+}
 
-#define rectangle_search_branch_handle(handle, requestedRectangle, context) \
-  auto current_node = treeRef->get_branch_node(handle);                     \
-  for (size_t i = 0; i < current_node->cur_offset_; i++) {                  \
-    Branch &b = current_node->entries.at(i);                                \
-    if (b.boundingBox.intersectsRectangle(requestedRectangle)) {            \
-      context.push(b.child);                                                \
-    }                                                                       \
-  }
-
-#define rectangle_search_packed_branch_handle(handle, requestedRectangle, context) \
-  auto packed_branch = allocator->get_tree_node<packed_node>(handle);              \
-  char *buffer = packed_branch->buffer_;                                           \
-  decode_entry_count_and_offset_packed_node(buffer);                               \
-  unsigned intersection_count = 0;                                                 \
-  for (size_t i = 0; i < count; i++) {                                             \
-    Branch *b = (Branch *)(buffer + offset);                                       \
-    offset += sizeof(Branch);                                                      \
-    intersection_count++;                                                          \
-    if (b->boundingBox.intersectsRectangle(requestedRectangle)) {                  \
-      context.push(b->child);                                                      \
-    }                                                                              \
-  }                                                                                \
-  treeRef->stats.recordIntersectionCount(intersection_count);
-
-NODE_TEMPLATE_PARAMS
+template <int min_branch_factor, int max_branch_factor>
 std::vector<Point> rectangle_search(
         tree_node_handle start_point,
         Rectangle &requestedRectangle,
-        RStarTreeDisk<min_branch_factor, max_branch_factor> *treeRef) {
+        RStarTreeDisk<min_branch_factor, max_branch_factor> *treeRef)
+{
   std::vector<Point> accumulator;
 
   std::stack<tree_node_handle> context;
@@ -1325,25 +1258,14 @@ std::vector<Point> rectangle_search(
     context.pop();
 
     if (current_handle.get_type() == LEAF_NODE) {
-      rectangle_search_leaf_handle(current_handle, requestedRectangle, accumulator);
-#ifdef STAT
-      treeRef->stats.markLeafSearched();
-#endif
-    } else if (current_handle.get_type() == REPACKED_LEAF_NODE) {
-      rectangle_search_packed_leaf_handle(current_handle,
-                                          requestedRectangle, accumulator);
+      auto current_node = treeRef->get_leaf_node(current_handle);
+      rectangle_search_leaf_node(current_node, requestedRectangle, accumulator);
 #ifdef STAT
       treeRef->stats.markLeafSearched();
 #endif
     } else if (current_handle.get_type() == BRANCH_NODE) {
-      rectangle_search_branch_handle(current_handle,
-                                     requestedRectangle, context);
-#ifdef STAT
-      treeRef->stats.markNonLeafNodeSearched();
-#endif
-    } else if (current_handle.get_type() == REPACKED_BRANCH_NODE) {
-      rectangle_search_packed_branch_handle(current_handle,
-                                            requestedRectangle, context);
+      auto current_node = treeRef->get_branch_node(current_handle);
+      rectangle_search_branch_node(current_node, requestedRectangle, context);
 #ifdef STAT
       treeRef->stats.markNonLeafNodeSearched();
 #endif
@@ -1357,8 +1279,9 @@ std::vector<Point> rectangle_search(
   return accumulator;
 }
 
-NODE_TEMPLATE_PARAMS
-tree_node_handle BRANCH_NODE_CLASS_TYPES::chooseSubtree(const NodeEntry &givenNodeEntry) {
+template <int min_branch_factor, int max_branch_factor>
+tree_node_handle BranchNode<min_branch_factor, max_branch_factor>::chooseSubtree(const NodeEntry &givenNodeEntry) {
+#if 0
   // CS1: This is CAlled on the root! Just like above
   // CS2: If N is a leaf return N (same)
   // CS3: If the child pointers (bounding boxes) -> choose reactangle that needs least
@@ -1491,10 +1414,15 @@ tree_node_handle BRANCH_NODE_CLASS_TYPES::chooseSubtree(const NodeEntry &givenNo
     // Descend
     node_handle = node->entries[descentIndex].child;
   }
+#endif
+
+  // Unsupported
+  abort();
 }
 
-NODE_TEMPLATE_PARAMS
-tree_node_handle BRANCH_NODE_CLASS_TYPES::findLeaf(const Point &givenPoint) {
+template <int min_branch_factor, int max_branch_factor>
+tree_node_handle BranchNode<min_branch_factor, max_branch_factor>::findLeaf(const Point &givenPoint) {
+#if 0
   assert(cur_offset_ > 0);
 
   for (unsigned i = 0; i < cur_offset_; i++) {
@@ -1520,10 +1448,14 @@ tree_node_handle BRANCH_NODE_CLASS_TYPES::findLeaf(const Point &givenPoint) {
   }
 
   return tree_node_handle(nullptr);
+#endif
+
+  // Unsupported
+  abort();
 }
 
-NODE_TEMPLATE_PARAMS
-unsigned BRANCH_NODE_CLASS_TYPES::chooseSplitNonLeafAxis() {
+template <int min_branch_factor, int max_branch_factor>
+unsigned BranchNode<min_branch_factor, max_branch_factor>::chooseSplitNonLeafAxis() {
   unsigned optimalAxisLower = 0;
   unsigned optimalAxisUpper = 0;
   double optimalMarginLower = std::numeric_limits<double>::infinity();
@@ -1632,8 +1564,8 @@ unsigned BRANCH_NODE_CLASS_TYPES::chooseSplitNonLeafAxis() {
 //  that we keep in a loop -> and the just compare to the others?
 // 	We can first call a helper function that returns an array of all possible distributions for it?
 // CSA2: Return the Axis that has the minimum total sum of all the distributions
-NODE_TEMPLATE_PARAMS
-unsigned BRANCH_NODE_CLASS_TYPES::chooseSplitAxis() {
+template <int min_branch_factor, int max_branch_factor>
+unsigned BranchNode<min_branch_factor, max_branch_factor>::chooseSplitAxis() {
   return chooseSplitNonLeafAxis();
 }
 
@@ -1641,8 +1573,8 @@ unsigned BRANCH_NODE_CLASS_TYPES::chooseSplitAxis() {
 // 	group all the entries into multiple groups and choose the one that has the least
 // 	overlap value; resolve ties with the minimum area
 // 	returns tuple of best distribution group indices
-NODE_TEMPLATE_PARAMS
-unsigned BRANCH_NODE_CLASS_TYPES::chooseSplitIndex(unsigned axis) {
+template <int min_branch_factor, int max_branch_factor>
+unsigned BranchNode<min_branch_factor, max_branch_factor>::chooseSplitIndex(unsigned axis) {
   // We assume this is called after we have sorted this->data according to axis.
 
   const auto groupABegin = entries.begin();
@@ -1709,8 +1641,9 @@ unsigned BRANCH_NODE_CLASS_TYPES::chooseSplitIndex(unsigned axis) {
   return splitIndex;
 }
 
-NODE_TEMPLATE_PARAMS
-tree_node_handle BRANCH_NODE_CLASS_TYPES::splitNode() {
+template <int min_branch_factor, int max_branch_factor>
+tree_node_handle BranchNode<min_branch_factor, max_branch_factor>::splitNode() {
+#if 0
   // S1: Call chooseSplitAxis to determine the axis perpendicular to which the split is performed
   // S2: Invoke chooseSplitIndex given the axis to determine the best distribution along this axis
   // S3: Distribute the entries among these two groups
@@ -1732,13 +1665,13 @@ tree_node_handle BRANCH_NODE_CLASS_TYPES::splitNode() {
 
   tree_node_allocator *allocator = get_node_allocator(treeRef);
   auto alloc_data =
-          allocator->create_new_tree_node<BRANCH_NODE_CLASS_TYPES>(
+          allocator->create_new_tree_node<BranchNode<min_branch_factor, max_branch_factor>>(
                   NodeHandleType(BRANCH_NODE));
 
   auto newSibling = alloc_data.first;
   tree_node_handle sibling_handle = alloc_data.second;
 
-  new (&(*(newSibling))) BRANCH_NODE_CLASS_TYPES(treeRef, sibling_handle, parent,
+  new (&(*(newSibling))) BranchNode<min_branch_factor, max_branch_factor>(treeRef, sibling_handle, parent,
                                                  level);
 
   newSibling->parent = parent;
@@ -1797,10 +1730,15 @@ tree_node_handle BRANCH_NODE_CLASS_TYPES::splitNode() {
 
   // Return our newly minted sibling
   return sibling_handle;
+#endif
+
+  // Unsupported
+  abort();
 }
 
-NODE_TEMPLATE_PARAMS
-tree_node_handle BRANCH_NODE_CLASS_TYPES::reInsert(std::vector<bool> &hasReinsertedOnLevel) {
+template <int min_branch_factor, int max_branch_factor>
+tree_node_handle BranchNode<min_branch_factor, max_branch_factor>::reInsert(std::vector<bool> &hasReinsertedOnLevel) {
+#if 0
   // 1. RI1 Compute distance between each of the points and the bounding box containing them.
   // 2. RI2 Sort the entries by DECREASING index -> ok let's define an
   // 		extra helper function that gets to do this and pass it into sort
@@ -1881,8 +1819,8 @@ tree_node_handle BRANCH_NODE_CLASS_TYPES::reInsert(std::vector<bool> &hasReinser
 }
 
 // Overflow treatement for dealing with a node that is too big (overflow)
-NODE_TEMPLATE_PARAMS
-tree_node_handle BRANCH_NODE_CLASS_TYPES::overflowTreatment(std::vector<bool> &hasReinsertedOnLevel) {
+template <int min_branch_factor, int max_branch_factor>
+tree_node_handle BranchNode<min_branch_factor, max_branch_factor>::overflowTreatment(std::vector<bool> &hasReinsertedOnLevel) {
   assert(hasReinsertedOnLevel.size() > level);
 
   if (hasReinsertedOnLevel.at(level)) {
@@ -1897,8 +1835,8 @@ tree_node_handle BRANCH_NODE_CLASS_TYPES::overflowTreatment(std::vector<bool> &h
   }
 }
 
-NODE_TEMPLATE_PARAMS
-tree_node_handle BRANCH_NODE_CLASS_TYPES::insert(NodeEntry nodeEntry, std::vector<bool> &hasReinsertedOnLevel) {
+template <int min_branch_factor, int max_branch_factor>
+tree_node_handle BranchNode<min_branch_factor, max_branch_factor>::insert(NodeEntry nodeEntry, std::vector<bool> &hasReinsertedOnLevel) {
   tree_node_allocator *allocator = get_node_allocator(treeRef);
   // Always called on root, this = root
   assert(!parent);
@@ -1980,7 +1918,7 @@ tree_node_handle BRANCH_NODE_CLASS_TYPES::insert(NodeEntry nodeEntry, std::vecto
 
     assert(!parent);
     auto alloc_data =
-            allocator->create_new_tree_node<BRANCH_NODE_CLASS_TYPES>(
+            allocator->create_new_tree_node<BranchNode<min_branch_factor, max_branch_factor>>(
                     NodeHandleType(BRANCH_NODE));
     auto newRoot = alloc_data.first;
     tree_node_handle root_handle = alloc_data.second;
@@ -1988,7 +1926,7 @@ tree_node_handle BRANCH_NODE_CLASS_TYPES::insert(NodeEntry nodeEntry, std::vecto
     auto sibling = treeRef->get_branch_node(sibling_handle);
 
     new (&(*(newRoot)))
-            BRANCH_NODE_CLASS_TYPES(treeRef, root_handle, tree_node_handle(nullptr), this->level + 1);
+            BranchNode<min_branch_factor, max_branch_factor>(treeRef, root_handle, tree_node_handle(nullptr), this->level + 1);
 
     this->parent = root_handle;
 
@@ -2029,8 +1967,8 @@ tree_node_handle BRANCH_NODE_CLASS_TYPES::insert(NodeEntry nodeEntry, std::vecto
 }
 
 // Always called on root, this = root
-NODE_TEMPLATE_PARAMS
-tree_node_handle BRANCH_NODE_CLASS_TYPES::remove(Point &givenPoint, std::vector<bool> hasReinsertedOnLevel) {
+template <int min_branch_factor, int max_branch_factor>
+tree_node_handle BranchNode<min_branch_factor, max_branch_factor>::remove(Point &givenPoint, std::vector<bool> hasReinsertedOnLevel) {
   assert(!parent);
 
   // D1 [Find node containing record]
@@ -2071,15 +2009,19 @@ tree_node_handle BRANCH_NODE_CLASS_TYPES::remove(Point &givenPoint, std::vector<
     }
   }
   return root_handle;
+#endif
+
+  // Unsupported
+  abort();
 }
 
-NODE_TEMPLATE_PARAMS
-void BRANCH_NODE_CLASS_TYPES::print() const {
+template <int min_branch_factor, int max_branch_factor>
+void BranchNode<min_branch_factor, max_branch_factor>::print() const {
   std::string indentation(4, ' ');
   std::cout << indentation << "Node " << (void *)this << std::endl;
   std::cout << indentation << "{" << std::endl;
   std::cout << indentation << "    BoundingBox: " << boundingBox() << std::endl;
-  std::cout << indentation << "    Parent: " << parent << std::endl;
+//  std::cout << indentation << "    Parent: " << parent << std::endl;
   std::cout << indentation << "    Entries: " << std::endl;
 
   for (unsigned i = 0; i < cur_offset_; i++) {
@@ -2090,8 +2032,9 @@ void BRANCH_NODE_CLASS_TYPES::print() const {
             << indentation << "}" << std::endl;
 }
 
-NODE_TEMPLATE_PARAMS
-void BRANCH_NODE_CLASS_TYPES::printTree() const {
+template <int min_branch_factor, int max_branch_factor>
+void BranchNode<min_branch_factor, max_branch_factor>::printTree() const {
+#if 0
   // Print this node first
   struct Printer {
     void operator()(RStarTreeDisk<min_branch_factor, max_branch_factor> *treeRef, tree_node_handle node_handle) {
@@ -2107,6 +2050,10 @@ void BRANCH_NODE_CLASS_TYPES::printTree() const {
 
   Printer p;
   treeWalker<min_branch_factor, max_branch_factor>(treeRef, self_handle_, p);
+#endif
+
+  // Unsupported
+  abort();
 }
 
 template <int min_branch_factor, int max_branch_factor>
@@ -2141,8 +2088,9 @@ void printPackedNodes(
   }
 }
 
-NODE_TEMPLATE_PARAMS
-unsigned BRANCH_NODE_CLASS_TYPES::checksum() const {
+template <int min_branch_factor, int max_branch_factor>
+unsigned BranchNode<min_branch_factor, max_branch_factor>::checksum() const {
+#if 0
   struct ChecksumFunctor {
       unsigned checksum;
 
@@ -2151,9 +2099,9 @@ unsigned BRANCH_NODE_CLASS_TYPES::checksum() const {
       }
 
       void operator()(
-              RStarTreeDisk<min_branch_factor, max_branch_factor>
-              *treeRef,
-              tree_node_handle node_handle) {
+          RStarTreeDisk<min_branch_factor, max_branch_factor> *treeRef,
+          tree_node_handle node_handle)
+      {
         if (node_handle.get_type() == LEAF_NODE) {
           auto node = treeRef->get_leaf_node(node_handle);
           for (unsigned i = 0; i < node->cur_offset_; i++) {
@@ -2168,14 +2116,20 @@ unsigned BRANCH_NODE_CLASS_TYPES::checksum() const {
 
   ChecksumFunctor cf;
   treeWalker<min_branch_factor, max_branch_factor>(treeRef, self_handle_, cf);
-
   return cf.checksum;
+#endif
+
+  // Unsupported
+  abort();
 }
 
-NODE_TEMPLATE_PARAMS
-unsigned BRANCH_NODE_CLASS_TYPES::height() const {
-  assert(parent == nullptr);
-  return level + 1;
+template <int min_branch_factor, int max_branch_factor>
+unsigned BranchNode<min_branch_factor, max_branch_factor>::height() const {
+//  assert(parent == nullptr);
+//  return level + 1;
+
+// Unsupported
+  abort();
 }
 
 template <int min_branch_factor, int max_branch_factor>
@@ -2198,25 +2152,6 @@ void stat_node(tree_node_handle start_handle, RStarTreeDisk<min_branch_factor, m
       auto current_node = treeRef->get_leaf_node(currentContext);
       totalLeaves++;
       memoryFootprint += sizeof(LeafNode<min_branch_factor, max_branch_factor>);
-    } else if (currentContext.get_type() == REPACKED_LEAF_NODE) {
-      auto current_node = allocator->get_tree_node<packed_node>(currentContext);
-      char *data = current_node->buffer_;
-      decode_entry_count_and_offset_packed_node(data);
-      totalLeaves++;
-      // Not true, but what it should be
-      memoryFootprint += sizeof(unsigned) + count * sizeof(Point);
-    } else if (currentContext.get_type() == REPACKED_BRANCH_NODE) {
-      auto current_node = allocator->get_tree_node<packed_node>(currentContext);
-      char *buffer = current_node->buffer_;
-      decode_entry_count_and_offset_packed_node(buffer);
-      // Not true, but what it should be
-      memoryFootprint += sizeof(unsigned);
-      for (unsigned i = 0; i < count; i++) {
-        Branch *b = (Branch *)(buffer + offset);
-        context.push(b->child);
-        offset += sizeof(Branch);
-        memoryFootprint += sizeof(Branch);
-      }
     } else if (currentContext.get_type() == BRANCH_NODE) {
       auto current_node = treeRef->get_branch_node(currentContext);
       memoryFootprint += sizeof(BranchNode<min_branch_factor, max_branch_factor>);
@@ -2237,101 +2172,4 @@ void stat_node(tree_node_handle start_handle, RStarTreeDisk<min_branch_factor, m
   STATLEAF(totalLeaves);
   std::cout << treeRef->stats << std::endl;
 }
-
-NODE_TEMPLATE_PARAMS
-uint16_t LEAF_NODE_CLASS_TYPES::compute_packed_size() {
-  uint16_t sz = 0;
-  sz += sizeof(cur_offset_);
-  sz += cur_offset_ * sizeof(Point);
-  return sz;
-}
-
-NODE_TEMPLATE_PARAMS
-uint16_t BRANCH_NODE_CLASS_TYPES::compute_packed_size() {
-  uint16_t sz = 0;
-  sz += sizeof(cur_offset_);
-  sz += cur_offset_ * sizeof(Branch);
-  return sz;
-}
-
-NODE_TEMPLATE_PARAMS
-tree_node_handle LEAF_NODE_CLASS_TYPES::repack(tree_node_allocator *allocator) {
-  static_assert(sizeof(void *) == sizeof(uint64_t));
-  uint16_t alloc_size = compute_packed_size();
-  auto alloc_data = allocator->create_new_tree_node<packed_node>(alloc_size, NodeHandleType(REPACKED_LEAF_NODE));
-
-  char *buffer = alloc_data.first->buffer_;
-  buffer += write_data_to_buffer(buffer, &cur_offset_);
-  for (unsigned i = 0; i < cur_offset_; i++) {
-    buffer += write_data_to_buffer(buffer, &(entries.at(i)));
-  }
-  assert(buffer - alloc_data.first->buffer_ == alloc_size);
-  return alloc_data.second;
-}
-
-NODE_TEMPLATE_PARAMS
-tree_node_handle BRANCH_NODE_CLASS_TYPES::repack(tree_node_allocator *allocator) {
-  uint16_t alloc_size = compute_packed_size();
-  auto alloc_data = allocator->create_new_tree_node<packed_node>(alloc_size, NodeHandleType(REPACKED_BRANCH_NODE));
-
-  char *buffer = alloc_data.first->buffer_;
-  buffer += write_data_to_buffer(buffer, &cur_offset_);
-  for (unsigned i = 0; i < cur_offset_; i++) {
-    Branch &b = entries.at(i);
-    buffer += write_data_to_buffer(buffer, &b);
-  }
-  size_t true_size = (buffer - alloc_data.first->buffer_);
-  assert(true_size == alloc_size);
-  return alloc_data.second;
-}
-
-NODE_TEMPLATE_PARAMS
-tree_node_handle repack_subtree(
-        tree_node_handle handle,
-        tree_node_allocator *existing_allocator,
-        tree_node_allocator *new_allocator) {
-  std::vector<tree_node_handle> repacked_handles;
-  switch (handle.get_type()) {
-    case LEAF_NODE: {
-      auto leaf_node = existing_allocator->get_tree_node<LEAF_NODE_CLASS_TYPES>(handle);
-      auto new_handle = leaf_node->repack(new_allocator);
-      existing_allocator->free(handle, sizeof(LEAF_NODE_CLASS_TYPES));
-      return new_handle;
-    }
-    case BRANCH_NODE: {
-      auto branch_node =
-              existing_allocator->get_tree_node<BRANCH_NODE_CLASS_TYPES>(handle);
-      // Repack all my children, adjust my handles
-      for (size_t i = 0; i < branch_node->cur_offset_; i++) {
-        auto child_handle = branch_node->entries.at(i).child;
-        auto new_child_handle =
-        repack_subtree<min_branch_factor, max_branch_factor>(child_handle,
-                existing_allocator, new_allocator);
-        branch_node->entries.at(i).child = new_child_handle;
-      }
-      auto new_handle = branch_node->repack(new_allocator);
-      existing_allocator->free(handle, sizeof(BRANCH_NODE_CLASS_TYPES));
-      return new_handle;
-    }
-    default:
-      assert(false);
-      return tree_node_handle(nullptr);
-  }
-}
-
-#undef NODE_TEMPLATE_PARAMS
-#undef LEAF_NODE_CLASS_TYPES
-#undef BRANCH_NODE_CLASS_TYPES
-#undef point_search_leaf_handle
-#undef point_search_leaf_node
-#undef point_search_packed_leaf_node
-#undef point_search_packed_branch_handle
-#undef point_search_branch_handle
-#undef rectangle_search_leaf_handle
-#undef rectangle_search_leaf_node
-#undef rectangle_search_packed_leaf_node
-#undef rectangle_search_packed_leaf_handle
-#undef rectangle_search_packed_branch_handle
-#undef rectangle_search_branch_handle
-#undef decode_entry_count_and_offset_packed_node
 } // namespace rstartreedisk
