@@ -95,14 +95,6 @@ std::pair<uint64_t, double> compute_max_dist(const Point &point, std::vector<Poi
 
 bool point_comparator(const Point &lhs, const Point &rhs);
 
-template <typename T, typename LN, typename BN>
-std::vector<tree_node_handle> str_packing_branch_euclidean(
-    T *tree,
-    std::vector<tree_node_handle> &child_nodes,
-    unsigned branch_factor,
-    LN *leaf_node_type,
-    BN *branch_node_type);
-
 template <>
 std::vector<tree_node_handle> str_packing_branch(
     nirtreedisk::NIRTreeDisk<5, NIR_FANOUT, nirtreedisk::ExperimentalStrategy> *tree,
@@ -117,15 +109,6 @@ std::vector<tree_node_handle> str_packing_branch(
 
 template <typename T, typename LN, typename BN>
 std::vector<tree_node_handle> str_packing_leaf(
-    T *tree,
-    std::vector<Point>::iterator begin,
-    std::vector<Point>::iterator end,
-    unsigned branch_factor,
-    LN *ln_type,
-    BN *bn_type);
-
-template <typename T, typename LN, typename BN>
-std::vector<tree_node_handle> str_packing_leaf_euclidean(
     T *tree,
     std::vector<Point>::iterator begin,
     std::vector<Point>::iterator end,
