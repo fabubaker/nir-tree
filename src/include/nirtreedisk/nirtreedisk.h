@@ -33,12 +33,6 @@
 #include <unistd.h>
 
 namespace nirtreedisk {
-// Sets unsigned offset pointing to start of leaf entries and unsigned count
-#define decode_entry_count_and_offset_packed_node(data)           \
-  [[maybe_unused]] unsigned offset = 0;                           \
-  [[maybe_unused]] unsigned count = *(unsigned *)(data + offset); \
-  offset += sizeof(unsigned);
-
 template <int min_branch_factor, int max_branch_factor, class strategy = LineMinimizeDownsplits>
 class NIRTreeDisk : public Index {
 public:
@@ -94,175 +88,40 @@ public:
   void print();
   void visualize();
 
-  void update_repacked_parent(tree_node_handle parent, tree_node_handle old_child, tree_node_handle new_child) {
-    auto packed_parent = node_allocator_->get_tree_node<packed_node>(parent);
-    char *buffer = packed_parent->buffer_;
-    decode_entry_count_and_offset_packed_node(buffer);
-    for (unsigned i = 0; i < count; i++) {
-      tree_node_handle *child = (tree_node_handle *)(buffer + offset);
-      if (*child == old_child) {
-        *child = new_child;
-        return;
-      }
-      offset += sizeof(tree_node_handle);
-
-      bool is_compressed = child->get_associated_poly_is_compressed();
-      if (is_compressed) {
-        int new_offset;
-        IsotheticPolygon decoded_poly = decompress_polygon((buffer + offset), &new_offset);
-        offset += new_offset;
-        continue;
-      }
-
-      uint8_t rect_count = *(uint8_t *)(buffer + offset);
-      offset += sizeof(uint8_t);
-
-      if (rect_count == std::numeric_limits<uint8_t>::max()) {
-        offset += sizeof(tree_node_handle);
-      } else {
-        for (unsigned r = 0; r < rect_count; r++) {
-          offset += sizeof(Rectangle);
-        }
-      }
-    }
-  }
-
   inline Point get_a_contained_point(tree_node_handle node_handle) {
     tree_node_allocator *allocator = node_allocator_.get();
 
-    while (node_handle.get_type() != LEAF_NODE and node_handle.get_type() != REPACKED_LEAF_NODE) {
-      if (node_handle.get_type() == BRANCH_NODE) {
-        auto branch_node =
-            allocator->get_tree_node<BranchNode<min_branch_factor, max_branch_factor, strategy>>(node_handle);
-        Branch &b = branch_node->entries.at(0);
-        node_handle = b.child;
-      } else {
-        auto packed_branch_node = allocator->get_tree_node<packed_node>(node_handle);
-        char *buffer = packed_branch_node->buffer_;
-        {
-          decode_entry_count_and_offset_packed_node(buffer);
-          node_handle = *(tree_node_handle *)(buffer + offset);
-        }
-      }
-    }
-    if (node_handle.get_type() == LEAF_NODE) {
-      auto leaf_node =
-          allocator->get_tree_node<LeafNode<min_branch_factor, max_branch_factor, strategy>>(node_handle);
-      return leaf_node->entries.at(0);
-    }
-    // Decode and find offset
-    auto leaf_node = allocator->get_tree_node<packed_node>(node_handle);
-    char *buffer = leaf_node->buffer_;
-    decode_entry_count_and_offset_packed_node(buffer);
-    // First entry
-    return *(Point *)(buffer + offset);
-  }
+    while (node_handle.get_type() != LEAF_NODE) {
+      assert(node_handle.get_type() == BRANCH_NODE);
 
-  inline tree_node_handle get_parent_handle_for_repacked_node(tree_node_handle node_handle) {
-    Point p = get_a_contained_point(node_handle);
-    tree_node_handle parent_handle = parent_handle_point_search(root, p, this, node_handle);
-    return parent_handle;
+      auto branch_node =
+              allocator->get_tree_node<BranchNode<min_branch_factor, max_branch_factor, strategy>>(node_handle);
+      Branch &b = branch_node->entries.at(0);
+      node_handle = b.child;
+    }
+
+    assert(node_handle.get_type() == LEAF_NODE);
+
+    auto leaf_node =
+        allocator->get_tree_node<LeafNode<min_branch_factor, max_branch_factor, strategy>>(node_handle);
+    return leaf_node->entries.at(0);
   }
 
   /* If unpack_perm=true, the tree will be modified */
   inline pinned_node_ptr<LeafNode<min_branch_factor, max_branch_factor, strategy>>
   get_leaf_node(tree_node_handle node_handle, bool unpack_perm = true) {
-    assert(node_handle.get_type() == LEAF_NODE || node_handle.get_type() == REPACKED_LEAF_NODE);
-
-    if (node_handle.get_type() == REPACKED_LEAF_NODE) {
-      tree_node_handle parent_handle = get_parent_handle_for_repacked_node(node_handle);
-
-      tree_node_handle unpacked_node_handle =
-          unpack<min_branch_factor, max_branch_factor, strategy>(node_handle,
-                                                                 node_allocator_.get(), this,
-                                                                 parent_handle);
-      auto node = get_leaf_node(unpacked_node_handle);
-
-      // Update the parent!
-      if (unpack_perm && node->parent) {
-        // This does NOT unpack the parent
-        assert(node->parent == parent_handle);
-        if (node->parent.get_type() == REPACKED_BRANCH_NODE) {
-          update_repacked_parent(node->parent, node_handle, unpacked_node_handle);
-        } else {
-          auto parent = get_branch_node(node->parent);
-          Branch &b = parent->locateBranch(node_handle);
-          b.child = unpacked_node_handle;
-        }
-      }
-
-      if (unpack_perm && root == node_handle) {
-        root = unpacked_node_handle;
-      }
-
-      node_handle = unpacked_node_handle;
-    }
-
     assert(node_handle.get_type() == LEAF_NODE);
     auto ptr =
         node_allocator_->get_tree_node<LeafNode<min_branch_factor, max_branch_factor, strategy>>(node_handle);
-    ptr->treeRef = this;
     return ptr;
   }
 
   /* If unpack_perm=true, the tree will be modified */
   inline pinned_node_ptr<BranchNode<min_branch_factor, max_branch_factor, strategy>>
   get_branch_node(tree_node_handle node_handle, bool unpack_perm = true) {
-    assert(node_handle.get_type() == BRANCH_NODE || node_handle.get_type() == REPACKED_BRANCH_NODE);
-
-    if (node_handle.get_type() == REPACKED_BRANCH_NODE) {
-      tree_node_handle parent_handle = get_parent_handle_for_repacked_node(node_handle);
-      tree_node_handle unpacked_node_handle =
-          unpack<min_branch_factor, max_branch_factor, strategy>(node_handle, node_allocator_.get(), this, parent_handle);
-      auto node = get_branch_node(unpacked_node_handle);
-
-      // Update the parent!
-      if (unpack_perm && node->parent) {
-        assert(node->parent == parent_handle);
-        if (node->parent.get_type() == REPACKED_BRANCH_NODE) {
-          update_repacked_parent(node->parent, node_handle, unpacked_node_handle);
-        } else {
-          auto parent = get_branch_node(node->parent);
-          Branch &b = parent->locateBranch(node_handle);
-          b.child = unpacked_node_handle;
-        }
-      }
-
-      // Update the children!
-      if (unpack_perm) {
-        for (unsigned i = 0; i < node->cur_offset_; i++) {
-          Branch &b = node->entries.at(i);
-
-          if (b.child.get_type() == REPACKED_LEAF_NODE || b.child.get_type() == REPACKED_BRANCH_NODE) {
-            continue;
-          }
-
-          // Branch or leaf?
-          if (b.child.get_type() == LEAF_NODE) {
-            auto child = get_leaf_node(b.child);
-            child->parent = unpacked_node_handle;
-          } else {
-            // Branch
-            if (b.child.get_type() != BRANCH_NODE) {
-              std::cerr << " LOOK " << (int)b.child.get_type() << std::endl;
-            }
-            auto child = get_branch_node(b.child);
-            child->parent = unpacked_node_handle;
-          }
-        }
-
-        if (node_handle == root) {
-          root = unpacked_node_handle;
-        }
-      }
-
-      node_handle = unpacked_node_handle;
-    }
-
     assert(node_handle.get_type() == BRANCH_NODE);
     auto ptr =
         node_allocator_->get_tree_node<BranchNode<min_branch_factor, max_branch_factor, strategy>>(node_handle);
-    ptr->treeRef = this;
     return ptr;
   }
 
@@ -304,7 +163,7 @@ NIRTreeDisk<min_branch_factor, max_branch_factor, strategy>::search(Rectangle re
 template <int min_branch_factor, int max_branch_factor, class strategy>
 void NIRTreeDisk<min_branch_factor, max_branch_factor, strategy>::insert(Point givenPoint) {
   std::fill(hasReinsertedOnLevel.begin(), hasReinsertedOnLevel.end(), false);
-  if (root.get_type() == LEAF_NODE || root.get_type() == REPACKED_LEAF_NODE) {
+  if (root.get_type() == LEAF_NODE) {
     auto root_node = get_leaf_node(root, true);
     root = root_node->insert(givenPoint, hasReinsertedOnLevel);
   } else {
@@ -316,7 +175,7 @@ void NIRTreeDisk<min_branch_factor, max_branch_factor, strategy>::insert(Point g
 
 template <int min_branch_factor, int max_branch_factor, class strategy>
 void NIRTreeDisk<min_branch_factor, max_branch_factor, strategy>::remove(Point givenPoint) {
-  if (root.get_type() == LEAF_NODE || root.get_type() == REPACKED_LEAF_NODE) {
+  if (root.get_type() == LEAF_NODE) {
     auto root_node = get_leaf_node(root);
     root = root_node->remove(givenPoint);
   } else {
@@ -327,7 +186,7 @@ void NIRTreeDisk<min_branch_factor, max_branch_factor, strategy>::remove(Point g
 
 template <int min_branch_factor, int max_branch_factor, class strategy>
 unsigned NIRTreeDisk<min_branch_factor, max_branch_factor, strategy>::checksum() {
-  if (root.get_type() == LEAF_NODE || root.get_type() == REPACKED_LEAF_NODE) {
+  if (root.get_type() == LEAF_NODE) {
     auto root_node = get_leaf_node(root);
     return root_node->checksum();
   } else {
@@ -338,7 +197,7 @@ unsigned NIRTreeDisk<min_branch_factor, max_branch_factor, strategy>::checksum()
 
 template <int min_branch_factor, int max_branch_factor, class strategy>
 bool NIRTreeDisk<min_branch_factor, max_branch_factor, strategy>::validate() {
-  if (root.get_type() == LEAF_NODE || root.get_type() == REPACKED_LEAF_NODE) {
+  if (root.get_type() == LEAF_NODE) {
     auto root_node = get_leaf_node(root);
     root_node->bounding_box_validate();
     return root_node->validate(tree_node_handle(nullptr), 0);
@@ -362,7 +221,7 @@ void NIRTreeDisk<min_branch_factor, max_branch_factor, strategy>::print() {
       Printer(std::ofstream &printFile): printFile(printFile) {}
 
       void operator()(NIRTreeDisk<min_branch_factor, max_branch_factor, strategy> *treeRef, tree_node_handle node_handle) {
-        printPackedNodes<min_branch_factor, max_branch_factor, strategy>(treeRef, node_handle, printFile);
+//        printPackedNodes<min_branch_factor, max_branch_factor, strategy>(treeRef, node_handle, printFile);
       }
 
       std::ofstream &printFile;

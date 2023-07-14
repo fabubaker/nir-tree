@@ -47,184 +47,28 @@ struct LineMinimizeDistanceFromMean : BranchPartitionStrategy {};
 
 struct ExperimentalStrategy : BranchPartitionStrategy {};
 
-template <int min_branch_factor, int max_branch_factor,
-          class strategy>
+template <int min_branch_factor, int max_branch_factor, class strategy>
 class NIRTreeDisk;
 
-template <int min_branch_factor, int max_branch_factor,
-          class strategy>
+template <int min_branch_factor, int max_branch_factor, class strategy>
 requires(std::derived_from<strategy, BranchPartitionStrategy>)
 tree_node_allocator *get_node_allocator(NIRTreeDisk<min_branch_factor, max_branch_factor, strategy> *treeRef) {
   return treeRef->node_allocator_.get();
 }
 
 struct Branch {
+  Branch(Rectangle boundingBox, tree_node_handle child_handle):
+    boundingBox(boundingBox), child(child_handle) {}
+
   Branch() = default;
 
-  Branch(InlineBoundedIsotheticPolygon boundingPoly,
-         tree_node_handle child) : boundingPoly(boundingPoly),
-                                   child(child) {}
-
-  Branch(tree_node_handle boundingPoly, tree_node_handle child)
-      : boundingPoly(boundingPoly), child(child) {}
-
-  Rectangle get_summary_rectangle(tree_node_allocator *allocator) {
-    if (std::holds_alternative<InlineBoundedIsotheticPolygon>(
-            boundingPoly)) {
-      return std::get<InlineBoundedIsotheticPolygon>(
-                 boundingPoly)
-          .get_summary_rectangle();
-    }
-    tree_node_handle poly_handle = std::get<tree_node_handle>(boundingPoly);
-    auto poly_pin = allocator->get_tree_node<InlineUnboundedIsotheticPolygon>(
-        poly_handle);
-    return poly_pin->get_summary_rectangle();
-  }
-
-  inline_poly get_inline_polygon(tree_node_allocator *allocator) {
-    if (std::holds_alternative<InlineBoundedIsotheticPolygon>(
-            boundingPoly)) {
-      return std::get<InlineBoundedIsotheticPolygon>(
-          boundingPoly);
-    }
-    tree_node_handle poly_handle = std::get<tree_node_handle>(boundingPoly);
-    auto poly_pin = allocator->get_tree_node<InlineUnboundedIsotheticPolygon>(
-        poly_handle);
-    return poly_pin;
-  }
-
-  IsotheticPolygon materialize_polygon(tree_node_allocator *allocator) {
-    if (std::holds_alternative<InlineBoundedIsotheticPolygon>(
-            boundingPoly)) {
-      return std::get<InlineBoundedIsotheticPolygon>(
-                 boundingPoly)
-          .materialize_polygon();
-    }
-    tree_node_handle poly_handle = std::get<tree_node_handle>(
-        boundingPoly);
-    auto poly_pin =
-        allocator->get_tree_node<InlineUnboundedIsotheticPolygon>(
-            poly_handle);
-    return poly_pin->materialize_polygon();
-  }
-
-  std::pair<bool, pinned_node_ptr<InlineUnboundedIsotheticPolygon>>
-  should_repack_big_poly(
-      tree_node_handle poly_handle, tree_node_allocator *existing_allocator,
-      tree_node_allocator *new_allocator, unsigned maximum_repacked_rect_size
-  ) {
-    auto poly_pin = existing_allocator->get_tree_node<InlineUnboundedIsotheticPolygon>(poly_handle);
-
-    if (poly_pin->get_total_rectangle_count() <= maximum_repacked_rect_size) {
-      return std::make_pair(true, poly_pin);
-    }
-
-    return std::make_pair(false, poly_pin);
-  }
-
-  uint16_t compute_packed_size(
-    tree_node_allocator *existing_allocator, tree_node_allocator *new_allocator,
-    unsigned maximum_repacked_rect_size, bool truncate_polygons
-  ) {
-    uint16_t sz = sizeof(child);
-
-    // If the bounding polygon is stored out-of-line...
-    if (std::holds_alternative<tree_node_handle>(boundingPoly)) {
-      auto should_pack_and_pin = should_repack_big_poly(
-          std::get<tree_node_handle>(boundingPoly),
-          existing_allocator,
-          new_allocator,
-          maximum_repacked_rect_size
-      );
-
-      if (should_pack_and_pin.first) {
-        auto poly_pin = should_pack_and_pin.second;
-        sz += sizeof(uint8_t); // Rectangle count
-        sz += poly_pin->get_total_rectangle_count() * sizeof(Rectangle); //rectangles
-        return sz;
-      }
-
-      sz += sizeof(uint8_t); // magic rect count id
-      sz += sizeof(Rectangle); // summary rectangle for out-of-line polygon
-      sz += sizeof(tree_node_handle);
-      return sz;
-    }
-
-    // The bounding polygon is stored in-line...
-    InlineBoundedIsotheticPolygon &poly = std::get<InlineBoundedIsotheticPolygon>(boundingPoly);
-    uint8_t rect_count = poly.get_rectangle_count();
-    sz += sizeof(rect_count);
-    sz += rect_count * sizeof(Rectangle);
-    return sz;
-  }
-
-  std::optional<std::pair<char *, int>> compute_compression_data(tree_node_allocator *existing_allocator) {
-    if (std::holds_alternative<tree_node_handle>(boundingPoly)) {
-      tree_node_handle poly_handle = std::get<tree_node_handle>(boundingPoly);
-      auto poly_pin = existing_allocator->get_tree_node<InlineUnboundedIsotheticPolygon>(poly_handle);
-      uint8_t rect_count = poly_pin->get_total_rectangle_count();
-      std::pair<char *, int> compression_result = compress_polygon(poly_pin->begin(),poly_pin->end(), rect_count);
-      unsigned compressed_size = compression_result.second;
-
-      if (compressed_size + 10 < rect_count * sizeof(Rectangle)) {
-        return compression_result;
-      }
-
-      free(compression_result.first);
-      return std::nullopt;
-    }
-
-    InlineBoundedIsotheticPolygon &poly = std::get<InlineBoundedIsotheticPolygon>(boundingPoly);
-    uint8_t rect_count = poly.get_rectangle_count();
-    std::pair<char *, int> compression_result = compress_polygon(poly.begin(), poly.end(), rect_count);
-    unsigned compressed_size = compression_result.second;
-
-    if (compressed_size + 10 < rect_count * sizeof(Rectangle)) {
-      return compression_result;
-    }
-
-    free(compression_result.first);
-    return std::nullopt;
-  }
-
-  uint16_t repack_into(
-      char *buffer,
-      tree_node_allocator *existing_allocator,
-      tree_node_allocator *new_allocator,
-      unsigned cut_off_inline_rect_count
-  ) {
-    uint16_t offset = write_data_to_buffer(buffer, &child);
-    if (std::holds_alternative<tree_node_handle>(boundingPoly)) {
-      tree_node_handle poly_handle = std::get<tree_node_handle>(boundingPoly);
-      auto poly_pin = existing_allocator->get_tree_node<InlineUnboundedIsotheticPolygon>(
-        poly_handle
-      );
-      assert(poly_pin->get_total_rectangle_count() > 0);
-
-      // This will write the polygon in direct, or allocate
-      // space for it elsewhere using new_allocator and then
-      // write that handle in.
-      offset += poly_pin->repack(buffer + offset, cut_off_inline_rect_count, new_allocator, poly_handle);
-
-      return offset;
-    }
-
-    InlineBoundedIsotheticPolygon &poly = std::get<InlineBoundedIsotheticPolygon>(boundingPoly);
-
-    uint8_t rect_count = (uint8_t) poly.get_rectangle_count();
-    offset += write_data_to_buffer(buffer + offset, &rect_count);
-    for (auto iter = poly.begin(); iter != poly.end(); iter++) {
-      offset += write_data_to_buffer(buffer + offset, &(*iter));
-    }
-
-    return offset;
-  }
-
-  std::variant<InlineBoundedIsotheticPolygon, tree_node_handle> boundingPoly;
-  tree_node_handle child;
+  Branch(const Branch &other): boundingBox(other.boundingBox), child(other.child) {}
 
   bool operator==(const Branch &o) const = default;
   bool operator!=(const Branch &o) const = default;
+
+  Rectangle boundingBox;
+  tree_node_handle child;
 };
 
 struct SplitResult {
@@ -241,24 +85,15 @@ template <int min_branch_factor, int max_branch_factor, class strategy>
 requires(std::derived_from<strategy, BranchPartitionStrategy>)
 class LeafNode {
 public:
-  NIRTreeDisk<min_branch_factor, max_branch_factor, strategy> *treeRef;
-  tree_node_handle parent;
-  unsigned cur_offset_; // Pointer into next free slot in "entries", essentially size of "entries"
-  tree_node_handle self_handle_; // Why do we need this?
+  unsigned cur_offset_;
+  std::array<Point, max_branch_factor> entries;
 
-  std::array<Point, max_branch_factor + 1> entries;
-
-  uint8_t level_;
-
-  // Constructors and destructors
-  LeafNode(
-      NIRTreeDisk<min_branch_factor, max_branch_factor, strategy> *treeRef,
-      tree_node_handle parent,
-      tree_node_handle self_handle,
-      uint8_t level) : treeRef(treeRef), parent(parent), cur_offset_(0),
-                       self_handle_(self_handle), level_(level) {
-
+  LeafNode(): cur_offset_(0) {
     static_assert(sizeof(LeafNode<min_branch_factor, max_branch_factor, strategy>) <= PAGE_DATA_SIZE);
+  }
+
+  void addPoint(const Point &point) {
+    entries.at(this->cur_offset_++) = point;
   }
 
   void deleteSubtrees();
@@ -268,10 +103,6 @@ public:
 
   void removePoint(const Point &point);
   void removeEntry(const tree_node_handle &handle);
-
-  void addPoint(const Point &point) {
-    entries.at(this->cur_offset_++) = point;
-  }
 
   tree_node_handle chooseNode(Point givenPoint);
   tree_node_handle findLeaf(Point givenPoint);
@@ -283,8 +114,7 @@ public:
                                    tree_node_handle handle_to_skip);
   SplitResult splitNode(Partition p, bool is_downsplit);
   SplitResult splitNode();
-  SplitResult adjustTree(std::vector<bool>
-                             &hasReinsertedOnLevel);
+  SplitResult adjustTree(std::vector<bool> &hasReinsertedOnLevel);
   void condenseTree();
 
   // Data structure interface functions
@@ -301,30 +131,17 @@ public:
   void print(unsigned n = 0);
   void printTree(unsigned n = 0);
   unsigned height();
-
-  uint16_t compute_packed_size();
-  tree_node_handle repack(tree_node_allocator *allocator);
 };
 
 template <int min_branch_factor, int max_branch_factor, class strategy>
 requires(std::derived_from<strategy, BranchPartitionStrategy>)
 class BranchNode {
 public:
-  NIRTreeDisk<min_branch_factor, max_branch_factor, strategy> *treeRef;
-  tree_node_handle parent;
   unsigned cur_offset_;
-  tree_node_handle self_handle_;
-
-  std::array<Branch, max_branch_factor + 1> entries;
-
-  uint8_t level_;
+  std::array<Branch, max_branch_factor> entries;
 
   // Constructors and destructors
-  BranchNode(
-    NIRTreeDisk<min_branch_factor, max_branch_factor, strategy> *treeRef, tree_node_handle parent,
-    tree_node_handle self_handle, uint8_t level
-  ): treeRef(treeRef), parent(parent), cur_offset_(0), self_handle_(self_handle), level_(level) {
-  }
+  BranchNode(): cur_offset_(0) {}
 
   void deleteSubtrees();
 
@@ -354,9 +171,10 @@ public:
 
   template <class S = strategy>
   Partition partitionBranchNode(typename std::enable_if<std::is_same<S, LineMinimizeDownsplits>::value, S>::type * = 0) {
-  Partition defaultPartition;
+#if 0
+    Partition defaultPartition;
 
-  tree_node_allocator *allocator = get_node_allocator(this->treeRef);
+    tree_node_allocator *allocator = get_node_allocator(this->treeRef);
     std::vector<Rectangle> all_branch_polys;
     for (unsigned i = 0; i < this->cur_offset_; i++) {
       Branch &b_i = entries.at(i);
@@ -442,11 +260,16 @@ public:
     defaultPartition.location = best_candidate;
 
     return defaultPartition;
+#endif
+
+    // Unsupported
+    abort();
   }
 
   template <class S = strategy>
   Partition partitionBranchNode(typename std::enable_if<std::is_same<S, LineMinimizeDistanceFromMean>::value,
                                                         S>::type * = 0) {
+#if 0
     Partition defaultPartition;
 
     tree_node_allocator *allocator = get_node_allocator(
@@ -581,10 +404,14 @@ public:
               });
 
     return defaultPartition;
+#endif
+
+    // Unsupported
+    abort();
   }
 
-  std::pair<bool, Partition> try_cut_geo_mean(
-      std::vector<Rectangle> &all_branch_polys) {
+  std::pair<bool, Partition> try_cut_geo_mean(std::vector<Rectangle> &all_branch_polys) {
+#if 0
     Partition defaultPartition;
     Point mean_point = Point::atOrigin;
 
@@ -648,11 +475,16 @@ public:
       return std::make_pair(true, defaultPartition);
     }
     return std::make_pair(false, defaultPartition);
+#endif
+
+    // Unsupported
+    abort();
   }
 
   template <class S = strategy>
   Partition partitionBranchNode(typename std::enable_if<std::is_same<S, ExperimentalStrategy>::value,
                                                         S>::type * = 0) {
+#if 0
     Partition defaultPartition;
 
     tree_node_allocator *allocator = get_node_allocator(
@@ -824,10 +656,13 @@ public:
               });
 
     return defaultPartition;
+#endif
+
+    // Unsupported
+    abort();
   }
 
-  void make_disjoint_from_children(IsotheticPolygon &polygon,
-                                   tree_node_handle handle_to_skip);
+  void make_disjoint_from_children(IsotheticPolygon &polygon, tree_node_handle handle_to_skip);
   SplitResult splitNode(Partition p, bool is_downsplit);
   SplitResult splitNode();
   SplitResult adjustTree();
@@ -858,19 +693,13 @@ public:
   );
 };
 
-// Shorthand so I don't have to write this a billion times
-#define NODE_TEMPLATE_PARAMS template <int min_branch_factor, int max_branch_factor, class strategy>
-#define NN_CLASS_TYPES Node<min_branch_factor, max_branch_factor, strategy>
-#define LEAF_NODE_CLASS_TYPES LeafNode<min_branch_factor, max_branch_factor, strategy>
-#define BRANCH_NODE_CLASS_TYPES BranchNode<min_branch_factor, max_branch_factor, strategy>
-
-NODE_TEMPLATE_PARAMS
-void LEAF_NODE_CLASS_TYPES::deleteSubtrees() {
+template <int min_branch_factor, int max_branch_factor, class strategy>
+void LeafNode<min_branch_factor, max_branch_factor, strategy>::deleteSubtrees() {
   return;
 }
 
-NODE_TEMPLATE_PARAMS
-Rectangle LEAF_NODE_CLASS_TYPES::boundingBox() {
+template <int min_branch_factor, int max_branch_factor, class strategy>
+Rectangle LeafNode<min_branch_factor, max_branch_factor, strategy>::boundingBox() {
   assert(this->cur_offset_ > 0);
 
   if (this->cur_offset_ <= 0) {
@@ -887,9 +716,8 @@ Rectangle LEAF_NODE_CLASS_TYPES::boundingBox() {
 }
 
 // Point: removes the point from the node
-NODE_TEMPLATE_PARAMS
-void LEAF_NODE_CLASS_TYPES::removePoint(
-        const Point &point) {
+template <int min_branch_factor, int max_branch_factor, class strategy>
+void LeafNode<min_branch_factor, max_branch_factor, strategy>::removePoint(const Point &point) {
   // Locate the child
   unsigned childIndex;
   for (childIndex = 0; entries.at(childIndex) != point and
@@ -904,28 +732,6 @@ void LEAF_NODE_CLASS_TYPES::removePoint(
   // Truncate array size
   this->cur_offset_--;
 }
-
-// Macros so that we don't have recursive function calls
-#define point_search_leaf_node(current_node, requestedPoint, accumulator) \
-  for (unsigned i = 0; i < current_node->cur_offset_; i++) {              \
-    Point &p = current_node->entries.at(i);                               \
-    if (requestedPoint == p) {                                            \
-      accumulator.push_back(p);                                           \
-      break;                                                              \
-    }                                                                     \
-  }
-
-#define point_search_leaf_handle(handle, requestedPoint, accumulator) \
-  auto current_node = treeRef->get_leaf_node(handle);                 \
-  point_search_leaf_node(current_node, requestedPoint, accumulator);
-
-#define rectangle_search_leaf_handle(handle, requestedRectangle, accumulator) \
-  auto current_node = treeRef->get_leaf_node(handle);                         \
-  for (unsigned i = 0; i < current_node->cur_offset_; i++) {                  \
-    if (requestedRectangle.containsPoint(current_node->entries.at(i))) {      \
-      accumulator.push_back(current_node->entries.at(i));                     \
-    }                                                                         \
-  }
 
 template <typename iter>
 void shrink(IsotheticPolygon &polygon, iter begin, iter end, tree_node_allocator *allocator) {
@@ -961,13 +767,13 @@ void shrink(IsotheticPolygon &polygon, iter begin, iter end, tree_node_allocator
 // Always called on root, this = root
 // This top-to-bottom sweep is only for adjusting bounding boxes to contain the point and
 // choosing a particular leaf
-NODE_TEMPLATE_PARAMS
-tree_node_handle LEAF_NODE_CLASS_TYPES::chooseNode(Point givenPoint) {
+template <int min_branch_factor, int max_branch_factor, class strategy>
+tree_node_handle LeafNode<min_branch_factor, max_branch_factor, strategy>::chooseNode(Point givenPoint) {
   return this->self_handle_;
 }
 
-NODE_TEMPLATE_PARAMS
-tree_node_handle LEAF_NODE_CLASS_TYPES::findLeaf(Point givenPoint) {
+template <int min_branch_factor, int max_branch_factor, class strategy>
+tree_node_handle LeafNode<min_branch_factor, max_branch_factor, strategy>::findLeaf(Point givenPoint) {
   // FL2 [Search leaf node for record]
   // Check each entry to see if it matches E
   for (unsigned i = 0; i < this->cur_offset_; i++) {
@@ -979,8 +785,8 @@ tree_node_handle LEAF_NODE_CLASS_TYPES::findLeaf(Point givenPoint) {
   return tree_node_handle(nullptr);
 }
 
-NODE_TEMPLATE_PARAMS
-Partition LEAF_NODE_CLASS_TYPES::partitionLeafNode() {
+template <int min_branch_factor, int max_branch_factor, class strategy>
+Partition LeafNode<min_branch_factor, max_branch_factor, strategy>::partitionLeafNode() {
   Partition defaultPartition;
   double totalMass = 0.0;
   Point variance = Point::atOrigin;
@@ -1013,8 +819,8 @@ Partition LEAF_NODE_CLASS_TYPES::partitionLeafNode() {
   return defaultPartition;
 }
 
-NODE_TEMPLATE_PARAMS
-Partition LEAF_NODE_CLASS_TYPES::partitionNode() {
+template <int min_branch_factor, int max_branch_factor, class strategy>
+Partition LeafNode<min_branch_factor, max_branch_factor, strategy>::partitionNode() {
   return partitionLeafNode();
 }
 
@@ -1022,25 +828,26 @@ Partition LEAF_NODE_CLASS_TYPES::partitionNode() {
 // The old one is freed in adjustTree using removeEntry
 // If we downsplit, then we won't call adjustTree for that split so we
 // need to delete the node ourselves.
-NODE_TEMPLATE_PARAMS
-SplitResult LEAF_NODE_CLASS_TYPES::splitNode(Partition p, bool is_downsplit) {
+template <int min_branch_factor, int max_branch_factor, class strategy>
+SplitResult LeafNode<min_branch_factor, max_branch_factor, strategy>::splitNode(Partition p, bool is_downsplit) {
+#if 0
   tree_node_allocator *allocator = get_node_allocator(this->treeRef);
 
   auto alloc_data =
-          allocator->create_new_tree_node<LEAF_NODE_CLASS_TYPES>(
+          allocator->create_new_tree_node<LeafNode<min_branch_factor, max_branch_factor, strategy>>(
                   NodeHandleType(LEAF_NODE));
   tree_node_handle left_handle = alloc_data.second;
   auto left_node = alloc_data.first; // take pin
-  new (&(*left_node)) LEAF_NODE_CLASS_TYPES(this->treeRef,
+  new (&(*left_node)) LeafNode<min_branch_factor, max_branch_factor, strategy>(this->treeRef,
                                             this->parent, left_handle, level_);
   assert(left_node->self_handle_ == left_handle);
   assert(left_handle.get_type() == LEAF_NODE);
 
-  alloc_data = allocator->create_new_tree_node<LEAF_NODE_CLASS_TYPES>(
+  alloc_data = allocator->create_new_tree_node<LeafNode<min_branch_factor, max_branch_factor, strategy>>(
           NodeHandleType(LEAF_NODE));
   tree_node_handle right_handle = alloc_data.second;
   auto right_node = alloc_data.first; // take pin
-  new (&(*right_node)) LEAF_NODE_CLASS_TYPES(this->treeRef,
+  new (&(*right_node)) LeafNode<min_branch_factor, max_branch_factor, strategy>(this->treeRef,
                                              this->parent, right_handle, level_);
   assert(right_node->self_handle_ == right_handle);
   assert(right_handle.get_type() == LEAF_NODE);
@@ -1120,17 +927,22 @@ SplitResult LEAF_NODE_CLASS_TYPES::splitNode(Partition p, bool is_downsplit) {
   update_branch_polygon(split.rightBranch, right_polygon, treeRef, true);
 
   return split;
+#endif
+
+  // Unsupported
+  abort();
 }
 
 // Splitting a node will remove it from its this->parent node and its memory will be freed
-NODE_TEMPLATE_PARAMS
-SplitResult LEAF_NODE_CLASS_TYPES::splitNode() {
-  SplitResult returnSplit = splitNode(partitionNode(), false);
-  return returnSplit;
+template <int min_branch_factor, int max_branch_factor, class strategy>
+SplitResult LeafNode<min_branch_factor, max_branch_factor, strategy>::splitNode() {
+      SplitResult returnSplit = splitNode(partitionNode(), false);
+      return returnSplit;
 }
 
-NODE_TEMPLATE_PARAMS
-void LEAF_NODE_CLASS_TYPES::reInsert(std::vector<bool> &hasReinsertedOnLevel) {
+template <int min_branch_factor, int max_branch_factor, class strategy>
+void LeafNode<min_branch_factor, max_branch_factor, strategy>::reInsert(std::vector<bool> &hasReinsertedOnLevel) {
+#if 0
   // Taken from R*
   hasReinsertedOnLevel.at(level_) = true;
 
@@ -1181,13 +993,18 @@ void LEAF_NODE_CLASS_TYPES::reInsert(std::vector<bool> &hasReinsertedOnLevel) {
       root_handle = root_node->insert(ent, hasReinsertedOnLevel);
     }
   }
+#endif
+
+  // Unsupported
+  abort();
 }
 
 template <int min_branch_factor, int max_branch_factor, class strategy>
 IsotheticPolygon get_polygon_path_constraints(
         tree_node_handle start_handle,
-        NIRTreeDisk<min_branch_factor, max_branch_factor, strategy> *treeRef) {
-
+        NIRTreeDisk<min_branch_factor, max_branch_factor, strategy> *treeRef)
+{
+#if 0
   tree_node_allocator *allocator = get_node_allocator(treeRef);
   tree_node_handle parent_handle;
   if (start_handle.get_type() == LEAF_NODE || start_handle.get_type() == REPACKED_LEAF_NODE) {
@@ -1223,6 +1040,10 @@ IsotheticPolygon get_polygon_path_constraints(
     current_handle = parent_handle;
   }
   return constraint_poly;
+#endif
+
+  // Unsupported
+  abort();
 }
 
 template <int min_branch_factor, int max_branch_factor, class strategy>
@@ -1230,7 +1051,9 @@ void update_branch_polygon(
         Branch &branch_to_update,
         IsotheticPolygon &polygon_to_write,
         NIRTreeDisk<min_branch_factor, max_branch_factor, strategy> *treeRef,
-        bool force_create = false) {
+        bool force_create = false)
+{
+#if 0
   if (polygon_to_write.basicRectangles.size() <= MAX_RECTANGLE_COUNT) {
     // Could leak if we had an out of band rectangle before
     branch_to_update.boundingPoly = InlineBoundedIsotheticPolygon();
@@ -1264,10 +1087,15 @@ void update_branch_polygon(
     alloc_data.first->push_polygon_to_disk(polygon_to_write);
     branch_to_update.boundingPoly = alloc_data.second;
   }
+#endif
+
+  // Unsupported
+  abort();
 }
 
-NODE_TEMPLATE_PARAMS
-void BRANCH_NODE_CLASS_TYPES::reInsert(std::vector<bool> &hasReinsertedOnLevel) {
+template <int min_branch_factor, int max_branch_factor, class strategy>
+void BranchNode<min_branch_factor, max_branch_factor, strategy>::reInsert(std::vector<bool> &hasReinsertedOnLevel) {
+#if 0
   // Taken from R*
   hasReinsertedOnLevel.at(level_) = true;
 
@@ -1334,6 +1162,10 @@ void BRANCH_NODE_CLASS_TYPES::reInsert(std::vector<bool> &hasReinsertedOnLevel) 
     std::variant<Branch, Point> ent = entry;
     root_handle = root_node->insert(ent, hasReinsertedOnLevel);
   }
+#endif
+
+  // Unsupported
+  abort();
 }
 
 template <class NT, class TR>
@@ -1341,7 +1173,9 @@ std::pair<SplitResult, tree_node_handle> adjust_tree_bottom_half(
         NT current_node,
         TR *tree_ref_backup,
         int max_branch_factor,
-        std::vector<bool> &hasReinsertedOnLevel) {
+        std::vector<bool> &hasReinsertedOnLevel)
+{
+#if 0
   SplitResult propagationSplit = {
           {InlineBoundedIsotheticPolygon(), tree_node_handle(nullptr)},
           {InlineBoundedIsotheticPolygon(), tree_node_handle(nullptr)}};
@@ -1377,12 +1211,18 @@ std::pair<SplitResult, tree_node_handle> adjust_tree_bottom_half(
     return std::make_pair(propagationSplit,
                           tree_node_handle(nullptr));
   }
+#endif
+
+  // Unsupported
+  abort();
 }
 
 // This bottom-to-top sweep is only for splitting bounding boxes as necessary
-NODE_TEMPLATE_PARAMS
-SplitResult LEAF_NODE_CLASS_TYPES::adjustTree(
-        std::vector<bool> &hasReinsertedOnLevel) {
+template <int min_branch_factor, int max_branch_factor, class strategy>
+SplitResult LeafNode<min_branch_factor, max_branch_factor, strategy>::adjustTree(
+        std::vector<bool> &hasReinsertedOnLevel)
+{
+#if 0
   // N.B., as we walk up the tree, we may perform a bunch of splits,
   // which is liable to destroy nodes that are downsplit. These
   // downsplit nodes' memory can then be re-used for other things,
@@ -1468,12 +1308,17 @@ SplitResult LEAF_NODE_CLASS_TYPES::adjustTree(
     current_handle = split_res_and_new_handle.second;
   }
   return propagationSplit;
+#endif
+
+    // Unsupported
+    abort();
 }
 
 template <int min_branch_factor, int max_branch_factor, class strategy>
 void fix_up_path_polys(
         tree_node_handle start_handle,
-        NIRTreeDisk<min_branch_factor, max_branch_factor, strategy> *treeRef) {
+        NIRTreeDisk<min_branch_factor, max_branch_factor, strategy> *treeRef)
+{
   tree_node_handle current_handle = start_handle;
   while (current_handle != nullptr) {
     // Regenerate this node's bounding polygon
@@ -1516,7 +1361,9 @@ template <int min_branch_factor, int max_branch_factor, class strategy>
 void cut_out_branch_region_in_path(
         tree_node_handle start_handle,
         IsotheticPolygon &region_to_cut_out,
-        NIRTreeDisk<min_branch_factor, max_branch_factor, strategy> *treeRef) {
+        NIRTreeDisk<min_branch_factor, max_branch_factor, strategy> *treeRef)
+{
+#if 0
   tree_node_handle current_handle = start_handle;
   while (current_handle != nullptr) {
     // Regenerate this node's bounding polygon
@@ -1548,13 +1395,19 @@ void cut_out_branch_region_in_path(
     current_handle = parent_handle;
   }
   // Hit the root, done!
+#endif
+
+  // Unsupported
+  abort();
 }
 
 template <int min_branch_factor, int max_branch_factor, class strategy>
 SplitResult adjustTreeSub(
         std::vector<bool> &hasReinsertedOnLevel,
         tree_node_handle start_handle,
-        NIRTreeDisk<min_branch_factor, max_branch_factor, strategy> *treeRef) {
+        NIRTreeDisk<min_branch_factor, max_branch_factor, strategy> *treeRef)
+{
+#if 0
   // N.B., as we walk up the tree, we may perform a bunch of splits,
   // which is liable to destroy nodes that are downsplit. These
   // downsplit nodes' memory can then be re-used for other things,
@@ -1634,15 +1487,20 @@ SplitResult adjustTreeSub(
     current_handle = split_res_and_new_handle.second;
   }
   return propagationSplit;
+#endif
+
+  // Unsupported
+  abort();
 }
 
 // This always get called on the root node. So if it got called on us,
 // that's because we are the only node in the whole tree.
-NODE_TEMPLATE_PARAMS
-tree_node_handle LEAF_NODE_CLASS_TYPES::insert(
+template <int min_branch_factor, int max_branch_factor, class strategy>
+tree_node_handle LeafNode<min_branch_factor, max_branch_factor, strategy>::insert(
         Point givenPoint,
-        std::vector<bool> &hasReinsertedOnLevel) {
-
+        std::vector<bool> &hasReinsertedOnLevel)
+{
+#if 0
   // This is a leaf, so we are the ONLY node.
   addPoint(givenPoint);
 
@@ -1655,9 +1513,9 @@ tree_node_handle LEAF_NODE_CLASS_TYPES::insert(
   if (finalSplit.leftBranch.child != nullptr and finalSplit.rightBranch.child != nullptr) {
     tree_node_allocator *allocator = get_node_allocator(this->treeRef);
     auto alloc_data =
-            allocator->create_new_tree_node<BRANCH_NODE_CLASS_TYPES>(
+            allocator->create_new_tree_node<BranchNode<min_branch_factor, max_branch_factor, strategy>>(
                     NodeHandleType(BRANCH_NODE));
-    new (&(*alloc_data.first)) BRANCH_NODE_CLASS_TYPES(this->treeRef,
+    new (&(*alloc_data.first)) BranchNode<min_branch_factor, max_branch_factor, strategy>(this->treeRef,
                                                        tree_node_handle(nullptr), alloc_data.second, level_ + 1);
     auto new_root_handle = alloc_data.second;
     assert(new_root_handle.get_type() == BRANCH_NODE);
@@ -1677,7 +1535,7 @@ tree_node_handle LEAF_NODE_CLASS_TYPES::insert(
     treeRef->root = new_root_handle;
 
     assert(this->self_handle_.get_type() == LEAF_NODE);
-    allocator->free(this->self_handle_, sizeof(LEAF_NODE_CLASS_TYPES));
+    allocator->free(this->self_handle_, sizeof(LeafNode<min_branch_factor, max_branch_factor, strategy>));
 
     // Fix the reinserted length
     hasReinsertedOnLevel.push_back(false);
@@ -1686,11 +1544,16 @@ tree_node_handle LEAF_NODE_CLASS_TYPES::insert(
   }
 
   return tree_ref_backup->root;
+#endif
+
+    // Unsupported
+    abort();
 }
 
 // To be called on a leaf
-NODE_TEMPLATE_PARAMS
-void LEAF_NODE_CLASS_TYPES::condenseTree() {
+template <int min_branch_factor, int max_branch_factor, class strategy>
+void LeafNode<min_branch_factor, max_branch_factor, strategy>::condenseTree() {
+#if 0
   auto current_node_handle = this->self_handle_;
   auto previous_node_handle = tree_node_handle(nullptr);
 
@@ -1720,18 +1583,26 @@ void LEAF_NODE_CLASS_TYPES::condenseTree() {
     }
     previous_node_handle = current_node_handle;
   }
+#endif
+
+    // Unsupported
+    abort();
 }
 
 // Always called on root, this = root
-NODE_TEMPLATE_PARAMS
-tree_node_handle LEAF_NODE_CLASS_TYPES::remove(Point givenPoint) {
-
+template <int min_branch_factor, int max_branch_factor, class strategy>
+tree_node_handle LeafNode<min_branch_factor, max_branch_factor, strategy>::remove(Point givenPoint) {
+#if 0
   removePoint(givenPoint);
   return this->self_handle_;
+#endif
+
+  // Unsupported
+  abort();
 }
 
-NODE_TEMPLATE_PARAMS
-unsigned LEAF_NODE_CLASS_TYPES::checksum() {
+template <int min_branch_factor, int max_branch_factor, class strategy>
+unsigned LeafNode<min_branch_factor, max_branch_factor, strategy>::checksum() {
   unsigned sum = 0;
 
   for (unsigned i = 0; i < this->cur_offset_; i++) {
@@ -1743,8 +1614,8 @@ unsigned LEAF_NODE_CLASS_TYPES::checksum() {
   return sum;
 }
 
-NODE_TEMPLATE_PARAMS
-std::vector<Point> LEAF_NODE_CLASS_TYPES::bounding_box_validate() {
+template <int min_branch_factor, int max_branch_factor, class strategy>
+std::vector<Point> LeafNode<min_branch_factor, max_branch_factor, strategy>::bounding_box_validate() {
   std::vector<Point> my_points;
   for (unsigned i = 0; i < this->cur_offset_; i++) {
     my_points.push_back(entries.at(i));
@@ -1752,9 +1623,9 @@ std::vector<Point> LEAF_NODE_CLASS_TYPES::bounding_box_validate() {
   return my_points;
 }
 
-NODE_TEMPLATE_PARAMS
-bool LEAF_NODE_CLASS_TYPES::validate(tree_node_handle expectedParent, unsigned index) {
-
+template <int min_branch_factor, int max_branch_factor, class strategy>
+bool LeafNode<min_branch_factor, max_branch_factor, strategy>::validate(tree_node_handle expectedParent, unsigned index) {
+#if 0
   if (expectedParent != nullptr and (this->parent != expectedParent ||
                                      this->cur_offset_ > max_branch_factor)) {
     std::cout << "node = " << (void *)this << std::endl;
@@ -1796,10 +1667,14 @@ bool LEAF_NODE_CLASS_TYPES::validate(tree_node_handle expectedParent, unsigned i
     }
   }
   return true;
+#endif
+
+  // Unsupported
+  abort();
 }
 
-NODE_TEMPLATE_PARAMS
-void LEAF_NODE_CLASS_TYPES::print(unsigned n) {
+template <int min_branch_factor, int max_branch_factor, class strategy>
+void LeafNode<min_branch_factor, max_branch_factor, strategy>::print(unsigned n) {
   std::string indentation(n * 4, ' ');
   std::cout << indentation << "Node " << (void *)this << std::endl;
   std::cout << indentation << "    Parent: " << this->parent << std::endl;
@@ -1810,105 +1685,21 @@ void LEAF_NODE_CLASS_TYPES::print(unsigned n) {
   std::cout << std::endl;
 }
 
-NODE_TEMPLATE_PARAMS
-void LEAF_NODE_CLASS_TYPES::printTree(unsigned n) {
+template <int min_branch_factor, int max_branch_factor, class strategy>
+void LeafNode<min_branch_factor, max_branch_factor, strategy>::printTree(unsigned n) {
   // Print this node first
   print(n);
   std::cout << std::endl;
 }
 
-NODE_TEMPLATE_PARAMS
-unsigned LEAF_NODE_CLASS_TYPES::height() {
+template <int min_branch_factor, int max_branch_factor, class strategy>
+unsigned LeafNode<min_branch_factor, max_branch_factor, strategy>::height() {
   return 1;
 }
 
-NODE_TEMPLATE_PARAMS
-uint16_t LEAF_NODE_CLASS_TYPES::compute_packed_size() {
-  uint16_t sz = 0;
-  sz += sizeof(cur_offset_);
-  sz += cur_offset_ * sizeof(Point);
-  return sz;
-}
-
-NODE_TEMPLATE_PARAMS
-std::pair<uint16_t, std::vector<std::optional<std::pair<char *, int>>>> BRANCH_NODE_CLASS_TYPES::compute_packed_size(
-  tree_node_allocator *existing_allocator, tree_node_allocator *new_allocator, unsigned &maximum_repacked_rect_size
-) {
-  do {
-    uint16_t sz = 0;
-    sz += sizeof(cur_offset_);
-
-    std::vector<std::optional<std::pair<char *, int>>> branch_compression_data;
-
-    for (unsigned i = 0; i < cur_offset_; i++) {
-      uint16_t unpacked_size = 0;
-      unpacked_size = entries.at(i).compute_packed_size(existing_allocator, new_allocator, maximum_repacked_rect_size, false);
-
-      sz += unpacked_size;
-    }
-
-    return std::make_pair(sz, branch_compression_data);
-
-    assert(maximum_repacked_rect_size >= 1);
-    maximum_repacked_rect_size /= 2;
-  } while (true);
-}
-
-NODE_TEMPLATE_PARAMS
-tree_node_handle LEAF_NODE_CLASS_TYPES::repack(tree_node_allocator *allocator) {
-  uint16_t alloc_size = compute_packed_size();
-  auto alloc_data = allocator->create_new_tree_node<packed_node>(
-          alloc_size, NodeHandleType(REPACKED_LEAF_NODE));
-
-  char *buffer = alloc_data.first->buffer_;
-  buffer += write_data_to_buffer(buffer, &cur_offset_);
-  for (unsigned i = 0; i < cur_offset_; i++) {
-    buffer += write_data_to_buffer(buffer, &(entries.at(i)));
-  }
-  if (buffer - alloc_data.first->buffer_ != alloc_size) {
-    abort();
-  }
-
-  assert(buffer - alloc_data.first->buffer_ == alloc_size);
-  return alloc_data.second;
-}
-
-NODE_TEMPLATE_PARAMS
-tree_node_handle BRANCH_NODE_CLASS_TYPES::repack(
-        tree_node_allocator *existing_allocator, tree_node_allocator *new_allocator
-) {
-  unsigned maximum_unpacked_rect_size = MAX_RECTANGLE_COUNT;
-  auto packing_computation_result = compute_packed_size(
-          existing_allocator, new_allocator, maximum_unpacked_rect_size
-  );
-  uint16_t alloc_size = packing_computation_result.first;
-  auto alloc_data = new_allocator->create_new_tree_node<packed_node>(
-    alloc_size, NodeHandleType(REPACKED_BRANCH_NODE)
-  );
-  char *buffer = alloc_data.first->buffer_;
-  uint16_t offset = 0;
-  offset += write_data_to_buffer(buffer + offset, &cur_offset_);
-
-  for (unsigned i = 0; i < cur_offset_; i++) {
-    Branch &b = entries.at(i);
-    assert(b.child);
-    // N.B.: This will also set "compressed" status on the child handle
-    // if we chose to compress its associated polygon per compute_packed_size.
-    offset += b.repack_into(buffer + offset, existing_allocator,
-                            new_allocator, maximum_unpacked_rect_size);
-  }
-
-  unsigned true_size = offset;
-  if (alloc_size != true_size) {
-    abort();
-  }
-
-  assert(true_size == alloc_size);
-  return alloc_data.second;
-}
-
-NODE_TEMPLATE_PARAMS
-void BRANCH_NODE_CLASS_TYPES::deleteSubtrees() {
+template <int min_branch_factor, int max_branch_factor, class strategy>
+void BranchNode<min_branch_factor, max_branch_factor, strategy>::deleteSubtrees() {
+#if 0
   tree_node_allocator *allocator = get_node_allocator(this->treeRef);
   for (unsigned i = 0; i < this->cur_offset_; i++) {
     Branch &b = entries.at(i);
@@ -1923,36 +1714,38 @@ void BRANCH_NODE_CLASS_TYPES::deleteSubtrees() {
     if (child_handle.get_type() == LEAF_NODE) {
       allocator->free(
               child_handle,
-              sizeof(LEAF_NODE_CLASS_TYPES));
+              sizeof(LeafNode<min_branch_factor, max_branch_factor, strategy>));
     } else if (child_handle.get_type() == BRANCH_NODE) {
       auto child = this->treeRef->get_branch_node(child_handle);
       child->deleteSubtrees();
       allocator->free(
               child_handle,
-              sizeof(BRANCH_NODE_CLASS_TYPES));
+              sizeof(BranchNode<min_branch_factor, max_branch_factor, strategy>));
     }
   }
+#endif
+
+  // Unsupported
+  abort();
 }
 
-NODE_TEMPLATE_PARAMS
-Rectangle BRANCH_NODE_CLASS_TYPES::boundingBox() {
-  assert(this->cur_offset_ > 0);
+template <int min_branch_factor, int max_branch_factor, class strategy>
+Rectangle BranchNode<min_branch_factor, max_branch_factor, strategy>::boundingBox() {
+  assert(cur_offset_ > 0);
+  Rectangle boundingBox = entries.at(0).boundingBox;
 
-  tree_node_allocator *allocator = get_node_allocator(this->treeRef);
-  Branch &b = entries.at(0);
-  Rectangle bb = b.get_summary_rectangle(allocator);
-
-  for (unsigned i = 1; i < this->cur_offset_; i++) {
-    Branch &b2 = entries.at(i);
-    bb.expand(b2.get_summary_rectangle(allocator));
+  for (unsigned i = 1; i < cur_offset_; i++) {
+    boundingBox.expand(entries.at(i).boundingBox);
   }
-  return bb;
+
+  return boundingBox;
 }
 
-NODE_TEMPLATE_PARAMS
-void BRANCH_NODE_CLASS_TYPES::updateBranch(
+template <int min_branch_factor, int max_branch_factor, class strategy>
+void BranchNode<min_branch_factor, max_branch_factor, strategy>::updateBranch(
         tree_node_handle child_handle,
-        const InlineBoundedIsotheticPolygon &boundingPoly) {
+        const InlineBoundedIsotheticPolygon &boundingPoly)
+{
   // Locate the child
   unsigned childIndex;
   for (childIndex = 0; entries.at(childIndex).child != child_handle &&
@@ -1967,9 +1760,11 @@ void BRANCH_NODE_CLASS_TYPES::updateBranch(
 // Removes a child logical pointer from a this->parent node, freeing that
 // child's memory and the memory of the associated polygon (if external
 // to the node).
-NODE_TEMPLATE_PARAMS
-void BRANCH_NODE_CLASS_TYPES::removeBranch(
-        const tree_node_handle &entry) {
+template <int min_branch_factor, int max_branch_factor, class strategy>
+void BranchNode<min_branch_factor, max_branch_factor, strategy>::removeBranch(
+        const tree_node_handle &entry)
+{
+#if 0
   unsigned found_index = 0;
   while (found_index < this->cur_offset_) {
     Branch &b = entries.at(found_index);
@@ -1995,337 +1790,19 @@ void BRANCH_NODE_CLASS_TYPES::removeBranch(
   }
 
   if (b.child.get_type() == LEAF_NODE) {
-    allocator->free(b.child, sizeof(LEAF_NODE_CLASS_TYPES));
+    allocator->free(b.child, sizeof(LeafNode<min_branch_factor, max_branch_factor, strategy>));
   } else if (b.child.get_type() == BRANCH_NODE) {
-    allocator->free(b.child, sizeof(BRANCH_NODE_CLASS_TYPES));
+    allocator->free(b.child, sizeof(BranchNode<min_branch_factor, max_branch_factor, strategy>));
   }
   b.child = tree_node_handle(nullptr);
 
   entries.at(found_index) = entries.at(this->cur_offset_ - 1);
   this->cur_offset_--;
-}
-
-// Macros for sub-routines in search to guarantee that this code is
-// inlined into the main methods without a function call or the need for
-// recursive search calls.
-
-// Sets unsigned offset pointing to start of leaf entries and unsigned count
-#define decode_entry_count_and_offset_packed_node(data)           \
-  [[maybe_unused]] unsigned offset = 0;                           \
-  [[maybe_unused]] unsigned count = *(unsigned *)(data + offset); \
-  offset += sizeof(unsigned);
-
-#define point_search_packed_leaf_node(packed_leaf, requestedPoint, accumulator) \
-  char *data = packed_leaf->buffer_;                                            \
-  decode_entry_count_and_offset_packed_node(data);                              \
-  for (unsigned i = 0; i < count; i++) {                                        \
-    Point *p = (Point *)(data + offset);                                        \
-    if (*p == requestedPoint) {                                                 \
-      accumulator.push_back(requestedPoint);                                    \
-      break;                                                                    \
-    }                                                                           \
-    offset += sizeof(Point);                                                    \
-  }
-
-#define point_search_packed_leaf_handle(handle, requestedPoint, accumulator) \
-  assert(handle.get_type() == REPACKED_LEAF_NODE);                           \
-  auto packed_leaf = allocator->get_tree_node<packed_node>(handle);          \
-  point_search_packed_leaf_node(packed_leaf, requestedPoint, accumulator);
-
-#define rectangle_search_packed_leaf_handle(handle, requestedRectangle, accumulator)     \
-  auto packed_leaf = allocator->get_tree_node<packed_node>(handle);                      \
-  char *data = packed_leaf->buffer_;                                                     \
-  decode_entry_count_and_offset_packed_node(data) for (unsigned i = 0; i < count; i++) { \
-    Point *p = (Point *)(data + offset);                                                 \
-    if (requestedRectangle.containsPoint(*p)) {                                          \
-      accumulator.push_back(*p);                                                         \
-    }                                                                                    \
-    offset += sizeof(Point);                                                             \
-  }
-
-#define point_search_branch_handle(handle, requestedPoint, context) \
-  auto current_node = treeRef->get_branch_node(handle);             \
-  for (unsigned i = 0; i < current_node->cur_offset_; i++) {        \
-    Branch &b = current_node->entries.at(i);                        \
-    if (std::holds_alternative<InlineBoundedIsotheticPolygon>(      \
-            b.boundingPoly)) {                                      \
-      InlineBoundedIsotheticPolygon &loc_poly =                     \
-          std::get<InlineBoundedIsotheticPolygon>(                  \
-              b.boundingPoly);                                      \
-      if (loc_poly.containsPoint(requestedPoint)) {                 \
-        context.push(b.child);                                      \
-        break;                                                      \
-      }                                                             \
-    } else {                                                        \
-      tree_node_handle poly_handle =                                \
-          std::get<tree_node_handle>(b.boundingPoly);               \
-      auto poly_pin =                                               \
-          InlineUnboundedIsotheticPolygon::read_polygon_from_disk(  \
-              allocator, poly_handle);                              \
-      if (poly_pin->containsPoint(requestedPoint)) {                \
-        context.push(b.child);                                      \
-        break;                                                      \
-      }                                                             \
-    }                                                               \
-  }
-
-#define parent_search_branch_handle(handle, requestedPoint, context, child_to_stop_at) \
-  auto current_node = treeRef->get_branch_node(handle);                                \
-  for (unsigned i = 0; i < current_node->cur_offset_; i++) {                           \
-    Branch &b = current_node->entries.at(i);                                           \
-    if (std::holds_alternative<InlineBoundedIsotheticPolygon>(                         \
-            b.boundingPoly)) {                                                         \
-      InlineBoundedIsotheticPolygon &loc_poly =                                        \
-          std::get<InlineBoundedIsotheticPolygon>(                                     \
-              b.boundingPoly);                                                         \
-      if (loc_poly.containsPoint(requestedPoint)) {                                    \
-        if (b.child == child_to_stop_at) {                                             \
-          return handle;                                                               \
-        }                                                                              \
-        context.push(b.child);                                                         \
-      }                                                                                \
-    } else {                                                                           \
-      tree_node_handle poly_handle =                                                   \
-          std::get<tree_node_handle>(b.boundingPoly);                                  \
-      auto poly_pin =                                                                  \
-          InlineUnboundedIsotheticPolygon::read_polygon_from_disk(                     \
-              allocator, poly_handle);                                                 \
-      if (poly_pin->containsPoint(requestedPoint)) {                                   \
-        if (b.child == child_to_stop_at) {                                             \
-          return handle;                                                               \
-        }                                                                              \
-        context.push(b.child);                                                         \
-      }                                                                                \
-    }                                                                                  \
-  }
-
-#ifdef STAT
-#define point_search_packed_branch_handle(handle, requestedPoint, context)                       \
-  auto packed_branch = allocator->get_tree_node<packed_node>(handle);                            \
-  char *buffer = packed_branch->buffer_;                                                         \
-  decode_entry_count_and_offset_packed_node(buffer);                                             \
-  unsigned matching_branch_counter = 0;                                                          \
-  unsigned intersection_count = 0;                                                             \
-  for (unsigned i = 0; i < count; i++) {                                                         \
-    tree_node_handle *child = (tree_node_handle *)(buffer + offset);                             \
-    offset += sizeof(tree_node_handle);                                                          \
-    if (!child->get_associated_poly_is_compressed()) {                                           \
-      uint8_t rect_count = *(uint8_t *)(buffer + offset);                                      \
-      offset += sizeof(uint8_t);                                                                \
-      if (rect_count == std::numeric_limits<uint8_t>::max()) {                                  \
-        Rectangle *summary_rect = (Rectangle *)(buffer + offset);                                \
-        offset += sizeof(Rectangle);                                                             \
-        tree_node_handle *poly_handle = (tree_node_handle *)(buffer + offset);                   \
-        offset += sizeof(tree_node_handle);                                                      \
-        intersection_count++;                                                                   \
-        if (summary_rect->containsPoint(requestedPoint)) {                                       \
-          auto poly_pin = allocator->get_tree_node<InlineUnboundedIsotheticPolygon>(*poly_handle); \
-          if (poly_pin->containsPointWithMetrics(requestedPoint, intersection_count)) {          \
-            context.push(*child);                                                                  \
-            matching_branch_counter++;                                                             \
-            break;                                                                                 \
-          }                                                                                        \
-        }                                                                                        \
-      } else {                                                                                   \
-        bool found = false;                                                                      \
-        for (unsigned r = 0; r < rect_count; r++) {                                              \
-          Rectangle *rect = (Rectangle *)(buffer + offset);                                      \
-          offset += sizeof(Rectangle);                                                           \
-          intersection_count++;                                                                \
-          if (rect->containsPoint(requestedPoint)) {                                             \
-            context.push(*child);                                                                \
-            matching_branch_counter++;                                                           \
-            found = true;                                                                        \
-            offset += (rect_count - r - 1) * sizeof(Rectangle);                                  \
-            break;                                                                               \
-          }                                                                                      \
-        }                                                                                        \
-        if (found) {                                                                             \
-          break;                                                                                 \
-        }                                                                                        \
-      }                                                                                          \
-    } else {                                                                                     \
-      int new_offset;                                                                            \
-      IsotheticPolygon decomp_poly = decompress_polygon(buffer + offset, &new_offset);           \
-      if (decomp_poly.containsPoint(requestedPoint)) {                                           \
-        matching_branch_counter++;                                                               \
-        context.push(*child);                                                                    \
-        break;                                                                                   \
-      }                                                                                          \
-      offset += new_offset;                                                                      \
-    }                                                                                            \
-  }                                                                                              \
-  treeRef->stats.recordScatter(matching_branch_counter);                                         \
-  treeRef->stats.recordIntersectionCount(intersection_count);
-#else
-#define point_search_packed_branch_handle(handle, requestedPoint, context)                       \
-  auto packed_branch = allocator->get_tree_node<packed_node>(handle);                            \
-  char *buffer = packed_branch->buffer_;                                                         \
-  decode_entry_count_and_offset_packed_node(buffer);                                             \
-  for (unsigned i = 0; i < count; i++) {                                                         \
-    tree_node_handle *child = (tree_node_handle *)(buffer + offset);                             \
-    offset += sizeof(tree_node_handle);                                                          \
-    if (!child->get_associated_poly_is_compressed()) {                                           \
-      uint8_t rect_count = *(uint8_t *)(buffer + offset);                                      \
-      offset += sizeof(uint8_t);                                                                \
-      if (rect_count == std::numeric_limits<uint8_t>::max()) {                                  \
-        Rectangle *summary_rect = (Rectangle *)(buffer + offset);                                \
-        offset += sizeof(Rectangle);                                                             \
-        tree_node_handle *poly_handle = (tree_node_handle *)(buffer + offset);                   \
-        offset += sizeof(tree_node_handle);                                                      \
-        if (summary_rect->containsPoint(requestedPoint)) {                                       \
-          treeRef->stats.recordOutOfLineSearched();                                                \                                                                                       \
-          auto poly_pin = allocator->get_tree_node<InlineUnboundedIsotheticPolygon>(*poly_handle); \
-          if (poly_pin->containsPoint(requestedPoint)) {                                           \
-            context.push(*child);                                                                  \
-            break;                                                                                 \
-          }                                                                                        \
-        }                                                                                          \
-      } else {                                                                                   \
-        bool found = false;                                                                      \
-        for (unsigned r = 0; r < rect_count; r++) {                                              \
-          Rectangle *rect = (Rectangle *)(buffer + offset);                                      \
-          offset += sizeof(Rectangle);                                                           \
-          if (rect->containsPoint(requestedPoint)) {                                             \
-            context.push(*child);                                                                \
-            found = true;                                                                        \
-            offset += (rect_count - r - 1) * sizeof(Rectangle);                                  \
-            break;                                                                               \
-          }                                                                                      \
-        }                                                                                        \
-        if (found) {                                                                             \
-          break;                                                                                 \
-        }                                                                                        \
-      }                                                                                          \
-    } else {                                                                                     \
-      int new_offset;                                                                            \
-      IsotheticPolygon decomp_poly = decompress_polygon(buffer + offset, &new_offset);           \
-      if (decomp_poly.containsPoint(requestedPoint)) {                                           \
-        context.push(*child);                                                                    \
-      }                                                                                          \
-      offset += new_offset;                                                                      \
-    }                                                                                            \
-  }
 #endif
 
-#define parent_search_packed_branch_handle(handle, requestedPoint, context, child_to_stop_at)    \
-  auto packed_branch = allocator->get_tree_node<packed_node>(handle);                            \
-  char *buffer = packed_branch->buffer_;                                                         \
-  decode_entry_count_and_offset_packed_node(buffer);                                             \
-  for (unsigned i = 0; i < count; i++) {                                                         \
-    tree_node_handle *child = (tree_node_handle *)(buffer + offset);                             \
-    offset += sizeof(tree_node_handle);                                                          \
-    if (!child->get_associated_poly_is_compressed()) {                                           \
-      uint8_t rect_count = *(uint8_t *)(buffer + offset);                                      \
-      offset += sizeof(uint8_t);                                                                \
-      if (rect_count == std::numeric_limits<uint8_t>::max()) {                                  \
-        Rectangle *summary_rect = (Rectangle *)(buffer + offset);                                \
-        offset += sizeof(Rectangle);                                                             \
-        tree_node_handle *poly_handle = (tree_node_handle *)(buffer + offset);                   \
-        offset += sizeof(tree_node_handle);                                                      \
-        if (summary_rect->containsPoint(requestedPoint)) {                                       \
-          auto poly_pin = allocator->get_tree_node<InlineUnboundedIsotheticPolygon>(*poly_handle); \
-          if (poly_pin->containsPoint(requestedPoint)) {                                           \
-            if (*child == child_to_stop_at) {                                                      \
-              return handle;                                                                       \
-            }                                                                                      \
-            context.push(*child);                                                                  \
-          }                                                                                        \
-        }                                                                                          \
-      } else {                                                                                   \
-        for (unsigned r = 0; r < rect_count; r++) {                                              \
-          Rectangle *rect = (Rectangle *)(buffer + offset);                                      \
-          offset += sizeof(Rectangle);                                                           \
-          if (rect->containsPoint(requestedPoint)) {                                             \
-            if (*child == child_to_stop_at) {                                                    \
-              return handle;                                                                     \
-            }                                                                                    \
-            context.push(*child);                                                                \
-            offset += (rect_count - r - 1) * sizeof(Rectangle);                                  \
-            break;                                                                               \
-          }                                                                                      \
-        }                                                                                        \
-      }                                                                                          \
-    } else {                                                                                     \
-      int new_offset;                                                                            \
-      IsotheticPolygon decomp_poly = decompress_polygon(buffer + offset, &new_offset);           \
-      if (decomp_poly.containsPoint(requestedPoint)) {                                           \
-        if (*child == child_to_stop_at) {                                                        \
-          return handle;                                                                         \
-        }                                                                                        \
-        context.push(*child);                                                                    \
-      }                                                                                          \
-      offset += new_offset;                                                                      \
-    }                                                                                            \
-  }
-
-#define rectangle_search_branch_handle(handle, requestedRectangle, context) \
-  auto current_node = treeRef->get_branch_node(handle);                     \
-  for (unsigned i = 0; i < current_node->cur_offset_; i++) {                \
-    Branch &b = current_node->entries.at(i);                                \
-    if (std::holds_alternative<InlineBoundedIsotheticPolygon>(              \
-            b.boundingPoly)) {                                              \
-      InlineBoundedIsotheticPolygon &loc_poly =                             \
-          std::get<InlineBoundedIsotheticPolygon>(                          \
-              b.boundingPoly);                                              \
-      if (loc_poly.intersectsRectangle(requestedRectangle)) {               \
-        context.push(b.child);                                              \
-      }                                                                     \
-    } else {                                                                \
-      tree_node_handle poly_handle =                                        \
-          std::get<tree_node_handle>(b.boundingPoly);                       \
-      auto poly_pin =                                                       \
-          InlineUnboundedIsotheticPolygon::read_polygon_from_disk(          \
-              allocator, poly_handle);                                      \
-      if (poly_pin->intersectsRectangle(requestedRectangle)) {              \
-        context.push(b.child);                                              \
-      }                                                                     \
-    }                                                                       \
-  }
-
-#define rectangle_search_packed_branch_handle(handle, requestedRectangle, context)               \
-  auto packed_branch = allocator->get_tree_node<packed_node>(handle);                            \
-  char *buffer = packed_branch->buffer_;                                                         \
-  decode_entry_count_and_offset_packed_node(buffer);                                             \
-  unsigned intersection_count = 0;                                                             \
-  for (unsigned i = 0; i < count; i++) {                                                         \
-    tree_node_handle *child = (tree_node_handle *)(buffer + offset);                             \
-    offset += sizeof(tree_node_handle);                                                          \
-    if (!child->get_associated_poly_is_compressed()) {                                           \
-      uint8_t rect_count = *(uint8_t *)(buffer + offset);                                      \
-      offset += sizeof(uint8_t);                                                                \
-      if (rect_count == std::numeric_limits<uint8_t>::max()) {                                  \
-        treeRef->stats.recordOutOfLineSearched();                                                \
-        Rectangle *summary_rect = (Rectangle *)(buffer + offset);                                \
-        offset += sizeof(Rectangle);                                                             \
-        tree_node_handle *poly_handle = (tree_node_handle *)(buffer + offset);                   \
-        offset += sizeof(tree_node_handle);                                                      \
-        intersection_count++;                                                                   \
-        if (summary_rect->intersectsRectangle(requestedRectangle)) {                              \
-          context.push(*child);                                                                   \
-        }                                                                                         \
-      } else {                                                                                   \
-        for (unsigned r = 0; r < rect_count; r++) {                                              \
-          Rectangle *rect = (Rectangle *)(buffer + offset);                                      \
-          offset += sizeof(Rectangle);                                                           \
-          intersection_count++;                                                                 \
-          if (rect->intersectsRectangle(requestedRectangle)) {                                   \
-            context.push(*child);                                                                \
-            offset += (rect_count - r - 1) * sizeof(Rectangle);                                  \
-            break;                                                                               \
-          }                                                                                      \
-        }                                                                                        \
-      }                                                                                          \
-    } else {                                                                                     \
-      int new_offset;                                                                            \
-      IsotheticPolygon decomp_poly = decompress_polygon(buffer + offset, &new_offset);           \
-      if (decomp_poly.intersectsRectangle(requestedRectangle)) {                                 \
-        context.push(*child);                                                                    \
-      }                                                                                          \
-      offset += new_offset;                                                                      \
-    }                                                                                            \
-  }                                                                                              \
-  treeRef->stats.recordIntersectionCount(intersection_count);
+  // Unsupported
+  abort();
+}
 
 template <int min_branch_factor, int max_branch_factor, class strategy, typename functor>
 void treeWalker(NIRTreeDisk<min_branch_factor, max_branch_factor, strategy> *treeRef, tree_node_handle root, functor &f) {
@@ -2344,86 +1821,43 @@ void treeWalker(NIRTreeDisk<min_branch_factor, max_branch_factor, strategy> *tre
       for (unsigned i = 0; i < node->cur_offset_; i++) {
         context.push(node->entries.at(i).child);
       }
-    } else if (currentContext.get_type() == REPACKED_BRANCH_NODE) {
-      tree_node_allocator *allocator = treeRef->node_allocator_.get();
-      auto node = allocator->get_tree_node<packed_node>(currentContext);
-      char *buffer = node->buffer_;
-
-      decode_entry_count_and_offset_packed_node(buffer);
-
-      for (unsigned i = 0; i < count; i++) {
-        tree_node_handle *child = (tree_node_handle *)(buffer + offset);
-        context.push(*child);
-        offset += sizeof(tree_node_handle);
-
-        uint8_t rect_count = *(uint8_t *)(buffer + offset);
-        offset += sizeof(uint8_t);
-
-        if (rect_count == std::numeric_limits<uint8_t>::max()) {
-          offset += sizeof(Rectangle); // summary rectangle
-          offset += sizeof(tree_node_handle);
-        } else {
-          offset += rect_count * sizeof(Rectangle);
-        }
-      }
     }
   }
 }
 
 template <int min_branch_factor, int max_branch_factor, class strategy>
-void printPackedNodes(
-        NIRTreeDisk<min_branch_factor, max_branch_factor, strategy> *treeRef,
-        tree_node_handle node_handle,
-        std::ofstream &printFile
-) {
-  tree_node_allocator *allocator = treeRef->node_allocator_.get();
-  auto node = allocator->get_tree_node<packed_node>(node_handle);
-  char *data = node->buffer_;
-
-  decode_entry_count_and_offset_packed_node(data);
-
-  if (node_handle.get_type() == REPACKED_BRANCH_NODE) {
-    for (size_t i = 0; i < count; i++) {
-      tree_node_handle *child = (tree_node_handle *)(data + offset);
-      offset += sizeof(tree_node_handle);
-
-      uint8_t rect_count = *(uint8_t *)(data + offset);
-      offset += sizeof(uint8_t);
-
-      if (rect_count == std::numeric_limits<uint8_t>::max()) {
-        Rectangle *summary_rect = (Rectangle *)(data + offset);
-        offset += sizeof(Rectangle);
-        auto handle = *(tree_node_handle *)(data + offset);
-        offset += sizeof(tree_node_handle);
-
-        auto poly_pin = allocator->get_tree_node<InlineUnboundedIsotheticPolygon>(handle);
-        auto poly = poly_pin->materialize_polygon();
-
-        if (child->get_type() == REPACKED_LEAF_NODE) {
-          for (const Rectangle &rect: poly.basicRectangles) {
-            printFile << rect << std::endl;
-          }
-        }
-      } else {
-        for (size_t j = 0; j < rect_count; j++) {
-          Rectangle *rect = (Rectangle *)(data + offset);
-
-          if (child->get_type() == REPACKED_LEAF_NODE) {
-            printFile << *rect << std::endl;
-          }
-
-          offset += sizeof(Rectangle);
-        }
-      }
-    }
-  } else if (node_handle.get_type() == REPACKED_LEAF_NODE) {
-    for (size_t i = 0; i < count; i++) {
-      Point *p = (Point *) (data + offset);
-      printFile << *p << std::endl;
-      offset += sizeof(Point);
+void point_search_leaf_node(LeafNode<min_branch_factor, max_branch_factor, strategy> &node,
+                            Point &requestedPoint,
+                            std::vector<Point> &accumulator)
+{
+  for (unsigned i = 0; i < node.cur_offset_; i++) {
+    const Point &p = node.entries.at(i);
+    if (p == requestedPoint) {
+      accumulator.push_back(p);
     }
   }
 }
+
+template <int min_branch_factor, int max_branch_factor, class strategy>
+void point_search_branch_node(BranchNode<min_branch_factor, max_branch_factor, strategy> &node,
+                              Point &requestedPoint,
+                              std::stack<tree_node_handle> &context,
+                              NIRTreeDisk<min_branch_factor, max_branch_factor, strategy> *treeRef)
+{
+  unsigned matching_branch_counter = 0;
+  unsigned intersection_count = 0;
+  for (size_t i = 0; i < node.cur_offset_; i++) {
+    Branch &b = node.entries.at(i);
+    intersection_count++;
+    if (b.boundingBox.containsPoint(requestedPoint)) {
+      context.push(b.child);
+      matching_branch_counter++;
+    }
+  }
+  treeRef->stats.recordScatter(matching_branch_counter);
+  treeRef->stats.recordIntersectionCount(intersection_count);
+}
+
 
 template <int min_branch_factor, int max_branch_factor, class strategy>
 std::vector<Point> point_search(tree_node_handle start_point, Point &requestedPoint,
@@ -2431,29 +1865,20 @@ std::vector<Point> point_search(tree_node_handle start_point, Point &requestedPo
   std::vector<Point> accumulator;
   std::stack<tree_node_handle> context;
   context.push(start_point);
-  tree_node_allocator *allocator = treeRef->node_allocator_.get();
 
   while (not context.empty()) {
     tree_node_handle current_handle = context.top();
     context.pop();
 
     if (current_handle.get_type() == LEAF_NODE) {
-      point_search_leaf_handle(current_handle, requestedPoint, accumulator);
-#ifdef STAT
-      treeRef->stats.markLeafSearched();
-#endif
-    } else if (current_handle.get_type() == REPACKED_LEAF_NODE) {
-      point_search_packed_leaf_handle(current_handle, requestedPoint, accumulator);
+      auto current_node = treeRef->get_leaf_node(current_handle);
+      point_search_leaf_node(*current_node, requestedPoint, accumulator);
 #ifdef STAT
       treeRef->stats.markLeafSearched();
 #endif
     } else if (current_handle.get_type() == BRANCH_NODE) {
-      point_search_branch_handle(current_handle, requestedPoint, context);
-#ifdef STAT
-      treeRef->stats.markNonLeafNodeSearched();
-#endif
-    } else if (current_handle.get_type() == REPACKED_BRANCH_NODE) {
-      point_search_packed_branch_handle(current_handle, requestedPoint, context);
+      auto current_node = treeRef->get_branch_node(current_handle);
+      point_search_branch_node(*current_node, requestedPoint, context, treeRef);
 #ifdef STAT
       treeRef->stats.markNonLeafNodeSearched();
 #endif
@@ -2473,6 +1898,7 @@ tree_node_handle parent_handle_point_search(
         Point &requestedPoint,
         NIRTreeDisk<min_branch_factor, max_branch_factor, strategy> *treeRef,
         tree_node_handle child_to_stop_at) {
+#if 0
   std::stack<tree_node_handle> context;
   context.push(start_point);
   tree_node_allocator *allocator = treeRef->node_allocator_.get();
@@ -2496,199 +1922,46 @@ tree_node_handle parent_handle_point_search(
   }
 
   return tree_node_handle(nullptr);
+#endif
+
+  // Unsupported
+  abort();
 }
 
-// Repack this subtree's data into the most compact representation
-// we can muster. This greatly increases query performance, but means
-// that we will need to convert it back if we ever need to shard a
-// rectangle during insertion.
-//
-// N.B.: This code frees the old subtree and polygons as well.
-// You should not rely on any of the data in the old tree after you call
-// ths function!
-NODE_TEMPLATE_PARAMS
-tree_node_handle repack_subtree(tree_node_handle handle, tree_node_allocator *existing_allocator, tree_node_allocator *new_allocator) {
-  std::vector<tree_node_handle> repacked_handles;
-
-  switch (handle.get_type()) {
-    case LEAF_NODE: {
-      auto leaf_node = existing_allocator->get_tree_node<LEAF_NODE_CLASS_TYPES>(handle);
-      auto new_handle = leaf_node->repack(new_allocator);
-      existing_allocator->free(handle, sizeof(LEAF_NODE_CLASS_TYPES));
-
-      if (handle.get_associated_poly_is_compressed()) {
-        new_handle.set_associated_poly_is_compressed();
-      }
-
-      return new_handle;
-    }
-    case BRANCH_NODE: {
-      auto branch_node = existing_allocator->get_tree_node<BRANCH_NODE_CLASS_TYPES>(handle);
-
-      // Repack all my children, adjust my handles
-      for (unsigned i = 0; i < branch_node->cur_offset_; i++) {
-        auto child_handle = branch_node->entries.at(i).child;
-        auto new_child_handle = repack_subtree<min_branch_factor, max_branch_factor, strategy>(
-          child_handle, existing_allocator, new_allocator
-        );
-        branch_node->entries.at(i).child = new_child_handle;
-      }
-
-      auto new_handle = branch_node->repack(existing_allocator, new_allocator);
-
-      // Children nodes want to know who their parent is, but
-      // we don't know that until we repack the branch node above.
-      // So, we re-walk the new children here and set up all their
-      // parents.
-      // N.B. Children no longer care about their parents.
-      /*
-              for( unsigned i = 0; i < branch_node->cur_offset_; i++ ) {
-                  auto new_child =
-                      new_allocator->get_tree_node<packed_node>(
-                              branch_node->entries.at(i).child );
-                  * (tree_node_handle *) (new_child->buffer_ + sizeof(void*) +
-                      sizeof(tree_node_handle)) = new_handle;
-              }
-              */
-
-      existing_allocator->free(handle, sizeof(BRANCH_NODE_CLASS_TYPES));
-
-      // If the polygon associated with our handle was compressed, it will still be compressed.
-      // Mark that accordingly.
-      if (handle.get_associated_poly_is_compressed()) {
-        // Branch nodes are not compressed until they are repacked.
-        // There's no reason you *couldn't* compress their polygons if you wanted to, but we
-        // don't because it increaes insertion cost.
-        // Assert this invariant for now, could remove later.
-        new_handle.set_associated_poly_is_compressed();
-      }
-
-      return new_handle;
-    }
-      // For repacked leaf nodes, just transfer the data over.
-    case REPACKED_LEAF_NODE: {
-      auto leaf_node = existing_allocator->get_tree_node<packed_node>(handle);
-      char *data = leaf_node->buffer_;
-      decode_entry_count_and_offset_packed_node(data);
-      uint16_t node_size = sizeof(unsigned) + sizeof(Point) * count;
-      auto alloc_data = new_allocator->create_new_tree_node<packed_node>(
-        node_size, NodeHandleType(REPACKED_LEAF_NODE)
-      );
-      memcpy(alloc_data.first->buffer_, data, node_size);
-
-      if (handle.get_associated_poly_is_compressed()) {
-        alloc_data.second.set_associated_poly_is_compressed();
-      }
-
-      // FIXME: should free
-      return alloc_data.second;
-    }
-    case REPACKED_BRANCH_NODE: {
-      // We need to copy over any children as well, swap their
-      // handles out to the new ones, update our handles, etc.
-      // Also, if we have any out of line polygons, we will need
-      // to copy those over and update their handles.
-
-      // For now, we assume that if this is repacked, then the
-      // whole sub-tree is repacked.
-
-      // Node Format:
-      // NODE_ENTRY_COUNT (unsigned) | CHILD_HANDLE (tree_node_handle) | RECT_COUNT (uint8_t)
-      // | SUMMARY_RECTANGLE (Rectangle) | POLYGON_HANDLE (tree_node_handle) |
-
-      // OR
-
-      // NODE_ENTRY_COUNT (unsigned) | CHILD_HANDLE (tree_node_handle) | RECT_COUNT (uint8_t)
-      // | POLYGON (Rectangle * RECT_COUNT )
-
-      auto branch_node = existing_allocator->get_tree_node<packed_node>(handle);
-      char *buffer = branch_node->buffer_;
-      decode_entry_count_and_offset_packed_node(buffer);
-
-      for (unsigned i = 0; i < count; i++) {
-        // repack this child, change handle
-
-        tree_node_handle *child = (tree_node_handle *)(buffer + offset);
-        assert(child);
-        bool poly_was_compressed = child->get_associated_poly_is_compressed();
-        auto new_child_handle = repack_subtree<min_branch_factor, max_branch_factor, strategy>(
-          *child, existing_allocator, new_allocator
-        );
-        *child = new_child_handle;
-
-        if (poly_was_compressed) {
-          assert(child->get_associated_poly_is_compressed());
-        }
-
-        offset += sizeof(tree_node_handle);
-        if (!child->get_associated_poly_is_compressed()) {
-          uint8_t rect_count = *(uint8_t *)(buffer + offset);
-          offset += sizeof(uint8_t);
-          if (rect_count == std::numeric_limits<uint8_t>::max()) {
-            Rectangle *summary_rect = (Rectangle *)(buffer + offset);
-            offset += sizeof(Rectangle);
-            tree_node_handle *poly_handle = (tree_node_handle *)(buffer + offset);
-            assert(poly_handle->get_type() == BIG_POLYGON);
-
-            // Recreate this handle using new allocator
-            auto poly_pin = existing_allocator->get_tree_node<InlineUnboundedIsotheticPolygon>(*poly_handle);
-            auto alloc_data = new_allocator->create_new_tree_node<InlineUnboundedIsotheticPolygon>(
-                    compute_sizeof_inline_unbounded_polygon(
-                            poly_pin->get_max_rectangle_count_on_first_page()),
-                    NodeHandleType(BIG_POLYGON));
-            new (&(*alloc_data.first))
-                    InlineUnboundedIsotheticPolygon(
-                    new_allocator,
-                    poly_pin->get_max_rectangle_count_on_first_page());
-            IsotheticPolygon materialized_poly = poly_pin->materialize_polygon();
-            alloc_data.first->push_polygon_to_disk(materialized_poly);
-
-            *poly_handle = alloc_data.second;
-            // FIXME: free old poly
-
-            offset += sizeof(tree_node_handle);
-          } else {
-            for (unsigned r = 0; r < rect_count; r++) {
-              Rectangle *rect = (Rectangle *)(buffer + offset);
-              (void) rect;
-              offset += sizeof(Rectangle);
-            }
-          }
-        } else {
-          int bytes_read;
-          IsotheticPolygon decomp_poly = decompress_polygon(buffer + offset, &bytes_read);
-          offset += bytes_read;
-        }
-      }
-
-      // memcpy the crap in
-      auto alloc_data = new_allocator->create_new_tree_node<packed_node>(
-              offset, NodeHandleType(REPACKED_BRANCH_NODE)
-      );
-
-      memcpy(alloc_data.first->buffer_, branch_node->buffer_, offset);
-
-      // If the polygon associated with our handle was compressed, it will still be compressed.
-      // Mark that accordingly.
-      if (handle.get_associated_poly_is_compressed()) {
-        alloc_data.second.set_associated_poly_is_compressed();
-      }
-
-      return alloc_data.second;
-    }
-    default: {
-      assert(false);
-      return tree_node_handle(nullptr);
+template <int min_branch_factor, int max_branch_factor, class strategy>
+void rectangle_search_leaf_node(LeafNode<min_branch_factor, max_branch_factor, strategy> &node,
+                                Rectangle &requestedRectangle,
+                                std::vector<Point> &accumulator)
+{
+  for (unsigned i = 0; i < node.cur_offset_; i++) {
+    const Point &p = node.entries.at(i);
+    if (requestedRectangle.containsPoint(p)) {
+      accumulator.push_back(p);
     }
   }
 }
 
-NODE_TEMPLATE_PARAMS
+template <int min_branch_factor, int max_branch_factor, class strategy>
+void rectangle_search_branch_node(BranchNode<min_branch_factor, max_branch_factor, strategy> &node,
+                                  Rectangle &requestedRectangle,
+                                  std::stack<tree_node_handle> &context,
+                                  NIRTreeDisk<min_branch_factor, max_branch_factor, strategy> *treeRef)
+{
+  for (size_t i = 0; i < node.cur_offset_; i++) {
+    Branch &b = node.entries.at(i);
+    if (b.boundingBox.intersectsRectangle(requestedRectangle)) {
+      context.push(b.child);
+    }
+  }
+}
+
+template <int min_branch_factor, int max_branch_factor, class strategy>
 std::vector<Point> rectangle_search(
         tree_node_handle start_point,
         Rectangle &requestedRectangle,
         NIRTreeDisk<min_branch_factor, max_branch_factor, strategy> *treeRef,
-        bool should_track_search = true) {
+        bool should_track_search = true)
+{
   std::vector<Point> accumulator;
 
   std::stack<tree_node_handle> context;
@@ -2700,35 +1973,20 @@ std::vector<Point> rectangle_search(
     context.pop();
 
     if (current_handle.get_type() == LEAF_NODE) {
-      rectangle_search_leaf_handle(current_handle, requestedRectangle, accumulator);
+      auto current_node = treeRef->get_leaf_node(current_handle);
+      rectangle_search_leaf_node(*current_node, requestedRectangle, accumulator);
 #ifdef STAT
       if (should_track_search) {
-    treeRef->stats.markLeafSearched();
-  }
-#endif
-    } else if (current_handle.get_type() == REPACKED_LEAF_NODE) {
-      rectangle_search_packed_leaf_handle(current_handle,
-                                          requestedRectangle, accumulator);
-#ifdef STAT
-      if (should_track_search) {
-    treeRef->stats.markLeafSearched();
-  }
+        treeRef->stats.markLeafSearched();
+      }
 #endif
     } else if (current_handle.get_type() == BRANCH_NODE) {
-      rectangle_search_branch_handle(current_handle,
-                                     requestedRectangle, context);
+      auto current_node = treeRef->get_branch_node(current_handle);
+      rectangle_search_branch_node(*current_node, requestedRectangle, context, treeRef);
 #ifdef STAT
       if (should_track_search) {
-    treeRef->stats.markNonLeafNodeSearched();
-  }
-#endif
-    } else if (current_handle.get_type() == REPACKED_BRANCH_NODE) {
-      rectangle_search_packed_branch_handle(current_handle,
-                                            requestedRectangle, context);
-#ifdef STAT
-      if (should_track_search) {
-    treeRef->stats.markNonLeafNodeSearched();
-  }
+        treeRef->stats.markNonLeafNodeSearched();
+      }
 #endif
     } else {
       assert(false);
@@ -2743,11 +2001,12 @@ std::vector<Point> rectangle_search(
 // Always called on root, this = root
 // This top-to-bottom sweep is only for adjusting bounding boxes to contain the point and
 // choosing a particular leaf
-NODE_TEMPLATE_PARAMS
+template <int min_branch_factor, int max_branch_factor, class strategy>
 tree_node_handle
-BRANCH_NODE_CLASS_TYPES::chooseNode(
+BranchNode<min_branch_factor, max_branch_factor, strategy>::chooseNode(
         std::variant<Branch, Point> &nodeEntry,
         uint8_t stopping_level) {
+#if 0
   // FIXME: try and avoid all these materialize calls
 
   // CL1 [Initialize]
@@ -3032,11 +2291,15 @@ BRANCH_NODE_CLASS_TYPES::chooseNode(
       assert(cur_node_handle != nullptr);
     }
   }
+#endif
+
+  // Unsupported
+  abort();
 }
 
-NODE_TEMPLATE_PARAMS
-tree_node_handle BRANCH_NODE_CLASS_TYPES::findLeaf(Point givenPoint) {
-
+template <int min_branch_factor, int max_branch_factor, class strategy>
+tree_node_handle BranchNode<min_branch_factor, max_branch_factor, strategy>::findLeaf(Point givenPoint) {
+#if 0
   // Initialize our context stack
   std::stack<tree_node_handle> context;
   context.push(this->self_handle_);
@@ -3107,10 +2370,14 @@ tree_node_handle BRANCH_NODE_CLASS_TYPES::findLeaf(Point givenPoint) {
   }
 
   return tree_node_handle(nullptr);
+#endif
+
+  // Unsupported
+  abort();
 }
 
-NODE_TEMPLATE_PARAMS
-Partition BRANCH_NODE_CLASS_TYPES::partitionNode() {
+template <int min_branch_factor, int max_branch_factor, class strategy>
+Partition BranchNode<min_branch_factor, max_branch_factor, strategy>::partitionNode() {
   return partitionBranchNode();
 }
 
@@ -3128,6 +2395,7 @@ struct summary_rectangle_sorter {
 
     template <class NE>
     bool operator()(NE &n1, NE &n2) {
+#if 0
       Branch &b1 = std::get<Branch>(n1);
       Branch &b2 = std::get<Branch>(n2);
 
@@ -3139,6 +2407,10 @@ struct summary_rectangle_sorter {
         return bb1.lowerLeft[dimension_] <= bb2.lowerLeft[dimension_];
       }
       return bb1.upperRight[dimension_] <= bb2.upperRight[dimension_];
+#endif
+
+      // Unsupported
+      abort();
     }
 
     unsigned dimension_;
@@ -3146,10 +2418,11 @@ struct summary_rectangle_sorter {
     sort_point sort_on_;
 };
 
-NODE_TEMPLATE_PARAMS
-void BRANCH_NODE_CLASS_TYPES::make_disjoint_from_children(
+template <int min_branch_factor, int max_branch_factor, class strategy>
+void BranchNode<min_branch_factor, max_branch_factor, strategy>::make_disjoint_from_children(
         IsotheticPolygon &polygon,
         tree_node_handle handle_to_skip) {
+#if 0
   tree_node_allocator *allocator = get_node_allocator(this->treeRef);
   for (auto iter = entries.begin(); iter !=
                                     entries.begin() + this->cur_offset_;
@@ -3162,20 +2435,25 @@ void BRANCH_NODE_CLASS_TYPES::make_disjoint_from_children(
     polygon.increaseResolution(Point::atInfinity, child_poly);
   }
   polygon.recomputeBoundingBox();
+#endif
+
+  // Unsupported
+  abort();
 }
 
 // We create two new nodes and free the old one.
 // The old one is freed in adjustTree using removeEntry
 // If we downsplit, then we won't call adjustTree for that split so we
 // need to delete the node ourselves.
-NODE_TEMPLATE_PARAMS
-SplitResult BRANCH_NODE_CLASS_TYPES::splitNode(Partition p, bool is_downsplit) {
+template <int min_branch_factor, int max_branch_factor, class strategy>
+SplitResult BranchNode<min_branch_factor, max_branch_factor, strategy>::splitNode(Partition p, bool is_downsplit) {
+#if 0
   assert(this->self_handle_.get_type() == BRANCH_NODE);
-  using NodeType = BRANCH_NODE_CLASS_TYPES;
+  using NodeType = BranchNode<min_branch_factor, max_branch_factor, strategy>;
   tree_node_allocator *allocator = get_node_allocator(this->treeRef);
 
   auto alloc_data =
-          allocator->create_new_tree_node<BRANCH_NODE_CLASS_TYPES>(
+          allocator->create_new_tree_node<BranchNode<min_branch_factor, max_branch_factor, strategy>>(
                   NodeHandleType(BRANCH_NODE));
   tree_node_handle left_handle = alloc_data.second;
   auto left_node = alloc_data.first; // take pin
@@ -3184,7 +2462,7 @@ SplitResult BRANCH_NODE_CLASS_TYPES::splitNode(Partition p, bool is_downsplit) {
   assert(left_node->self_handle_ == left_handle);
 
   alloc_data =
-          allocator->create_new_tree_node<BRANCH_NODE_CLASS_TYPES>(
+          allocator->create_new_tree_node<BranchNode<min_branch_factor, max_branch_factor, strategy>>(
                   NodeHandleType(BRANCH_NODE));
   tree_node_handle right_handle = alloc_data.second;
   auto right_node = alloc_data.first; // take pin
@@ -3281,12 +2559,12 @@ SplitResult BRANCH_NODE_CLASS_TYPES::splitNode(Partition p, bool is_downsplit) {
         auto child = treeRef->get_leaf_node(branch.child);
         downwardSplit = child->splitNode(p, true);
         allocator->free(branch.child, sizeof(
-                LEAF_NODE_CLASS_TYPES));
+                LeafNode<min_branch_factor, max_branch_factor, strategy>));
       } else {
         auto child = treeRef->get_branch_node(branch.child);
         downwardSplit = child->splitNode(p, true);
         allocator->free(branch.child, sizeof(
-                BRANCH_NODE_CLASS_TYPES));
+                BranchNode<min_branch_factor, max_branch_factor, strategy>));
       }
 
       if (std::holds_alternative<tree_node_handle>(
@@ -3463,20 +2741,25 @@ SplitResult BRANCH_NODE_CLASS_TYPES::splitNode(Partition p, bool is_downsplit) {
   this->cur_offset_ = 0;
 
   return split;
+#endif
+
+  // Unsupported
+  abort();
 }
 
 // Splitting a node will remove it from its this->parent node and its memory will be freed
-NODE_TEMPLATE_PARAMS
-SplitResult BRANCH_NODE_CLASS_TYPES::splitNode() {
+template <int min_branch_factor, int max_branch_factor, class strategy>
+SplitResult BranchNode<min_branch_factor, max_branch_factor, strategy>::splitNode() {
   SplitResult returnSplit = splitNode(partitionNode(), false);
   return returnSplit;
 }
 
-NODE_TEMPLATE_PARAMS
-tree_node_handle BRANCH_NODE_CLASS_TYPES::insert(
+template <int min_branch_factor, int max_branch_factor, class strategy>
+tree_node_handle BranchNode<min_branch_factor, max_branch_factor, strategy>::insert(
         std::variant<Branch, Point> &nodeEntry,
-        std::vector<bool> &hasReinsertedOnLevel) {
-
+        std::vector<bool> &hasReinsertedOnLevel)
+{
+#if 0
   bool givenIsPoint = std::holds_alternative<Point>(nodeEntry);
   uint8_t stopping_level = 0;
   if (not givenIsPoint) {
@@ -3551,9 +2834,9 @@ tree_node_handle BRANCH_NODE_CLASS_TYPES::insert(
   // Grow the tree taller if we need to
   if (finalSplit.leftBranch.child != nullptr and finalSplit.rightBranch.child != nullptr) {
     auto alloc_data =
-            allocator->create_new_tree_node<BRANCH_NODE_CLASS_TYPES>(
+            allocator->create_new_tree_node<BranchNode<min_branch_factor, max_branch_factor, strategy>>(
                     NodeHandleType(BRANCH_NODE));
-    new (&(*alloc_data.first)) BRANCH_NODE_CLASS_TYPES(
+    new (&(*alloc_data.first)) BranchNode<min_branch_factor, max_branch_factor, strategy>(
             tree_ref_backup, tree_node_handle(nullptr), alloc_data.second, level_ + 1);
     auto new_root_handle = alloc_data.second;
     auto new_root_node = alloc_data.first;
@@ -3579,7 +2862,7 @@ tree_node_handle BRANCH_NODE_CLASS_TYPES::insert(
     tree_ref_backup->root = new_root_handle;
 
     assert(this->self_handle_.get_type() == BRANCH_NODE);
-    allocator->free(this->self_handle_, sizeof(BRANCH_NODE_CLASS_TYPES));
+    allocator->free(this->self_handle_, sizeof(BranchNode<min_branch_factor, max_branch_factor, strategy>));
     this->self_handle_ = tree_node_handle(nullptr);
 
     // Fix the reinserted length
@@ -3589,12 +2872,13 @@ tree_node_handle BRANCH_NODE_CLASS_TYPES::insert(
   }
 
   return tree_ref_backup->root;
+#endif
 }
 
 // Always called on root, this = root
-NODE_TEMPLATE_PARAMS
-tree_node_handle BRANCH_NODE_CLASS_TYPES::remove(Point givenPoint) {
-
+template <int min_branch_factor, int max_branch_factor, class strategy>
+tree_node_handle BranchNode<min_branch_factor, max_branch_factor, strategy>::remove(Point givenPoint) {
+#if 0
   // D1 [Find node containing record]
   tree_node_handle leaf_handle = findLeaf(givenPoint);
   // Record not in the tree
@@ -3614,7 +2898,7 @@ tree_node_handle BRANCH_NODE_CLASS_TYPES::remove(Point givenPoint) {
   if (this->cur_offset_ == 1) {
     tree_node_handle new_root_handle = entries.at(0).child;
     tree_node_allocator *allocator = get_node_allocator(this->treeRef);
-    allocator->free(this->self_handle_, sizeof(BRANCH_NODE_CLASS_TYPES));
+    allocator->free(this->self_handle_, sizeof(BranchNode<min_branch_factor, max_branch_factor, strategy>));
     if (new_root_handle.get_type() == LEAF_NODE || new_root_handle.get_type() == REPACKED_LEAF_NODE) {
       auto new_root = treeRef->get_leaf_node(new_root_handle, true);
       new_root->parent = tree_node_handle(nullptr);
@@ -3627,10 +2911,15 @@ tree_node_handle BRANCH_NODE_CLASS_TYPES::remove(Point givenPoint) {
   }
 
   return this->self_handle_;
+#endif
+
+  // Unsupported
+  abort();
 }
 
-NODE_TEMPLATE_PARAMS
-unsigned BRANCH_NODE_CLASS_TYPES::checksum() {
+template <int min_branch_factor, int max_branch_factor, class strategy>
+unsigned BranchNode<min_branch_factor, max_branch_factor, strategy>::checksum() {
+#if 0
   unsigned sum = 0;
 
   for (unsigned i = 0; i < this->cur_offset_; i++) {
@@ -3646,10 +2935,15 @@ unsigned BRANCH_NODE_CLASS_TYPES::checksum() {
   }
 
   return sum;
+#endif
+
+  // Unsupported
+  abort();
 }
 
-NODE_TEMPLATE_PARAMS
-std::vector<Point> BRANCH_NODE_CLASS_TYPES::bounding_box_validate() {
+template <int min_branch_factor, int max_branch_factor, class strategy>
+std::vector<Point> BranchNode<min_branch_factor, max_branch_factor, strategy>::bounding_box_validate() {
+#if 0
   tree_node_allocator *allocator = get_node_allocator(this->treeRef);
   std::vector<Point> all_child_points;
   for (unsigned i = 0; i < this->cur_offset_; i++) {
@@ -3693,10 +2987,15 @@ std::vector<Point> BRANCH_NODE_CLASS_TYPES::bounding_box_validate() {
     }
   }
   return all_child_points;
+#endif
+
+  // Unsupported
+  abort();
 }
 
-NODE_TEMPLATE_PARAMS
-bool BRANCH_NODE_CLASS_TYPES::validate(tree_node_handle expectedParent, unsigned index) {
+template <int min_branch_factor, int max_branch_factor, class strategy>
+bool BranchNode<min_branch_factor, max_branch_factor, strategy>::validate(tree_node_handle expectedParent, unsigned index) {
+#if 0
   tree_node_allocator *allocator = get_node_allocator(this->treeRef);
 
   if (expectedParent != nullptr and (this->parent != expectedParent ||
@@ -3775,10 +3074,15 @@ bool BRANCH_NODE_CLASS_TYPES::validate(tree_node_handle expectedParent, unsigned
   }
 
   return valid;
+#endif
+
+  // Unsupported
+  abort();
 }
 
-NODE_TEMPLATE_PARAMS
-void BRANCH_NODE_CLASS_TYPES::print(unsigned n) {
+template <int min_branch_factor, int max_branch_factor, class strategy>
+void BranchNode<min_branch_factor, max_branch_factor, strategy>::print(unsigned n) {
+#if 0
   std::string indentation(n * 4, ' ');
   std::cout << indentation << "Node " << (void *)this << std::endl;
   std::cout << indentation << "    Parent: " << this->parent << std::endl;
@@ -3793,10 +3097,14 @@ void BRANCH_NODE_CLASS_TYPES::print(unsigned n) {
     std::cout << indentation << "		" << poly << std::endl;
   }
   std::cout << std::endl;
+#endif
+
+  // Unsupported
+  abort();
 }
 
-NODE_TEMPLATE_PARAMS
-void BRANCH_NODE_CLASS_TYPES::printTree(unsigned n) {
+template <int min_branch_factor, int max_branch_factor, class strategy>
+void BranchNode<min_branch_factor, max_branch_factor, strategy>::printTree(unsigned n) {
   // Print this node first
   print(n);
 
@@ -3819,8 +3127,9 @@ void BRANCH_NODE_CLASS_TYPES::printTree(unsigned n) {
   std::cout << std::endl;
 }
 
-NODE_TEMPLATE_PARAMS
-unsigned BRANCH_NODE_CLASS_TYPES::height() {
+template <int min_branch_factor, int max_branch_factor, class strategy>
+unsigned BranchNode<min_branch_factor, max_branch_factor, strategy>::height() {
+#if 0
   unsigned ret = 0;
   tree_node_handle current_handle = this->self_handle_;
 
@@ -3833,6 +3142,7 @@ unsigned BRANCH_NODE_CLASS_TYPES::height() {
     auto node = treeRef->get_branch_node(current_handle, false);
     current_handle = node->entries.at(0).child;
   }
+#endif
 }
 
 template <int min_branch_factor, int max_branch_factor, class strategy>
@@ -3876,80 +3186,8 @@ void stat_node(tree_node_handle start_handle, NIRTreeDisk<min_branch_factor, max
       histogramFanout[fanout]++;
       totalLeaves++;
       memoryFootprint += sizeof(LeafNode<min_branch_factor, max_branch_factor, strategy>);
-    } else if (currentContext.get_type() == REPACKED_LEAF_NODE) {
-      auto current_node = allocator->get_tree_node<packed_node>(currentContext);
-      char *data = current_node->buffer_;
-
-      decode_entry_count_and_offset_packed_node(data);
-
-      totalLeaves++;
-      unsigned fanout = (unsigned)count;
-
-      if (fanout >= histogramFanout.size()) {
-        histogramFanout.resize(2 * fanout, 0);
-      }
-
-      histogramFanout[fanout]++;
-      memoryFootprint += sizeof(unsigned) + count * sizeof(Point);
-    } else if (currentContext.get_type() == REPACKED_BRANCH_NODE) {
-      auto current_node = allocator->get_tree_node<packed_node>(currentContext);
-      char *buffer = current_node->buffer_;
-
-      decode_entry_count_and_offset_packed_node(buffer);
-
-      unsigned fanout = (unsigned) count;
-
-      if (fanout >= histogramFanout.size()) {
-        histogramFanout.resize(2 * fanout, 0);
-      }
-
-      histogramFanout[fanout]++;
-      memoryFootprint += sizeof(unsigned);
-
-      for (unsigned i = 0; i < count; i++) {
-        tree_node_handle *child = (tree_node_handle *)(buffer + offset);
-        context.push(*child);
-        offset += sizeof(tree_node_handle);
-        memoryFootprint += sizeof(tree_node_handle);
-
-        if (!child->get_associated_poly_is_compressed()) {
-          uint8_t rect_count = *(uint8_t *)(buffer + offset);
-          offset += sizeof(uint8_t);
-          memoryFootprint += sizeof(uint8_t);
-
-          if (rect_count == std::numeric_limits<uint8_t>::max()) {
-            Rectangle *summary_rect = (Rectangle *)(buffer + offset);
-            offset += sizeof(Rectangle);
-            memoryFootprint += sizeof(Rectangle);
-
-            auto handle = *(tree_node_handle *)(buffer + offset);
-            offset += sizeof(tree_node_handle);
-            memoryFootprint += sizeof(tree_node_handle);
-
-            auto poly_pin = allocator->get_tree_node<InlineUnboundedIsotheticPolygon>(handle);
-
-            memoryFootprint += compute_sizeof_inline_unbounded_polygon(poly_pin->get_total_rectangle_count());
-            memoryPolygons += (compute_sizeof_inline_unbounded_polygon(poly_pin->get_total_rectangle_count()) - sizeof(Rectangle));
-
-            histogramPolygon.at(poly_pin->get_total_rectangle_count())++;
-            totalPolygonSize += poly_pin->get_total_rectangle_count();
-          } else {
-            offset += rect_count * sizeof(Rectangle);
-            memoryFootprint += rect_count * sizeof(Rectangle);
-            memoryPolygons += (rect_count * sizeof(Rectangle) - sizeof(Rectangle));
-            histogramPolygon.at(rect_count)++;
-            totalPolygonSize += rect_count;
-          }
-        } else {
-          int new_offset;
-          IsotheticPolygon decomp_poly = decompress_polygon(buffer + offset, &new_offset);
-          histogramPolygon.at(decomp_poly.basicRectangles.size())++;
-          totalPolygonSize += decomp_poly.basicRectangles.size();
-          memoryFootprint += sizeof(tree_node_handle) + new_offset;
-          offset += new_offset;
-        }
-      }
     } else if (currentContext.get_type() == BRANCH_NODE) {
+#if 0
       auto current_branch_node = treeRef->get_branch_node(currentContext);
 
       unsigned fanout = current_branch_node->cur_offset_;
@@ -3995,6 +3233,7 @@ void stat_node(tree_node_handle start_handle, NIRTreeDisk<min_branch_factor, max
 
         context.push(b.child);
       }
+#endif
     }
   }
 
@@ -4336,257 +3575,14 @@ std::pair<std::vector<Rectangle>, std::vector<Rectangle>> make_rectangles_disjoi
   return std::make_pair(ret_a_rects, ret_b_rects);
 }
 
-NODE_TEMPLATE_PARAMS
-tree_node_handle unpack_leaf(
-        tree_node_handle handle,
-        tree_node_allocator *allocator,
-        NIRTreeDisk<min_branch_factor, max_branch_factor, strategy> *treeRef,
-        tree_node_handle parent_handle) {
-  auto packed_leaf = allocator->get_tree_node<packed_node>(handle);
-
-  unsigned level = 0;
-  char *data = packed_leaf->buffer_;
-
-  // We will go from a REPACKED_LEAF_NODE to a LEAF_NODE
-  auto alloc_data = allocator->create_new_tree_node<LEAF_NODE_CLASS_TYPES>(
-          NodeHandleType(LEAF_NODE));
-  tree_node_handle leaf_handle = alloc_data.second;
-  auto leaf_node = alloc_data.first; // take pin
-  new (&(*leaf_node)) LEAF_NODE_CLASS_TYPES(treeRef,
-                                            parent_handle, leaf_handle, level);
-
-  decode_entry_count_and_offset_packed_node(data);
-  for (unsigned i = 0; i < count; i++) {
-    Point *p = (Point *)(data + offset);
-    leaf_node->addPoint(*p);
-    offset += sizeof(Point);
-  }
-
-  return leaf_handle;
-}
-
-NODE_TEMPLATE_PARAMS
-tree_node_handle unpack_branch(
-        tree_node_handle handle,
-        tree_node_allocator *allocator,
-        NIRTreeDisk<min_branch_factor, max_branch_factor, strategy> *treeRef,
-        tree_node_handle parent_handle) {
-  using NodeType = BRANCH_NODE_CLASS_TYPES;
-
-  auto packed_branch = allocator->get_tree_node<packed_node>(handle);
-  unsigned level = 1;
-
-  // This will be the child at entries[0] and after the new branch node is alloc'd it will be used to determine level
-  tree_node_handle level_determining_node;
-
-  auto alloc_data = allocator->create_new_tree_node<BRANCH_NODE_CLASS_TYPES>(
-          NodeHandleType(BRANCH_NODE));
-  tree_node_handle branch_handle = alloc_data.second;
-  auto branch_node = alloc_data.first; // take pin
-  new (&(*branch_node)) BRANCH_NODE_CLASS_TYPES(treeRef, parent_handle, branch_handle, level);
-
-  char *buffer = packed_branch->buffer_;
-  decode_entry_count_and_offset_packed_node(buffer);
-  for (unsigned i = 0; i < count; i++) {
-    tree_node_handle *child = (tree_node_handle *)(buffer + offset);
-    if (i == 0) level_determining_node = *child;
-    offset += sizeof(tree_node_handle);
-
-    bool is_compressed = child->get_associated_poly_is_compressed();
-    if (is_compressed) {
-
-      int new_offset;
-      IsotheticPolygon decoded_poly = decompress_polygon((buffer + offset), &new_offset);
-      offset += new_offset;
-
-      // To determine if unbounded or not...
-      // Check the number of rectangles
-      if (decoded_poly.basicRectangles.size() < MAX_RECTANGLE_COUNT) {
-        // UNBOUNDED:
-        InlineBoundedIsotheticPolygon poly;
-        poly.push_polygon_to_disk(decoded_poly);
-        branch_node->addBranchToNode(Branch(poly, *child));
-      } else {
-        // BOUNDED:
-        size_t max_rects_on_first_page = std::min(InlineUnboundedIsotheticPolygon::maximum_possible_rectangles_on_first_page(), decoded_poly.basicRectangles.size());
-        size_t unbounded_poly_size = compute_sizeof_inline_unbounded_polygon(max_rects_on_first_page);
-        auto alloc_data = allocator->create_new_tree_node<InlineUnboundedIsotheticPolygon>(
-                unbounded_poly_size, NodeHandleType(BIG_POLYGON));
-
-        new (&(*(alloc_data.first))) InlineUnboundedIsotheticPolygon(
-          allocator, max_rects_on_first_page
-        );
-
-        auto poly = alloc_data.first;
-        poly->push_polygon_to_disk(decoded_poly);
-        branch_node->addBranchToNode(Branch(alloc_data.second, *child));
-      }
-
-      continue;
-    }
-
-    uint8_t rect_count = * (uint8_t *)(buffer + offset);
-    offset += sizeof(uint8_t);
-
-    if (rect_count == std::numeric_limits<uint8_t>::max()) {
-      Rectangle *summary_rect = (Rectangle *)(buffer + offset);
-      offset += sizeof(Rectangle);
-      tree_node_handle *poly_handle = (tree_node_handle *)(buffer + offset);
-      offset += sizeof(tree_node_handle);
-
-      branch_node->addBranchToNode(Branch(*poly_handle, *child));
-    } else {
-      IsotheticPolygon accumulator;
-      for (unsigned r = 0; r < rect_count; r++) {
-        Rectangle *rect = (Rectangle *)(buffer + offset);
-        offset += sizeof(Rectangle);
-
-        accumulator.basicRectangles.push_back(*rect);
-      }
-
-      InlineBoundedIsotheticPolygon poly;
-      poly.push_polygon_to_disk(accumulator);
-      branch_node->addBranchToNode(Branch(poly, *child));
-    }
-  }
-
-  assert(level_determining_node);
-  while (level_determining_node.get_type() != REPACKED_LEAF_NODE && level_determining_node.get_type() != LEAF_NODE) {
-    assert(level_determining_node.get_type() != UNASSIGNED);
-    level++;
-    tree_node_handle child;
-    if (level_determining_node.get_type() == BRANCH_NODE) {
-      child = allocator->get_tree_node<NodeType>(level_determining_node)->entries.at(0).child;
-    } else if (level_determining_node.get_type() == REPACKED_BRANCH_NODE) {
-      char *dfs_buffer = allocator->get_tree_node<packed_node>(level_determining_node)->buffer_;
-      decode_entry_count_and_offset_packed_node(dfs_buffer);
-      child = *(tree_node_handle *)(dfs_buffer + offset);
-    } else {
-      assert(false);
-    }
-    level_determining_node = child;
-  }
-  branch_node->level_ = level;
-
-  return branch_handle;
-}
-
-NODE_TEMPLATE_PARAMS
-tree_node_handle unpack(
-        tree_node_handle &handle,
-        tree_node_allocator *allocator,
-        NIRTreeDisk<min_branch_factor, max_branch_factor, strategy> *treeRef,
-        tree_node_handle &parent) {
-  if (handle.get_type() == REPACKED_LEAF_NODE) {
-    return unpack_leaf<min_branch_factor, max_branch_factor, strategy>(
-            handle, allocator, treeRef, parent);
-  } else if (handle.get_type() == REPACKED_BRANCH_NODE) {
-    return unpack_branch<min_branch_factor, max_branch_factor, strategy>(
-            handle, allocator, treeRef, parent);
-  }
-  return handle;
-}
-
 static std::vector<Point> tree_validate_recursive(tree_node_handle current_handle, tree_node_allocator *allocator) {
   switch (current_handle.get_type()) {
     case LEAF_NODE:
     case BRANCH_NODE:
       assert(false);
-    case REPACKED_LEAF_NODE: {
-      std::vector<Point> accumulator;
-      { // Leaf scope
-        auto packed_leaf = allocator->get_tree_node<packed_node>(current_handle);
-        char *buffer = packed_leaf->buffer_;
-        decode_entry_count_and_offset_packed_node(buffer);
-
-        // Check pts in box
-        for (unsigned i = 0; i < count; i++) {
-          Point *p = (Point *)(buffer + offset);
-          accumulator.push_back(*p);
-          offset += sizeof(Point);
-        }
-      }
-      return accumulator;
-    }
-    case REPACKED_BRANCH_NODE: {
-      std::vector<Point> all_pts;
-      auto packed_branch = allocator->get_tree_node<packed_node>(current_handle);
-      char *buffer = packed_branch->buffer_;
-      decode_entry_count_and_offset_packed_node(buffer);
-      for (unsigned i = 0; i < count; i++) {
-        std::vector<Point> child_pts;
-        tree_node_handle *child = (tree_node_handle *)(buffer + offset);
-        offset += sizeof(tree_node_handle);
-        child_pts = tree_validate_recursive(*child, allocator);
-
-        if (!child->get_associated_poly_is_compressed()) {
-          uint8_t rect_count = * (uint8_t *)(buffer + offset);
-          offset += sizeof(uint8_t);
-
-          if (rect_count == std::numeric_limits<uint8_t>::max()) {
-            Rectangle *summary_rect = (Rectangle *)(buffer + offset);
-            offset += sizeof(Rectangle);
-            tree_node_handle *poly_handle = (tree_node_handle *)(buffer + offset);
-            offset += sizeof(tree_node_handle);
-            auto poly_pin = allocator->get_tree_node<InlineUnboundedIsotheticPolygon>(*poly_handle);
-            for (const Point &p : child_pts) {
-              if (!poly_pin->containsPoint(p)) {
-                assert(poly_pin->get_total_rectangle_count() > 0);
-                assert(false);
-              }
-            }
-          } else {
-            unsigned before_rects_offset = offset;
-            for (const Point &p : child_pts) {
-              offset = before_rects_offset;
-              bool found_pt = false;
-              for (unsigned r = 0; r < rect_count; r++) {
-                Rectangle *rect = (Rectangle *)(buffer + offset);
-                offset += sizeof(Rectangle);
-                if (rect->containsPoint(p)) {
-                  offset += (rect_count - r - 1) * sizeof(Rectangle);
-                  found_pt = true;
-                  break;
-                }
-              }
-              if (!found_pt) {
-                assert(false);
-              }
-            }
-          }
-        } else {
-          int new_offset;
-          [[maybe_unused]] IsotheticPolygon decomp_poly;
-          decomp_poly = decompress_polygon(buffer + offset, &new_offset);
-#ifndef NDEBUG
-          for (const Point &p : child_pts) {
-            assert(decomp_poly.containsPoint(p));
-          }
-#endif
-          offset += new_offset;
-        }
-        all_pts.insert(all_pts.end(), child_pts.begin(), child_pts.end());
-      }
-      return all_pts;
-    }
     default: {
       assert(false);
     }
   }
 }
-
-#undef NODE_TEMPLATE_PARAMS
-#undef LEAF_NODE_CLASS_TYPES
-#undef BRANCH_NODE_CLASS_TYPES
-#undef point_search_leaf_handle
-#undef point_search_leaf_node
-#undef point_search_packed_leaf_node
-#undef point_search_packed_branch_handle
-#undef point_search_branch_handle
-#undef rectangle_search_leaf_handle
-#undef rectangle_search_leaf_node
-#undef rectangle_search_packed_leaf_node
-#undef rectangle_search_packed_branch_handle
-#undef rectangle_search_branch_handle
-#undef decode_entry_count_and_offset_packed_node
 } // namespace nirtreedisk
