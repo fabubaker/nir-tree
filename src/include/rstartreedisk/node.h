@@ -44,7 +44,7 @@ public:
 
   Branch() = default;
 
-  Branch(const Branch &other) : boundingBox(other.boundingBox), child(other.child) {}
+  Branch(const Branch &other): boundingBox(other.boundingBox), child(other.child) {}
 
   bool operator==(const Branch &o) const = default;
 
@@ -56,21 +56,12 @@ typedef std::variant<Branch, Point> NodeEntry;
 
 template <int min_branch_factor, int max_branch_factor>
 class LeafNode {
-private:
-  void searchSub(const Point &requestedPoint, std::vector<Point> &accumulator);
-  void searchSub(const Rectangle &rectangle, std::vector<Point> &accumulator);
-
 public:
   unsigned cur_offset_;
-
-  // Obnoxiously, this needs to have a +1 so we can overflow
-  // by 1 entry and deal with it later.
   std::array<Point, max_branch_factor> entries;
 
   // Constructors and destructors
-  LeafNode() {
-    cur_offset_ = 0;
-  }
+  LeafNode(): cur_offset_(0) {}
 
   void addPoint(const Point &p) {
     entries.at(cur_offset_++) = p;
@@ -106,9 +97,6 @@ public:
   void print() const;
   void printTree() const;
   unsigned height() const;
-
-  uint16_t compute_packed_size();
-  tree_node_handle repack(tree_node_allocator *allocator);
 
   // Operators
   bool operator<(const LeafNode &otherNode) const;
@@ -1082,7 +1070,7 @@ Rectangle BranchNode<min_branch_factor, max_branch_factor>::boundingBox() const 
   assert(cur_offset_ > 0);
   Rectangle boundingBox = entries.at(0).boundingBox;
 
-  for (unsigned i = 0; i < cur_offset_; i++) {
+  for (unsigned i = 1; i < cur_offset_; i++) {
     boundingBox.expand(entries.at(i).boundingBox);
   }
 
@@ -1184,7 +1172,6 @@ std::vector<Point> point_search(
 {
   std::vector<Point> accumulator;
   std::stack<tree_node_handle> context;
-  tree_node_allocator *allocator = treeRef->node_allocator_.get();
 
   context.push(start_point);
 
@@ -1250,7 +1237,6 @@ std::vector<Point> rectangle_search(
   std::vector<Point> accumulator;
 
   std::stack<tree_node_handle> context;
-  tree_node_allocator *allocator = treeRef->node_allocator_.get();
   context.push(start_point);
 
   while (not context.empty()) {
