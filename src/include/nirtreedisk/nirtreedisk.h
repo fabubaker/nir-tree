@@ -74,6 +74,12 @@ public:
 
     int rc = read(fd, (char *)&root, sizeof(root));
     assert(rc == sizeof(root));
+
+    std::string polygon_fname = backing_file + ".polygons";
+    std::ifstream polygon_file(polygon_fname);
+    boost::archive::text_iarchive polygon_archive(polygon_file);
+    polygon_archive >> polygons;
+    polygon_file.close();
   }
 
   ~NIRTreeDisk() {
