@@ -133,7 +133,10 @@ void fill_branch(
     b.child = fixed_bb_and_handles.at(i).second;
     b.boundingBox = constructed_poly.boundingBox;
 
-    treeRef->polygons.insert({b.child, constructed_poly});
+    // If the MBR has not been split into a polygon, don't keep it in the map.
+    if (constructed_poly.basicRectangles.size() != 1) {
+      treeRef->polygons.insert({b.child, constructed_poly});
+    }
 
     branch_node->addBranchToNode(b);
   }
@@ -594,7 +597,10 @@ std::pair<tree_node_handle, Rectangle> quad_tree_style_load(
     b.child = branch_handles.at(i).second;
     b.boundingBox = constructed_poly.boundingBox;
 
-    tree->polygons.insert({b.child, constructed_poly});
+    // If the MBR has not been split into a polygon, don't keep it in the map.
+    if (constructed_poly.basicRectangles.size() != 1) {
+      tree->polygons.insert({b.child, constructed_poly});
+    }
 
     branch_node->addBranchToNode(b);
   }
