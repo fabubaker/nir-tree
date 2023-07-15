@@ -34,6 +34,8 @@
 #include <cstddef>
 #include <storage/tree_node_allocator.h>
 
+#include <boost/serialization/vector.hpp>
+
 // Generic hash_combine
 template <class T>
 inline void hash_combine(std::size_t& seed, const T& v)
@@ -107,6 +109,11 @@ class Point
 		friend bool operator!=(const Point &lhs, const Point &rhs);
 		friend std::ostream& operator<<(std::ostream &os, const Point &point);
 
+  private:
+    friend class boost::serialization::access;
+    template <typename Archive> void serialize(Archive &ar, const unsigned int version) {
+      ar & values;
+    }
 };
 
 static_assert(sizeof(Point) == sizeof(double) * dimensions);
@@ -171,6 +178,13 @@ class Rectangle
 		friend bool operator==(const Rectangle &lr, const Rectangle &rr);
 		friend bool operator!=(const Rectangle &lr, const Rectangle &rr);
 		friend std::ostream& operator<<(std::ostream& os, const Rectangle &rectangle);
+
+  private:
+    friend class boost::serialization::access;
+    template <typename Archive> void serialize(Archive &ar, const unsigned int version) {
+      ar & lowerLeft;
+      ar & upperRight;
+    }
 };
 
 bool operator==(const Rectangle &lhs, const Rectangle &rhs);
@@ -262,6 +276,13 @@ class IsotheticPolygon
 
     bool containsPointWithMetrics(const Point &givenPoint, unsigned &intersectionCount) const;
     bool intersectsRectangleWithMetrics(const Rectangle &givenRectangle, unsigned int &intersectionCount) const;
+
+  private:
+    friend class boost::serialization::access;
+    template <typename Archive> void serialize(Archive &ar, const unsigned int version) {
+      ar & boundingBox;
+      ar & basicRectangles;
+    }
 };
 
 bool operator==(const IsotheticPolygon &lhs, const IsotheticPolygon &rhs);

@@ -10,6 +10,9 @@
 #include <cstdint>
 #include <limits>
 
+#include <boost/serialization/access.hpp>
+
+
 template <typename T>
 class pinned_node_ptr {
 public:
@@ -115,6 +118,12 @@ public:
           page_id_ = 0;
           offset_ = 0;
         }
+    private:
+        friend class boost::serialization::access;
+        template <typename Archive> void serialize(Archive &ar, const unsigned int version) {
+          ar & page_id_;
+          ar & offset_;
+        }
     };
 
     tree_node_handle(uint32_t page_id, uint16_t offset, NodeHandleType type) :
@@ -193,6 +202,12 @@ private:
     // Special bits to indicate what type of node is on the other
     // end of this handle.
     uint8_t type_;
+
+    friend class boost::serialization::access;
+    template <typename Archive> void serialize(Archive &ar, const unsigned int version) {
+      ar & page_location_;
+      ar & type_;
+    }
 };
 
 static_assert( sizeof(tree_node_handle) == 12 );

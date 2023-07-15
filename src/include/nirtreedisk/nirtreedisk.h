@@ -32,6 +32,13 @@
 #include <fcntl.h>
 #include <unistd.h>
 
+#include <map>
+#include <fstream>
+#include <boost/archive/text_iarchive.hpp>
+#include <boost/archive/text_oarchive.hpp>
+
+#include <boost/serialization/map.hpp>
+
 namespace nirtreedisk {
 template <int min_branch_factor, int max_branch_factor, class strategy = LineMinimizeDownsplits>
 class NIRTreeDisk : public Index {
@@ -133,14 +140,21 @@ public:
 
     // Step 2:
     // Write metadata file
-    std::string meta_fname =
-        node_allocator_->get_backing_file_name() + ".meta";
+    std::string meta_fname = node_allocator_->get_backing_file_name() + ".meta";
+    std::string polygon_fname = node_allocator_->get_backing_file_name() + ".polygons";
+
+
     int fd = open(meta_fname.c_str(), O_WRONLY | O_TRUNC | O_CREAT, S_IRUSR | S_IWUSR);
     assert(fd >= 0);
     // yes, yes, i should loop this whatever
     int rc = write(fd, (char *)&root, sizeof(root));
     assert(rc == sizeof(root));
     close(fd);
+
+    std::ofstream polygon_file(polygon_fname);
+    boost::archive::text_oarchive polygon_archive(polygon_file);
+    polygon_archive << polygons;
+    polygon_file.close();
   }
 };
 

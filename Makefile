@@ -5,6 +5,7 @@ CXX := g++-10
 DIR := src/include # Include directory
 CXXFLAGS := -std=c++2a -Wall -fno-strict-aliasing -fno-omit-frame-pointer
 CPPFLAGS := -DDIM=2 -I $(DIR)
+LIBS := -lboost_serialization
 
 ifdef PROD
 CPPFLAGS := -DNDEBUG $(CPPFLAGS)
@@ -53,10 +54,10 @@ bin/main: $(OBJ) src/main.o
 	cp src/revisedrstartree/node.o bin/revisedrstartreenode.o
 	rm -rf test*.o
 	cp $(OBJ_TO_COPY) bin/
-	$(CXX) $(CXXFLAGS) $(CPPFLAGS) bin/*.o src/main.o -o bin/main -I $(DIR)
+	$(CXX) $(CXXFLAGS) $(CPPFLAGS) bin/*.o src/main.o -o bin/main -I $(DIR) $(LIBS)
 
 bin/gen_tree: $(OBJ) bin/main src/gen_tree.o
-	$(CXX) $(CXXFLAGS) $(CPPFLAGS) bin/*.o src/gen_tree.o -o bin/gen_tree -I $(DIR)
+	$(CXX) $(CXXFLAGS) $(CPPFLAGS) bin/*.o src/gen_tree.o -o bin/gen_tree -I $(DIR) $(LIBS)
 
 bin/tests: $(TESTOBJ) bin/main
 	$(CXX) $(CXXFLAGS) $(CPPFLAGS) bin/*.o src/tests/*.o -o bin/tests
