@@ -39,6 +39,7 @@ public:
   tree_node_handle root;
   std::unique_ptr<tree_node_allocator> node_allocator_;
   std::vector<bool> hasReinsertedOnLevel;
+  std::map<tree_node_handle, IsotheticPolygon> polygons;
 
   // Constructors and destructors
   NIRTreeDisk(size_t memory_budget, std::string backing_file) : node_allocator_(std::make_unique<tree_node_allocator>(memory_budget, backing_file)) {
@@ -48,7 +49,7 @@ public:
 
     hasReinsertedOnLevel = {false};
     // If this is a fresh tree, we need a root
-    // Update: We disable this for bulk-loading since the repacked root node
+    // Update: We disable this for bulk-loading since the root node
     // will be created anyways.
     if (existing_page_count == 0) {
 
