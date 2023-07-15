@@ -1846,14 +1846,32 @@ void point_search_branch_node(BranchNode<min_branch_factor, max_branch_factor, s
 {
   unsigned matching_branch_counter = 0;
   unsigned intersection_count = 0;
+
   for (size_t i = 0; i < node.cur_offset_; i++) {
     Branch &b = node.entries.at(i);
+
     intersection_count++;
     if (b.boundingBox.containsPoint(requestedPoint)) {
-      context.push(b.child);
-      matching_branch_counter++;
+      auto itr = treeRef->polygons.find(b.child);
+
+      // This branch has no polygons, just use info from native MBR
+      if (itr == treeRef->polygons.end()) {
+        context.push(b.child);
+        matching_branch_counter++;
+        break;
+      }
+
+      IsotheticPolygon polygon = itr->second;
+
+      intersection_count++;
+      if (polygon.containsPoint(requestedPoint)) {
+        context.push(b.child);
+        matching_branch_counter++;
+        break;
+      }
     }
   }
+
   treeRef->stats.recordScatter(matching_branch_counter);
   treeRef->stats.recordIntersectionCount(intersection_count);
 }
@@ -1947,12 +1965,31 @@ void rectangle_search_branch_node(BranchNode<min_branch_factor, max_branch_facto
                                   std::stack<tree_node_handle> &context,
                                   NIRTreeDisk<min_branch_factor, max_branch_factor, strategy> *treeRef)
 {
+  unsigned intersection_count = 0;
+
   for (size_t i = 0; i < node.cur_offset_; i++) {
     Branch &b = node.entries.at(i);
+
+    intersection_count++;
     if (b.boundingBox.intersectsRectangle(requestedRectangle)) {
-      context.push(b.child);
+      auto itr = treeRef->polygons.find(b.child);
+
+      // This branch has no polygons, just use info from native MBR
+      if (itr == treeRef->polygons.end()) {
+        context.push(b.child);
+        continue;
+      }
+
+      IsotheticPolygon polygon = itr->second;
+
+      intersection_count++;
+      if (polygon.intersectsRectangle(requestedRectangle)) {
+        context.push(b.child);
+      }
     }
   }
+
+  treeRef->stats.recordIntersectionCount(intersection_count);
 }
 
 template <int min_branch_factor, int max_branch_factor, class strategy>
