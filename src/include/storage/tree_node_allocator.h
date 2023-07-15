@@ -118,12 +118,13 @@ public:
           page_id_ = 0;
           offset_ = 0;
         }
-    private:
-        friend class boost::serialization::access;
-        template <typename Archive> void serialize(Archive &ar, const unsigned int version) {
-          ar & page_id_;
-          ar & offset_;
-        }
+
+        private:
+          friend class boost::serialization::access;
+          template <typename Archive> void serialize(Archive &ar, const unsigned int version) {
+            ar & page_id_;
+            ar & offset_;
+          }
     };
 
     tree_node_handle(uint32_t page_id, uint16_t offset, NodeHandleType type) :
