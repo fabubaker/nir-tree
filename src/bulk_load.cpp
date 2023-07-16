@@ -622,12 +622,12 @@ void bulk_load_tree(
   std::cout << "Num els: " << num_els << std::endl;
   uint64_t max_depth = std::floor(log(num_els) / log(max_branch_factor));
   std::cout << "Max depth required: " << max_depth << std::endl;
+  std::cout << "Size of NIR branch node: " <<
+    sizeof(nirtreedisk::BranchNode<5, NIR_FANOUT, nirtreedisk::ExperimentalStrategy>) << std::endl;
   intersection_count = 0;
 
   auto tree_ptr = tree;
 
-  std::cout << "Size of inline unbounded polygon: "
-            << compute_sizeof_inline_unbounded_polygon(MAX_RECTANGLE_COUNT) << std::endl;
   std::chrono::high_resolution_clock::time_point begin_time = std::chrono::high_resolution_clock::now();
   auto ret = quad_tree_style_load(
   tree_ptr, begin, end,
@@ -652,6 +652,8 @@ void bulk_load_tree(
     std::vector<Point>::iterator end,
     unsigned max_branch_factor
 ) {
+  std::cout << "Size of R* branch node: " << sizeof(rstartreedisk::BranchNode<5, R_STAR_FANOUT>) << std::endl;
+
   /* Start measuring bulk load time */
   std::chrono::high_resolution_clock::time_point begin_time = std::chrono::high_resolution_clock::now();
   std::vector<tree_node_handle> leaves = str_packing_leaf(tree, begin, end,max_branch_factor);
