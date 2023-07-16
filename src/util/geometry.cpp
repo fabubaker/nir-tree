@@ -1253,6 +1253,16 @@ std::ostream& operator<<(std::ostream &os, const IsotheticPolygon &polygon)
 	return os;
 }
 
+unsigned long IsotheticPolygon::computeMemory() {
+  unsigned long memory = 0;
+
+  for (const Rectangle &basicRectangle: basicRectangles) {
+    memory += sizeof(basicRectangle);
+  }
+
+  return memory;
+}
+
 bool operator==(const InlineBoundedIsotheticPolygon &lhs, const
         InlineBoundedIsotheticPolygon &rhs) {
     return lhs.rectangle_count_ == rhs.rectangle_count_ and
