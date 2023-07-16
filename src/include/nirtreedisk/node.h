@@ -97,8 +97,8 @@ template <int min_branch_factor, int max_branch_factor, class strategy>
 requires(std::derived_from<strategy, BranchPartitionStrategy>)
 class LeafNode {
 public:
-  unsigned cur_offset_;
   std::array<Point, max_branch_factor> entries;
+  unsigned cur_offset_;
 
   LeafNode(): cur_offset_(0) {
     static_assert(sizeof(LeafNode<min_branch_factor, max_branch_factor, strategy>) <= PAGE_DATA_SIZE);
@@ -149,8 +149,8 @@ template <int min_branch_factor, int max_branch_factor, class strategy>
 requires(std::derived_from<strategy, BranchPartitionStrategy>)
 class BranchNode {
 public:
-  unsigned cur_offset_;
   std::array<Branch, max_branch_factor> entries;
+  unsigned cur_offset_;
 
   // Constructors and destructors
   BranchNode(): cur_offset_(0) {}

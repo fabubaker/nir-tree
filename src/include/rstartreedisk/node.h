@@ -57,8 +57,8 @@ typedef std::variant<Branch, Point> NodeEntry;
 template <int min_branch_factor, int max_branch_factor>
 class LeafNode {
 public:
-  unsigned cur_offset_;
   std::array<Point, max_branch_factor> entries;
+  unsigned cur_offset_;
 
   // Constructors and destructors
   LeafNode(): cur_offset_(0) {}
