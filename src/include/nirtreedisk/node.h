@@ -3216,16 +3216,6 @@ void stat_node(tree_node_handle start_handle, NIRTreeDisk<min_branch_factor, max
         Branch &b = current_branch_node->entries.at(i);
         IsotheticPolygon polygon = b.fetch_polygon(treeRef->polygons);
         coverage += polygon.area();
-      }
-
-      memoryFootprint += sizeof(BranchNode<min_branch_factor, max_branch_factor, strategy>); // +
-      // other out of line polys
-
-      deadSpace += (sizeof(Branch) * (max_branch_factor - current_branch_node->cur_offset_));
-
-      for (unsigned i = 0; i < current_branch_node->cur_offset_; i++) {
-        Branch &b = current_branch_node->entries.at(i);
-        IsotheticPolygon polygon = b.fetch_polygon(treeRef->polygons);
 
         polygonSize = polygon.basicRectangles.size();
         assert(polygonSize < histogramPolygon.size());
@@ -3248,6 +3238,11 @@ void stat_node(tree_node_handle start_handle, NIRTreeDisk<min_branch_factor, max
 
         context.push(b.child);
       }
+
+      memoryFootprint += sizeof(BranchNode<min_branch_factor, max_branch_factor, strategy>); // +
+      // other out of line polys
+
+      deadSpace += (sizeof(Branch) * (max_branch_factor - current_branch_node->cur_offset_));
     }
   }
 
