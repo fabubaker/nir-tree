@@ -3203,7 +3203,6 @@ void stat_node(tree_node_handle start_handle, NIRTreeDisk<min_branch_factor, max
       totalLeaves++;
       memoryFootprint += sizeof(LeafNode<min_branch_factor, max_branch_factor, strategy>);
     } else if (currentContext.get_type() == BRANCH_NODE) {
-#if 0
       auto current_branch_node = treeRef->get_branch_node(currentContext);
 
       unsigned fanout = current_branch_node->cur_offset_;
@@ -3215,7 +3214,7 @@ void stat_node(tree_node_handle start_handle, NIRTreeDisk<min_branch_factor, max
       // Compute the overlap and coverage of our children
       for (unsigned i = 0; i < current_branch_node->cur_offset_; i++) {
         Branch &b = current_branch_node->entries.at(i);
-        IsotheticPolygon polygon = b.materialize_polygon(allocator);
+        IsotheticPolygon polygon = b.fetch_polygon(treeRef->polygons);
         coverage += polygon.area();
       }
 
@@ -3226,12 +3225,19 @@ void stat_node(tree_node_handle start_handle, NIRTreeDisk<min_branch_factor, max
 
       for (unsigned i = 0; i < current_branch_node->cur_offset_; i++) {
         Branch &b = current_branch_node->entries.at(i);
-        IsotheticPolygon polygon = b.materialize_polygon(allocator);
+        IsotheticPolygon polygon = b.fetch_polygon(treeRef->polygons);
 
         polygonSize = polygon.basicRectangles.size();
         assert(polygonSize < histogramPolygon.size());
         histogramPolygon[polygonSize]++;
         totalPolygonSize += polygonSize;
+
+        // Compute space occupied by polygons
+        // Ignore polygons with just one rectangle, we don't actually store
+        // them in the map, they are constructed at run-time.
+        if (polygon.basicRectangles.size() > 1) {
+          memoryPolygons += polygon.computeMemory();
+        }
 
         // FIXME: these stats are all wrong now.
         for (Rectangle r : polygon.basicRectangles) {
@@ -3240,16 +3246,8 @@ void stat_node(tree_node_handle start_handle, NIRTreeDisk<min_branch_factor, max
           }
         }
 
-        if (polygonSize < MAX_RECTANGLE_COUNT) {
-          deadSpace += (MAX_RECTANGLE_COUNT - polygonSize) * sizeof(Rectangle);
-
-        } else if (polygonSize > MAX_RECTANGLE_COUNT) {
-          deadSpace += sizeof(Branch) - sizeof(tree_node_handle);
-        }
-
         context.push(b.child);
       }
-#endif
     }
   }
 
