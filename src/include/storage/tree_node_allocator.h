@@ -111,12 +111,12 @@ public:
         }
 
         bool has_value() const {
-          return page_id_ != 0 && offset_ != 0;
+          return offset_ != std::numeric_limits<uint16_t>::max();
         }
 
         void reset() {
           page_id_ = 0;
-          offset_ = 0;
+          offset_ = std::numeric_limits<uint16_t>::max();;
         }
 
         private:
@@ -133,11 +133,11 @@ public:
     }
 
     tree_node_handle() :
-        page_location_(0, 0),
+        page_location_(0, std::numeric_limits<uint16_t>::max()),
         type_( 0 ) {}
 
     tree_node_handle( std::nullptr_t ) :
-        page_location_(0, 0),
+        page_location_(0, std::numeric_limits<uint16_t>::max()),
         type_( 0 ) {}
 
     operator bool() const {
@@ -154,6 +154,11 @@ public:
 
     bool operator==( const std::nullptr_t ) const {
         return not page_location_.has_value();
+    }
+
+    // For std::map
+    bool operator<(const tree_node_handle &other) const {
+      return this->page_location_.page_id_ < other.page_location_.page_id_;
     }
 
     tree_node_handle &operator=( const tree_node_handle &other ) =
