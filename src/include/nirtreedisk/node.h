@@ -69,18 +69,6 @@ struct Branch {
 
   Rectangle boundingBox;
   tree_node_handle child;
-
-  public:
-      IsotheticPolygon fetch_polygon(std::map<tree_node_handle, IsotheticPolygon> polygon_map) {
-        auto itr = polygon_map.find(child);
-
-        // There is no polygon data for this branch, just reuse the boundingBox
-        if (itr == polygon_map.end()) {
-          return IsotheticPolygon(boundingBox);
-        }
-
-        return itr->second;
-      }
 };
 
 struct SplitResult {
@@ -1857,20 +1845,37 @@ void point_search_branch_node(BranchNode<min_branch_factor, max_branch_factor, s
                               NIRTreeDisk<min_branch_factor, max_branch_factor, strategy> *treeRef)
 {
   unsigned matching_branch_counter = 0;
+  unsigned intersection_count = 0;
 
   for (size_t i = 0; i < node.cur_offset_; i++) {
     Branch &b = node.entries.at(i);
-    IsotheticPolygon polygon = b.fetch_polygon(treeRef->polygons);
 
-    if (polygon.containsPoint(requestedPoint)) {
+    intersection_count++;
+    if (b.boundingBox.containsPoint(requestedPoint)) {
+      auto itr = treeRef->polygons.find(b.child);
+
+      // This branch has no polygons, just use info from native MBR
+      if (itr == treeRef->polygons.end()) {
         context.push(b.child);
         matching_branch_counter++;
         break;
+      }
+
+      IsotheticPolygon polygon = itr->second;
+
+      intersection_count++;
+      if (polygon.containsPoint(requestedPoint)) {
+        context.push(b.child);
+        matching_branch_counter++;
+        break;
+      }
     }
   }
 
   treeRef->stats.recordScatter(matching_branch_counter);
+  treeRef->stats.recordIntersectionCount(intersection_count);
 }
+
 
 template <int min_branch_factor, int max_branch_factor, class strategy>
 std::vector<Point> point_search(tree_node_handle start_point, Point &requestedPoint,
@@ -1960,15 +1965,31 @@ void rectangle_search_branch_node(BranchNode<min_branch_factor, max_branch_facto
                                   std::stack<tree_node_handle> &context,
                                   NIRTreeDisk<min_branch_factor, max_branch_factor, strategy> *treeRef)
 {
+  unsigned intersection_count = 0;
+
   for (size_t i = 0; i < node.cur_offset_; i++) {
     Branch &b = node.entries.at(i);
-    IsotheticPolygon polygon = b.fetch_polygon(treeRef->polygons);
 
-    if (polygon.intersectsRectangle(requestedRectangle)) {
+    intersection_count++;
+    if (b.boundingBox.intersectsRectangle(requestedRectangle)) {
+      auto itr = treeRef->polygons.find(b.child);
+
+      // This branch has no polygons, just use info from native MBR
+      if (itr == treeRef->polygons.end()) {
         context.push(b.child);
         continue;
+      }
+
+      IsotheticPolygon polygon = itr->second;
+
+      intersection_count++;
+      if (polygon.intersectsRectangle(requestedRectangle)) {
+        context.push(b.child);
+      }
     }
   }
+
+  treeRef->stats.recordIntersectionCount(intersection_count);
 }
 
 template <int min_branch_factor, int max_branch_factor, class strategy>
