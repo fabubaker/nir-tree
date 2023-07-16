@@ -1834,6 +1834,7 @@ void point_search_leaf_node(LeafNode<min_branch_factor, max_branch_factor, strat
     const Point &p = node.entries.at(i);
     if (p == requestedPoint) {
       accumulator.push_back(p);
+      break;
     }
   }
 }
@@ -3235,7 +3236,15 @@ void stat_node(tree_node_handle start_handle, NIRTreeDisk<min_branch_factor, max
       // Compute the overlap and coverage of our children
       for (unsigned i = 0; i < current_branch_node->cur_offset_; i++) {
         Branch &b = current_branch_node->entries.at(i);
-        IsotheticPolygon polygon = b.fetch_polygon(treeRef->polygons);
+        IsotheticPolygon polygon;
+
+        auto itr = treeRef->polygons.find(b.child);
+        if (itr == treeRef->polygons.end()) {
+          polygon = IsotheticPolygon(b.boundingBox);
+        } else {
+          polygon = itr->second;
+        }
+
         coverage += polygon.area();
 
         polygonSize = polygon.basicRectangles.size();
