@@ -94,20 +94,19 @@ void generate_tree(std::map<std::string, size_t> &configU, std::map<std::string,
     std::cout << "Creating tree with " << configU["buffer_pool_memory"] << "bytes" << std::endl;
     bulk_load_tree(tree, configU, all_points.begin(), all_points.begin() + cut_off_bulk_load, NIR_FANOUT);
     std::cout << "Created NIRTree." << std::endl;
-    tree->stat(); // Print tree stats BEFORE repacking
 
-    exit(0);
     spatialIndex = tree;
+    tree->stat();
+    exit(0);
   } else if (configU["tree"] == R_STAR_TREE) {
     rstartreedisk::RStarTreeDisk<5, R_STAR_FANOUT> *tree = new rstartreedisk::RStarTreeDisk<5, R_STAR_FANOUT>(configU["buffer_pool_memory"], backing_file);
     std::cout << "Bulk Loading..." << std::endl;
     bulk_load_tree(tree, configU, all_points.begin(), all_points.begin() + cut_off_bulk_load, R_STAR_FANOUT);
     std::cout << "Created R*Tree" << std::endl;
+
     spatialIndex = tree;
-
-    tree->stat(); // Print tree stats AFTER repacking
+    tree->stat();
     exit(0);
-
   } else {
     abort();
   }

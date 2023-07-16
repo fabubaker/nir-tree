@@ -669,7 +669,6 @@ void bulk_load_tree(
   std::cout << "Bulk loading tree took: " << delta.count() << std::endl;
   /* End measuring bulk load time */
 
-  tree->stat();
   std::cout << "Total pages occupied: " << tree->node_allocator_->cur_page_ << std::endl;
   tree->write_metadata();
 }
