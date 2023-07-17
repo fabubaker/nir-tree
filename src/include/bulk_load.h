@@ -9,6 +9,8 @@
 #include <unistd.h>
 #include <vector>
 
+enum BulkLoadAlg { STR, QTS };
+
 template <class TreeType>
 void make_all_rects_disjoint(
     TreeType *treeRef,

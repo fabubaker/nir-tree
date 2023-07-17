@@ -149,7 +149,7 @@ int main(int argc, char **argv) {
   configU.emplace("distribution", CALIFORNIA);
   configU.emplace("seed", 0);
 
-  while ((option = getopt(argc, argv, "t:m:n:s:p:g:z:B:")) != -1) {
+  while ((option = getopt(argc, argv, "t:m:n:s:p:g:z:B:A:")) != -1) {
     switch (option) {
     case 't': {
       configU["tree"] = (TreeType)std::stoull(optarg);
@@ -182,6 +182,11 @@ int main(int argc, char **argv) {
     case 'B': // buffer pool memory in MB
     {
       configU["buffer_pool_memory"] = std::stoull(optarg) * 1000000;
+      break;
+    }
+    case 'A':
+    {
+      configU["bulk_load_alg"] = std::stoull(optarg);
       break;
     }
     }

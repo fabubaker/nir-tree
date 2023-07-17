@@ -497,7 +497,6 @@ std::pair<tree_node_handle, Rectangle> quad_tree_style_load(
 
   uint64_t tiles = std::floor(sqrt(branch_factor));
   std::vector<uint64_t> x_lines = find_bounding_lines(start, stop, 0, branch_factor, tiles, std::floor(branch_factor / tiles), max_depth - cur_depth);
-  std::vector<Rectangle> existing_boxes;
 
   std::vector<std::pair<IsotheticPolygon, tree_node_handle>> branch_handles;
   branch_handles.reserve(NIR_FANOUT);
@@ -617,16 +616,16 @@ void bulk_load_tree(
     std::vector<Point>::iterator end,
     unsigned max_branch_factor
 ) {
-  // Keep in mind there is a 0th level, so floor is correct
+  intersection_count = 0;
+  auto tree_ptr = tree;
   uint64_t num_els = (end - begin);
-  std::cout << "Num els: " << num_els << std::endl;
+  // Keep in mind there is a 0th level, so floor is correct
   uint64_t max_depth = std::floor(log(num_els) / log(max_branch_factor));
+
+  std::cout << "Num els: " << num_els << std::endl;
   std::cout << "Max depth required: " << max_depth << std::endl;
   std::cout << "Size of NIR branch node: " <<
     sizeof(nirtreedisk::BranchNode<5, NIR_FANOUT, nirtreedisk::ExperimentalStrategy>) << std::endl;
-  intersection_count = 0;
-
-  auto tree_ptr = tree;
 
   std::chrono::high_resolution_clock::time_point begin_time = std::chrono::high_resolution_clock::now();
   auto ret = quad_tree_style_load(
@@ -637,6 +636,7 @@ void bulk_load_tree(
   std::cout << "Out of line size: " << tree->node_allocator_.get()->out_of_line_nodes_size << std::endl;
   std::chrono::high_resolution_clock::time_point end_time = std::chrono::high_resolution_clock::now();
   std::chrono::duration<double> delta = std::chrono::duration_cast<std::chrono::duration<double>>(end_time - begin_time);
+
   std::cout << "Bulk loading NIRTree took: " << delta.count() << std::endl;
   std::cout << "Completed with " << intersection_count << " intersections" << std::endl;
   std::cout << "Total pages occupied: " << tree->node_allocator_->cur_page_ << std::endl;
@@ -656,19 +656,21 @@ void bulk_load_tree(
 
   /* Start measuring bulk load time */
   std::chrono::high_resolution_clock::time_point begin_time = std::chrono::high_resolution_clock::now();
+
   std::vector<tree_node_handle> leaves = str_packing_leaf(tree, begin, end,max_branch_factor);
   std::vector<tree_node_handle> branches = str_packing_branch(tree, leaves, max_branch_factor);
 
   while (branches.size() > 1) {
     branches = str_packing_branch(tree, branches, max_branch_factor);
   }
+
   tree->root = branches.at(0);
 
   std::chrono::high_resolution_clock::time_point end_time = std::chrono::high_resolution_clock::now();
   std::chrono::duration<double> delta = std::chrono::duration_cast<std::chrono::duration<double>>(end_time - begin_time);
-  std::cout << "Bulk loading tree took: " << delta.count() << std::endl;
   /* End measuring bulk load time */
 
+  std::cout << "Bulk loading tree took: " << delta.count() << std::endl;
   std::cout << "Total pages occupied: " << tree->node_allocator_->cur_page_ << std::endl;
   tree->write_metadata();
 }
