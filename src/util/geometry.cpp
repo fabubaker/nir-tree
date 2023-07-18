@@ -777,9 +777,7 @@ bool IsotheticPolygon::intersectsRectangle(const Rectangle &givenRectangle) cons
 
 bool IsotheticPolygon::intersectsRectangleWithMetrics(const Rectangle &givenRectangle, unsigned &intersectionCount) const
 {
-  intersectionCount++;
-  if (!boundingBox.intersectsRectangle(givenRectangle))
-  {
+  if (!boundingBox.intersectsRectangle(givenRectangle)) {
     return false;
   }
 
@@ -793,6 +791,20 @@ bool IsotheticPolygon::intersectsRectangleWithMetrics(const Rectangle &givenRect
     }
   }
 
+  return false;
+}
+
+bool IsotheticPolygon::containsPointWithMetrics(const Point &p, unsigned &intersectionCount) const {
+  if (!boundingBox.containsPoint( p )) {
+    return false;
+  }
+
+  for (const Rectangle &basicRectangle : basicRectangles) {
+    intersectionCount++;
+    if (basicRectangle.containsPoint(p)) {
+      return true;
+    }
+  }
   return false;
 }
 

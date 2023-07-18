@@ -1134,14 +1134,20 @@ void BranchNode<min_branch_factor, max_branch_factor>::exhaustiveSearch(const Po
 template <int min_branch_factor, int max_branch_factor>
 void point_search_leaf_node(LeafNode<min_branch_factor, max_branch_factor> &node,
                             Point &requestedPoint,
-                            std::vector<Point> &accumulator)
+                            std::vector<Point> &accumulator,
+                            RStarTreeDisk<min_branch_factor, max_branch_factor> *treeRef)
 {
+  unsigned intersection_count = 0;
+
   for (unsigned i = 0; i < node.cur_offset_; i++) {
     const Point &p = node.entries.at(i);
+    intersection_count++;
     if (p == requestedPoint) {
       accumulator.push_back(p);
     }
   }
+
+  treeRef->stats.recordIntersectionCount(intersection_count);
 }
 
 template <int min_branch_factor, int max_branch_factor>
@@ -1152,6 +1158,7 @@ void point_search_branch_node(BranchNode<min_branch_factor, max_branch_factor> &
 {
   unsigned matching_branch_counter = 0;
   unsigned intersection_count = 0;
+
   for (size_t i = 0; i < node.cur_offset_; i++) {
     Branch &b = node.entries.at(i);
     intersection_count++;
@@ -1160,6 +1167,7 @@ void point_search_branch_node(BranchNode<min_branch_factor, max_branch_factor> &
       matching_branch_counter++;
     }
   }
+
   treeRef->stats.recordScatter(matching_branch_counter);
   treeRef->stats.recordIntersectionCount(intersection_count);
 }
@@ -1181,7 +1189,7 @@ std::vector<Point> point_search(
 
     if (current_handle.get_type() == LEAF_NODE) {
       auto current_node = treeRef->get_leaf_node(current_handle);
-      point_search_leaf_node(*current_node, requestedPoint, accumulator);
+      point_search_leaf_node(*current_node, requestedPoint, accumulator, treeRef);
 #ifdef STAT
       treeRef->stats.markLeafSearched();
 #endif
@@ -1204,14 +1212,20 @@ std::vector<Point> point_search(
 template <int min_branch_factor, int max_branch_factor>
 void rectangle_search_leaf_node(LeafNode<min_branch_factor, max_branch_factor> &node,
                             Rectangle &requestedRectangle,
-                            std::vector<Point> &accumulator)
+                            std::vector<Point> &accumulator,
+                            RStarTreeDisk<min_branch_factor, max_branch_factor> *treeRef)
 {
+  unsigned intersection_count = 0;
+
   for (unsigned i = 0; i < node.cur_offset_; i++) {
     const Point &p = node.entries.at(i);
+    intersection_count++;
     if (requestedRectangle.containsPoint(p)) {
       accumulator.push_back(p);
     }
   }
+
+  treeRef->stats.recordIntersectionCount(intersection_count);
 }
 
 template <int min_branch_factor, int max_branch_factor>
@@ -1220,12 +1234,17 @@ void rectangle_search_branch_node(BranchNode<min_branch_factor, max_branch_facto
                                 std::stack<tree_node_handle> &context,
                                 RStarTreeDisk<min_branch_factor, max_branch_factor> *treeRef)
 {
+  unsigned intersection_count = 0;
+
   for (size_t i = 0; i < node.cur_offset_; i++) {
     Branch &b = node.entries.at(i);
+    intersection_count++;
     if (b.boundingBox.intersectsRectangle(requestedRectangle)) {
       context.push(b.child);
     }
   }
+
+  treeRef->stats.recordIntersectionCount(intersection_count);
 }
 
 template <int min_branch_factor, int max_branch_factor>
@@ -1245,7 +1264,7 @@ std::vector<Point> rectangle_search(
 
     if (current_handle.get_type() == LEAF_NODE) {
       auto current_node = treeRef->get_leaf_node(current_handle);
-      rectangle_search_leaf_node(*current_node, requestedRectangle, accumulator);
+      rectangle_search_leaf_node(*current_node, requestedRectangle, accumulator, treeRef);
 #ifdef STAT
       treeRef->stats.markLeafSearched();
 #endif

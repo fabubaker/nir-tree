@@ -1828,15 +1828,21 @@ void treeWalker(NIRTreeDisk<min_branch_factor, max_branch_factor, strategy> *tre
 template <int min_branch_factor, int max_branch_factor, class strategy>
 void point_search_leaf_node(LeafNode<min_branch_factor, max_branch_factor, strategy> &node,
                             Point &requestedPoint,
-                            std::vector<Point> &accumulator)
+                            std::vector<Point> &accumulator,
+                            NIRTreeDisk<min_branch_factor, max_branch_factor, strategy> *treeRef)
 {
+  unsigned intersection_count = 0;
+
   for (unsigned i = 0; i < node.cur_offset_; i++) {
     const Point &p = node.entries.at(i);
+    intersection_count++;
     if (p == requestedPoint) {
       accumulator.push_back(p);
       break;
     }
   }
+
+  treeRef->stats.recordIntersectionCount(intersection_count);
 }
 
 template <int min_branch_factor, int max_branch_factor, class strategy>
@@ -1864,8 +1870,7 @@ void point_search_branch_node(BranchNode<min_branch_factor, max_branch_factor, s
 
       IsotheticPolygon polygon = itr->second;
 
-      intersection_count++;
-      if (polygon.containsPoint(requestedPoint)) {
+      if (polygon.containsPointWithMetrics(requestedPoint, intersection_count)) {
         context.push(b.child);
         matching_branch_counter++;
         break;
@@ -1891,7 +1896,7 @@ std::vector<Point> point_search(tree_node_handle start_point, Point &requestedPo
 
     if (current_handle.get_type() == LEAF_NODE) {
       auto current_node = treeRef->get_leaf_node(current_handle);
-      point_search_leaf_node(*current_node, requestedPoint, accumulator);
+      point_search_leaf_node(*current_node, requestedPoint, accumulator, treeRef);
 #ifdef STAT
       treeRef->stats.markLeafSearched();
 #endif
@@ -1950,14 +1955,20 @@ tree_node_handle parent_handle_point_search(
 template <int min_branch_factor, int max_branch_factor, class strategy>
 void rectangle_search_leaf_node(LeafNode<min_branch_factor, max_branch_factor, strategy> &node,
                                 Rectangle &requestedRectangle,
-                                std::vector<Point> &accumulator)
+                                std::vector<Point> &accumulator,
+                                NIRTreeDisk<min_branch_factor, max_branch_factor, strategy> *treeRef)
 {
+  unsigned intersection_count = 0;
+
   for (unsigned i = 0; i < node.cur_offset_; i++) {
     const Point &p = node.entries.at(i);
+    intersection_count++;
     if (requestedRectangle.containsPoint(p)) {
       accumulator.push_back(p);
     }
   }
+
+  treeRef->stats.recordIntersectionCount(intersection_count);
 }
 
 template <int min_branch_factor, int max_branch_factor, class strategy>
@@ -1983,8 +1994,7 @@ void rectangle_search_branch_node(BranchNode<min_branch_factor, max_branch_facto
 
       IsotheticPolygon polygon = itr->second;
 
-      intersection_count++;
-      if (polygon.intersectsRectangle(requestedRectangle)) {
+      if (polygon.intersectsRectangleWithMetrics(requestedRectangle, intersection_count)) {
         context.push(b.child);
       }
     }
@@ -2012,7 +2022,7 @@ std::vector<Point> rectangle_search(
 
     if (current_handle.get_type() == LEAF_NODE) {
       auto current_node = treeRef->get_leaf_node(current_handle);
-      rectangle_search_leaf_node(*current_node, requestedRectangle, accumulator);
+      rectangle_search_leaf_node(*current_node, requestedRectangle, accumulator, treeRef);
 #ifdef STAT
       if (should_track_search) {
         treeRef->stats.markLeafSearched();
