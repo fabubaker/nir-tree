@@ -499,8 +499,10 @@ std::pair<tree_node_handle, Rectangle> quad_tree_style_load(
   auto branch_node = alloc_data.first;
   tree_node_handle branch_handle = alloc_data.second;
 
-  uint64_t tiles = std::floor(sqrt(branch_factor));
-  std::vector<uint64_t> x_lines = find_bounding_lines(start, stop, 0, branch_factor, tiles, std::floor(branch_factor / tiles), max_depth - cur_depth);
+  uint64_t partitions = std::ceil(sqrt(branch_factor));
+  uint64_t sub_partitions = std::ceil(branch_factor / (float) partitions);
+
+  std::vector<uint64_t> x_lines = find_bounding_lines(start, stop, 0, branch_factor, partitions, sub_partitions, max_depth - cur_depth);
 
   std::vector<std::pair<IsotheticPolygon, tree_node_handle>> branch_handles;
   branch_handles.reserve(NIR_FANOUT);
@@ -510,7 +512,7 @@ std::pair<tree_node_handle, Rectangle> quad_tree_style_load(
     uint64_t x_end = x_lines.at(i + 1); /* not inclusive */
 
     std::vector<uint64_t> y_lines = find_bounding_lines(
-        start + x_start, start + x_end, 1, branch_factor, tiles, 1, max_depth - cur_depth);
+        start + x_start, start + x_end, 1, branch_factor, sub_partitions, 1, max_depth - cur_depth);
     for (uint64_t j = 0; j < y_lines.size() - 1; j++) {
       uint64_t y_start = y_lines.at(j);
       uint64_t y_end = y_lines.at(j + 1); /* not inclusive */
