@@ -425,18 +425,18 @@ std::vector<uint64_t> find_bounding_lines(
   lines.push_back(0);
 
   uint64_t count = stop - start;
-  unsigned optimally_filled_branch = pow(branch_factor, length); // Total number of children starting from this level and below
-  unsigned min_branches = std::ceil((double) count / (double) optimally_filled_branch);
-  unsigned branches_per_partition = min_branches / partitions;
-  unsigned remainder = min_branches % partitions;
+  unsigned optimally_filled_branch = pow(branch_factor, length); // Total number of children (points) starting from this level and below
+  unsigned min_branches = std::ceil((double) count / (double) optimally_filled_branch); // Minimum branches at this level
+  unsigned branches_per_partition = min_branches / partitions; // Divide branches at this level to partitions
+  unsigned remaining_branches = min_branches % partitions; // Any leftover branches?
 
   unsigned partition_index = 0;
   for (unsigned partition = 0; partition < partitions - 1; partition++) {
     uint64_t partition_size = optimally_filled_branch * branches_per_partition;
 
-    if (remainder != 0 && partition_size + optimally_filled_branch <= optimally_filled_branch * sub_partitions) {
+    if (remaining_branches != 0 && partition_size + optimally_filled_branch <= optimally_filled_branch * sub_partitions) {
       partition_size += optimally_filled_branch;
-      remainder -= 1;
+      remaining_branches -= 1;
     }
 
     partition_index += partition_size;
@@ -446,6 +446,10 @@ std::vector<uint64_t> find_bounding_lines(
     lines.push_back(partition_index);
   }
   lines.push_back(count);
+
+  // If there are remaining branches, there are not enough partitions to host
+  // all branches.
+  assert(remaining_branches == 0);
 
   return lines;
 }
