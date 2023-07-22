@@ -688,6 +688,7 @@ void bulk_load_tree(
   std::chrono::high_resolution_clock::time_point begin_time = std::chrono::high_resolution_clock::now();
 
   if (configU["bulk_load_alg"] == STR) {
+    std::cout << "Bulk-loading R* using Sort-Tile-Recursive..." << std::endl;
     std::vector<tree_node_handle> leaves = str_packing_leaf(tree, begin, end,max_branch_factor, cur_depth);
     cur_depth--;
     std::vector<tree_node_handle> branches = str_packing_branch(tree, leaves, max_branch_factor, cur_depth);
@@ -700,6 +701,7 @@ void bulk_load_tree(
 
     tree->root = branches.at(0);
   } else if (configU["bulk_load_alg"] == TGS) {
+    std::cout << "Bulk-loading R* using Top-Down Greedy Splitting..." << std::endl;
     tree->root = tgs_load(tree, begin, end, max_branch_factor);
   }
 
