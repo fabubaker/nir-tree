@@ -678,17 +678,21 @@ void bulk_load_tree(
   /* Start measuring bulk load time */
   std::chrono::high_resolution_clock::time_point begin_time = std::chrono::high_resolution_clock::now();
 
-  std::vector<tree_node_handle> leaves = str_packing_leaf(tree, begin, end,max_branch_factor, cur_depth);
-  cur_depth--;
-  std::vector<tree_node_handle> branches = str_packing_branch(tree, leaves, max_branch_factor, cur_depth);
-  cur_depth--;
-
-  while (branches.size() > 1) {
-    branches = str_packing_branch(tree, branches, max_branch_factor, cur_depth);
+  if (configU["bulk_load_alg"] == STR) {
+    std::vector<tree_node_handle> leaves = str_packing_leaf(tree, begin, end,max_branch_factor, cur_depth);
     cur_depth--;
-  }
+    std::vector<tree_node_handle> branches = str_packing_branch(tree, leaves, max_branch_factor, cur_depth);
+    cur_depth--;
 
-  tree->root = branches.at(0);
+    while (branches.size() > 1) {
+      branches = str_packing_branch(tree, branches, max_branch_factor, cur_depth);
+      cur_depth--;
+    }
+
+    tree->root = branches.at(0);
+  } else if (configU["bulk_load_alg"] == TGS) {
+    tree->root = tgs_load(tree, begin, end, max_branch_factor);
+  }
 
   std::chrono::high_resolution_clock::time_point end_time = std::chrono::high_resolution_clock::now();
   std::chrono::duration<double> delta = std::chrono::duration_cast<std::chrono::duration<double>>(end_time - begin_time);
