@@ -624,6 +624,15 @@ std::pair<tree_node_handle, Rectangle> quad_tree_style_load(
   return std::make_pair(branch_handle, bbox);
 }
 
+tree_node_handle tgs_load(
+        rstartreedisk::RStarTreeDisk<5, R_STAR_FANOUT> *tree,
+        std::vector<Point>::iterator begin,
+        std::vector<Point>::iterator end,
+        unsigned branch_factor
+) {
+  return tree_node_handle();
+}
+
 template <>
 void bulk_load_tree(
     nirtreedisk::NIRTreeDisk<5, NIR_FANOUT, nirtreedisk::ExperimentalStrategy> *tree,
