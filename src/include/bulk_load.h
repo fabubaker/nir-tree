@@ -9,7 +9,7 @@
 #include <unistd.h>
 #include <vector>
 
-enum BulkLoadAlg { STR, QTS };
+enum BulkLoadAlg { STR, QTS, TGS };
 
 template <class TreeType>
 void make_all_rects_disjoint(
