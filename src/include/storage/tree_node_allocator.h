@@ -127,6 +127,8 @@ public:
           }
     };
 
+    static_assert(sizeof(page_location) == 8);
+
     tree_node_handle(uint32_t page_id, uint16_t offset, NodeHandleType type) :
         page_location_(page_id, offset),
         type_(type.type_) {
