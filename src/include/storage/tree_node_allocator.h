@@ -195,6 +195,14 @@ public:
         type_ = type.type_;
     }
 
+    inline void set_level(uint16_t level) {
+      level_ = level;
+    }
+
+    inline uint16_t get_level() {
+      return level_;
+    }
+
     friend std::ostream& operator<<(std::ostream &os, const tree_node_handle &handle ) {
         if ( handle.page_location_.has_value() ) {
             os << "{ PageID: " << handle.page_location_.page_id_
@@ -207,7 +215,7 @@ public:
 
 private:
     page_location page_location_;
-    uint16_t level; // Level of this node in the entire tree
+    uint16_t level_; // Level of this node in the entire tree
     uint8_t type_;  // Special bits to indicate what type of node is on the other
                     // end of this handle.
 
