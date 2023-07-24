@@ -207,9 +207,9 @@ public:
 
 private:
     page_location page_location_;
-    // Special bits to indicate what type of node is on the other
-    // end of this handle.
-    uint8_t type_;
+    uint16_t level; // Level of this node in the entire tree
+    uint8_t type_;  // Special bits to indicate what type of node is on the other
+                    // end of this handle.
 
     friend class boost::serialization::access;
     template <typename Archive> void serialize(Archive &ar, const unsigned int version) {
