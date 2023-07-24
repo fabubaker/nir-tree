@@ -190,7 +190,8 @@ std::vector<tree_node_handle> str_packing_branch(
     std::vector<tree_node_handle> &child_nodes,
     unsigned branch_factor,
     LN *leaf_node_type,
-    BN *branch_node_type) {
+    BN *branch_node_type,
+    unsigned cur_depth) {
   tree_node_allocator *allocator = tree->node_allocator_.get();
 
   // Get bbox once for everything so I'm not materializing it
@@ -294,12 +295,13 @@ template <>
 std::vector<tree_node_handle> str_packing_branch(
     nirtreedisk::NIRTreeDisk<5, NIR_FANOUT, nirtreedisk::ExperimentalStrategy> *tree,
     std::vector<tree_node_handle> &child_nodes,
-    unsigned branch_factor) {
+    unsigned branch_factor,
+    unsigned cur_depth) {
   nirtreedisk::LeafNode<5, NIR_FANOUT, nirtreedisk::ExperimentalStrategy> *targ = nullptr;
   nirtreedisk::BranchNode<5, NIR_FANOUT, nirtreedisk::ExperimentalStrategy> *targ2 = nullptr;
 
   return str_packing_branch(
-    tree, child_nodes, branch_factor, targ,targ2
+    tree, child_nodes, branch_factor, targ,targ2, cur_depth
   );
 }
 
@@ -307,14 +309,15 @@ template <>
 std::vector<tree_node_handle> str_packing_branch(
     rstartreedisk::RStarTreeDisk<5, R_STAR_FANOUT> *tree,
     std::vector<tree_node_handle> &child_nodes,
-    unsigned branch_factor
+    unsigned branch_factor,
+    unsigned cur_depth
 ) {
   rstartreedisk::LeafNode<5, R_STAR_FANOUT> *targ = nullptr;
   rstartreedisk::BranchNode<5, R_STAR_FANOUT> *targ2 = nullptr;
 
 
   return str_packing_branch(
-    tree, child_nodes, branch_factor, targ, targ2
+    tree, child_nodes, branch_factor, targ, targ2, cur_depth
   );
 }
 
@@ -325,7 +328,8 @@ std::vector<tree_node_handle> str_packing_leaf(
     std::vector<Point>::iterator end,
     unsigned branch_factor,
     LN *ln_type,
-    BN *bn_type
+    BN *bn_type,
+    unsigned cur_depth
 ) {
   uint64_t count = (end - begin);
   uint64_t P = count / branch_factor;
@@ -384,13 +388,14 @@ std::vector<tree_node_handle> str_packing_leaf(
     nirtreedisk::NIRTreeDisk<5, NIR_FANOUT, nirtreedisk::ExperimentalStrategy> *tree,
     std::vector<Point>::iterator begin,
     std::vector<Point>::iterator end,
-    unsigned branch_factor) {
+    unsigned branch_factor,
+    unsigned cur_depth) {
   nirtreedisk::LeafNode<5, NIR_FANOUT, nirtreedisk::ExperimentalStrategy> *targ = nullptr;
   nirtreedisk::BranchNode<5, NIR_FANOUT, nirtreedisk::ExperimentalStrategy>
       *targ2 = nullptr;
 
   return str_packing_leaf(
-    tree, begin, end, branch_factor,targ, targ2
+    tree, begin, end, branch_factor,targ, targ2, cur_depth
   );
 }
 
@@ -399,12 +404,13 @@ std::vector<tree_node_handle> str_packing_leaf(
     rstartreedisk::RStarTreeDisk<5, R_STAR_FANOUT> *tree,
     std::vector<Point>::iterator begin,
     std::vector<Point>::iterator end,
-    unsigned branch_factor) {
+    unsigned branch_factor,
+    unsigned cur_depth) {
   rstartreedisk::LeafNode<5, R_STAR_FANOUT> *targ = nullptr;
   rstartreedisk::BranchNode<5, R_STAR_FANOUT> *targ2 = nullptr;
 
   return str_packing_leaf(
-    tree, begin, end, branch_factor,targ, targ2
+    tree, begin, end, branch_factor,targ, targ2, cur_depth
   );
 }
 
@@ -658,16 +664,24 @@ void bulk_load_tree(
     std::vector<Point>::iterator end,
     unsigned max_branch_factor
 ) {
+  uint64_t num_els = (end - begin);
+  // Keep in mind there is a 0th level, so floor is correct
+  uint64_t max_depth = std::floor(log(num_els) / log(max_branch_factor));
+  uint64_t cur_depth = max_depth;
+
   std::cout << "Size of R* branch node: " << sizeof(rstartreedisk::BranchNode<5, R_STAR_FANOUT>) << std::endl;
 
   /* Start measuring bulk load time */
   std::chrono::high_resolution_clock::time_point begin_time = std::chrono::high_resolution_clock::now();
 
-  std::vector<tree_node_handle> leaves = str_packing_leaf(tree, begin, end,max_branch_factor);
-  std::vector<tree_node_handle> branches = str_packing_branch(tree, leaves, max_branch_factor);
+  std::vector<tree_node_handle> leaves = str_packing_leaf(tree, begin, end,max_branch_factor, cur_depth);
+  cur_depth--;
+  std::vector<tree_node_handle> branches = str_packing_branch(tree, leaves, max_branch_factor, cur_depth);
+  cur_depth--;
 
   while (branches.size() > 1) {
-    branches = str_packing_branch(tree, branches, max_branch_factor);
+    branches = str_packing_branch(tree, branches, max_branch_factor, cur_depth);
+    cur_depth--;
   }
 
   tree->root = branches.at(0);

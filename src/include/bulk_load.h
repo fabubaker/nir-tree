@@ -53,7 +53,8 @@ template <typename T>
 std::vector<tree_node_handle> str_packing_branch(
     T *tree,
     std::vector<tree_node_handle> &child_nodes,
-    unsigned branch_factor);
+    unsigned branch_factor,
+    unsigned cur_depth);
 
 template <typename T, typename LN, typename BN>
 std::vector<tree_node_handle> str_packing_branch(
@@ -61,7 +62,8 @@ std::vector<tree_node_handle> str_packing_branch(
     std::vector<tree_node_handle> &child_nodes,
     unsigned branch_factor,
     LN *leaf_node_type,
-    BN *branch_node_type);
+    BN *branch_node_type,
+    unsigned cur_depth);
 
 std::pair<uint64_t, double> compute_max_dist(const Point &point, std::vector<Point> &pts);
 
@@ -71,13 +73,15 @@ template <>
 std::vector<tree_node_handle> str_packing_branch(
     nirtreedisk::NIRTreeDisk<5, NIR_FANOUT, nirtreedisk::ExperimentalStrategy> *tree,
     std::vector<tree_node_handle> &child_nodes,
-    unsigned branch_factor);
+    unsigned branch_factor,
+    unsigned cur_depth);
 
 template <>
 std::vector<tree_node_handle> str_packing_branch(
     rstartreedisk::RStarTreeDisk<5, R_STAR_FANOUT> *tree,
     std::vector<tree_node_handle> &child_nodes,
-    unsigned branch_factor);
+    unsigned branch_factor,
+    unsigned cur_depth);
 
 template <typename T, typename LN, typename BN>
 std::vector<tree_node_handle> str_packing_leaf(
@@ -86,28 +90,32 @@ std::vector<tree_node_handle> str_packing_leaf(
     std::vector<Point>::iterator end,
     unsigned branch_factor,
     LN *ln_type,
-    BN *bn_type);
+    BN *bn_type,
+    unsigned cur_depth);
 
 template <typename T>
 std::vector<tree_node_handle> str_packing_leaf(
     T *tree,
     std::vector<Point>::iterator begin,
     std::vector<Point>::iterator end,
-    unsigned branch_factor);
+    unsigned branch_factor,
+    unsigned cur_depth);
 
 template <>
 std::vector<tree_node_handle> str_packing_leaf(
     nirtreedisk::NIRTreeDisk<5, NIR_FANOUT, nirtreedisk::ExperimentalStrategy> *tree,
     std::vector<Point>::iterator begin,
     std::vector<Point>::iterator end,
-    unsigned branch_factor);
+    unsigned branch_factor,
+    unsigned cur_depth);
 
 template <>
 std::vector<tree_node_handle> str_packing_leaf(
     rstartreedisk::RStarTreeDisk<5, R_STAR_FANOUT> *tree,
     std::vector<Point>::iterator begin,
     std::vector<Point>::iterator end,
-    unsigned branch_factor);
+    unsigned branch_factor,
+    unsigned cur_depth);
 
 std::vector<uint64_t> find_bounding_lines(
     std::vector<Point>::iterator start,
