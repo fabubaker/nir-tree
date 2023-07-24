@@ -215,7 +215,7 @@ public:
 
 private:
     page_location page_location_;
-    uint16_t level_; // Level of this node in the entire tree
+    uint16_t level_ = std::numeric_limits<uint16_t>::max(); // Level of this node in the entire tree
     uint8_t type_;  // Special bits to indicate what type of node is on the other
                     // end of this handle.
 
