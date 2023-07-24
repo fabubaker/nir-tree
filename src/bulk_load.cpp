@@ -252,6 +252,7 @@ std::vector<tree_node_handle> str_packing_branch(
 
     auto branch_node = alloc_data.first;
     tree_node_handle branch_handle = alloc_data.second;
+    branch_handle.set_level(cur_depth);
 
     fill_branch(
         tree,
@@ -368,6 +369,7 @@ std::vector<tree_node_handle> str_packing_leaf(
     new (&(*alloc_data.first)) LN();
     auto leaf_node = alloc_data.first;
     tree_node_handle leaf_handle = alloc_data.second;
+    leaf_handle.set_level(cur_depth);
 
     for (uint64_t i = 0; i < branch_factor; i++) {
       leaf_node->addPoint(*(begin + offset));
@@ -486,6 +488,7 @@ std::pair<tree_node_handle, Rectangle> quad_tree_style_load(
 
     auto leaf_node = alloc_data.first;
     auto leaf_handle = alloc_data.second;
+    leaf_handle.set_level(cur_depth);
 
     for (auto iter = start; iter != stop; iter++) {
       leaf_node->addPoint(*iter);
@@ -504,6 +507,7 @@ std::pair<tree_node_handle, Rectangle> quad_tree_style_load(
 
   auto branch_node = alloc_data.first;
   tree_node_handle branch_handle = alloc_data.second;
+  branch_handle.set_level(cur_depth);
 
   uint64_t partitions = std::ceil(sqrt(branch_factor));
   uint64_t sub_partitions = std::ceil(branch_factor / (float) partitions);
