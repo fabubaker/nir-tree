@@ -58,6 +58,8 @@ public:
     // If this is a fresh tree, we need a root
     // Update: We disable this for bulk-loading since the root node
     // will be created anyways.
+    // Update: For now, we will assume that insert only happens after
+    // bulk load, otherwise a root node may be required here (shirley)
     if (existing_page_count == 0) {
 
 //      auto alloc = node_allocator_->create_new_tree_node<LeafNode<min_branch_factor, max_branch_factor, strategy>>(NodeHandleType(LEAF_NODE));
@@ -89,10 +91,15 @@ public:
   }
 
   // Datastructure interface
+  // shirley: exhaustiveSearch is the same as search(point) ???
   std::vector<Point> exhaustiveSearch(Point requestedPoint);
+  // Maybe not ? 
   std::vector<Point> search(Point requestedPoint);
+  // Maybe not ? 
   std::vector<Point> search(Rectangle requestedRectangle);
+  // TO FIX 
   void insert(Point givenPoint);
+  // TO FIX 
   void remove(Point givenPoint);
 
   // Miscellaneous
@@ -102,6 +109,8 @@ public:
   void print();
   void visualize();
 
+  // where is this function called ? 
+  // get one (any Point) in a subtree starting from the given node_handle 
   inline Point get_a_contained_point(tree_node_handle node_handle) {
     tree_node_allocator *allocator = node_allocator_.get();
 
@@ -186,11 +195,11 @@ void NIRTreeDisk<min_branch_factor, max_branch_factor, strategy>::insert(Point g
   std::fill(hasReinsertedOnLevel.begin(), hasReinsertedOnLevel.end(), false);
   if (root.get_type() == LEAF_NODE) {
     auto root_node = get_leaf_node(root, true);
-    root = root_node->insert(givenPoint, hasReinsertedOnLevel);
+    root = root_node->insert(givenPoint, hasReinsertedOnLevel, this, root);
   } else {
     auto root_node = get_branch_node(root, true);
-    std::variant<Branch, Point> entry = givenPoint;
-    root = root_node->insert(entry, hasReinsertedOnLevel);
+    std::variant<BranchAtLevel, Point> entry = givenPoint;
+    root = root_node->insert(entry, hasReinsertedOnLevel, this, root);
   }
 }
 
@@ -212,7 +221,7 @@ unsigned NIRTreeDisk<min_branch_factor, max_branch_factor, strategy>::checksum()
     return root_node->checksum();
   } else {
     auto root_node = get_branch_node(root);
-    return root_node->checksum();
+    return root_node->checksum(this);
   }
 }
 
