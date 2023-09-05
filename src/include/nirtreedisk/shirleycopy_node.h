@@ -1,6 +1,3 @@
-// #ifndef NIRTREEDISK_NODE_H
-// #define NIRTREEDISK_NODE_H
-
 #pragma once
 
 // Copyright 2021 Kyle Langendoen
@@ -42,214 +39,179 @@
 #include <fstream>
 
 namespace nirtreedisk {
-// different strategies for partitioning BranchNode during shirnkNode() 
+
+// branch partition strategies: 
+//    1. Line Minimize DownSplits 
+//    2. Line Minimize Distance From Mean 
+//    3. Experimental Strategy 
 struct BranchPartitionStrategy {};
 struct LineMinimizeDownsplits : BranchPartitionStrategy {};
 struct LineMinimizeDistanceFromMean : BranchPartitionStrategy {};
 struct ExperimentalStrategy : BranchPartitionStrategy {};
 
+// 3 variables for template:
+//    1. min_branch_factor
+//    2. max_branch_factor
+//    3. branch partition strategy from above 
 template <int min_branch_factor, int max_branch_factor, class strategy>
 class NIRTreeDisk;
 
+// get_node_allocator from nir tree disk reference 
+//    tree node allocator can be used to allocate new branch/leaf node 
+//    or it can be used to get_summary_rectangle 
 template <int min_branch_factor, int max_branch_factor, class strategy>
 requires(std::derived_from<strategy, BranchPartitionStrategy>)
 tree_node_allocator *get_node_allocator(NIRTreeDisk<min_branch_factor, max_branch_factor, strategy> *treeRef) {
   return treeRef->node_allocator_.get();
 }
 
-// Shirley
-// Branch object contains child_handle which points to the disk page
-// which is the BranchNode correponding to this Branch 
-// boundingBox is the MBB of this branch's polygon
+// Branch has a bounding box and a tree_node_handle child 
+//    tree_node_handle is pointing to a disk page (child node at next level)
+//    tree_node_handle(uint32_t page_id, uint16_t offset, NodeHandleType type) 
+//    bounding box is the minimum bounding rectangle of all rectangles at child branch nodes 
 struct Branch {
-  Branch(Rectangle boundingBox, tree_node_handle child_handle):
-    boundingBox(boundingBox), child(child_handle) {}
-  Branch() = default;
-  Branch(const Branch &other): boundingBox(other.boundingBox), child(other.child) {}
-  bool operator==(const Branch &o) const = default;
-  bool operator!=(const Branch &o) const = default;
-  // members: 
   Rectangle boundingBox;
   tree_node_handle child;
+
+  Branch(Rectangle boundingBox, tree_node_handle child_handle):
+    boundingBox(boundingBox), child(child_handle) {}
+
+  Branch() = default;
+
+  Branch(const Branch &other): boundingBox(other.boundingBox), child(other.child) {}
+
+  bool operator==(const Branch &o) const = default;
+  bool operator!=(const Branch &o) const = default;
 };
 
-// Shirley
-// BranchAtLevel object is for insertion of a Branch at tree
-// level specifies which level this branch should be inserted at
-struct BranchAtLevel {
-  BranchAtLevel(Branch branch, uint8_t level):
-    branch(branch), level(level) {}
-  BranchAtLevel() = default;
-  BranchAtLevel(const BranchAtLevel &other): branch(other.branch), level(other.level) {}
-  bool operator==(const BranchAtLevel &o) const = default;
-  bool operator!=(const BranchAtLevel &o) const = default;
-  // members: 
-  Branch branch;
-  uint8_t level;
-};
-
-// Shirley
-// SplitResult object represents the resulted two branches after 
-// splitting an overflowed branch
+// Split Result contains two branches object
+//    which are left and right branch objects
 struct SplitResult {
   Branch leftBranch;
   Branch rightBranch;
 };
 
-// Shirley
-// Partition object specifies on which dimension and which location
-// the partition of Branch/Point should have be done. This is the 
-// result of PartitionLeafNode() or PartitionBranchNode()
+// Partition
+//    dimension : which dimension to perform the split 
+//    location  : where in the above dimension to perform the split    
 struct Partition {
   unsigned dimension;
   double location;
 };
-// Shirley
-// Helper functions:
-template <int min_branch_factor, int max_branch_factor, class strategy>
-IsotheticPolygon find_polygon(
-    NIRTreeDisk<min_branch_factor, max_branch_factor, strategy> *treeRef,
-    tree_node_handle node_handle,
-    Rectangle rectangle); 
 
-template <int min_branch_factor, int max_branch_factor, class strategy>
-IsotheticPolygon find_polygon(
-    NIRTreeDisk<min_branch_factor, max_branch_factor, strategy> *treeRef,
-    Branch &branch);
-
-std::pair<double, std::vector<IsotheticPolygon::OptimalExpansion>>
-computeExpansionArea( const IsotheticPolygon &this_poly, const IsotheticPolygon &other_poly );
-// Shirley
-// LeafNode object contains array of Points with name of entries   
-// cur_offset_ specifis the current count of Points in array entries
-  // to be fixed: 
-  // remove()
-  // reinsert()
-  // condenseTree()
-  // validate()
+// LeafNode:
+//    entries: contains an array of Points where array size is max_branch_factor(fanout)
+//    cur_offset_:  how many Points are currently in array (how many Points are in this Leaf Node)
 template <int min_branch_factor, int max_branch_factor, class strategy>
 requires(std::derived_from<strategy, BranchPartitionStrategy>)
 class LeafNode {
 public:
-  // members: 
-  // have a space for possible overflow and splitting ? 
-  std::array<Point, max_branch_factor+1> entries;
+  std::array<Point, max_branch_factor> entries;
   unsigned cur_offset_;
 
-  // LeafNode() initialize an empty LeafNode object
+  // empty Leaf Node 
   LeafNode(): cur_offset_(0) {
     static_assert(sizeof(LeafNode<min_branch_factor, max_branch_factor, strategy>) <= PAGE_DATA_SIZE);
   }
-  // LeafNode doesn't have a subtree, just return 
-  // ??? the root should be freed seperately? 
-  void deleteSubtrees();
 
-  // Data structure interface functions : 
-  // insert a Point on treeRef where selfHandle should be root
-  tree_node_handle insert(Point givenPoint, 
-                          std::vector<bool> &hasReinsertedOnLevel,
-                          // added arguments 
-                          NIRTreeDisk<min_branch_factor, max_branch_factor, strategy> *treeRef,
-                          tree_node_handle selfHandle);
-  // FIXME
-  void reInsert(std::vector<bool> &hasReinsertedOnLevel);
-  // FIXME 
-  tree_node_handle remove(Point givenPoint);
-  // There is no search from LeafNode ??? 
-
-  // Helper Functions: 
-  // addPoints: add Point at the end of the array and increase cur_offset_
   void addPoint(const Point &point) {
     entries.at(this->cur_offset_++) = point;
   }
-  // removePoint: remove the givenPoint from array and assumes that point exists 
-  void removePoint(const Point &point);
-  // chooseNode: chooses the Leaf Node to add given Point which has to be itself
-  tree_node_handle chooseNode(Point givenPoint, tree_node_handle selfHandle);
-  // findLeaf: returns itself if it contains givenPoint or nullptr if not 
-  tree_node_handle findLeaf(Point givenPoint, tree_node_handle selfHandle);
-  // entry function for partitionLeafNode()
-  Partition partitionNode();
-  // partitionLeafNode: return the best dimension and location to partition 
-  // on a LeafNode which is the dimension with the highest varaince and location
-  // at average of all points 
-  Partition partitionLeafNode();
-  // entry function for splitNode()
-  SplitResult splitNode(NIRTreeDisk<min_branch_factor, max_branch_factor, strategy> *treeRef,
-                        tree_node_handle current_handle,
-                        tree_node_handle parent_handle);
-  // splitNode: splits Leafnode with current_handle into two LeafNode objects 
-  // according to partition p
-  SplitResult splitNode(Partition p, bool is_downsplit,
-                        // added arguments 
-                        NIRTreeDisk<min_branch_factor, max_branch_factor, strategy> *treeRef,
-                        tree_node_handle current_handle,
-                        tree_node_handle parent_handle);
+  // undefined 
+  void deleteSubtrees();
 
-  // FIXME
-  // called by remove() 
+  // Helper functions
+  Rectangle boundingBox();
+  // remove point from array 
+  // assumes that the point exists in the array 
+  void removePoint(const Point &point);
+
+  // not used; only for BranchNode I think 
+  void removeEntry(const tree_node_handle &handle);
+
+  // choose a proper Leaf Node to insert the givenPoint 
+  // Q: where do I get self_handle_ ? 
+  //    there is no self_handle_ in this class 
+  tree_node_handle chooseNode(Point givenPoint);
+  // find Leaf Node which contains given Point 
+  // Q: where do I get self_handle_ ? 
+  //    there is no self_handle_ in this class 
+  tree_node_handle findLeaf(Point givenPoint);
+
+  // calls partitionLeafNode()
+  Partition partitionNode();
+  // return an Partition Object 
+  // which dimension and location the Leaf Node should be split based on Points 
+  Partition partitionLeafNode();
+
+  // undefined for LeafNode 
+  // Q: what does this function do? 
+  // undefined for Leaf Node
+  void make_disjoint_from_children(IsotheticPolygon &polygon,
+                                   tree_node_handle handle_to_skip);
+  
+  // split Leaf Node based on partition p 
+  // is_downsplit is a flag 
+  // Q: what is downsplit used for ? 
+  SplitResult splitNode(Partition p, bool is_downsplit);
+  // calls partitionNode() to get the partition plan 
+  SplitResult splitNode();
+  // TODO: should also be updated 
+  // this is not used any where 
+  SplitResult adjustTree(std::vector<bool> &hasReinsertedOnLevel);
+  // Q: needs to be updated 
+  // used in remove() as tree could be condensed after nodes being deleted 
   void condenseTree();
 
+  // Data structure interface functions
+  // insert points to a Leaf Node
+  // split only when the Leaf Node is full 
+  tree_node_handle insert(Point givenPoint, std::vector<bool>
+                                                &hasReinsertedOnLevel);
+  // taken from R*
+  // should this be used and how ? 
+  // this is used only in adjust_tree_bottom_half() 
+  void reInsert(std::vector<bool> &hasReinsertedOnLevel);
+
+  // remove the given Poinst
+  // Seems that the Point is assumed to be in the leaf node  
+  tree_node_handle remove(Point givenPoint);
+
   // Miscellaneous
-  // boundingBox() returns a MBB of all points on LeafNode 
-  Rectangle boundingBox();
-  // checksum: return sum of all points for each dimension 
+  // returns the sum of all data points 
   unsigned checksum();
-  // FIXME : called by branchnode validate
+  // TODO: needs to update for map 
+  //************
   bool validate(tree_node_handle expectedParent, unsigned index);
-  // bounding_box_validate: returns a copy of vector of Points
+  // creates a vector of all points on this LeafNode 
   std::vector<Point> bounding_box_validate();
-  void print(tree_node_handle current_handle, tree_node_handle parent_handle, unsigned n = 0);
-  void printTree(tree_node_handle current_handle, tree_node_handle parent_handle, unsigned n = 0);
-  // height: returns 1 for Leaf Node, only called by stat_node()
+  // print this leaf node with n indentation 
+  void print(unsigned n = 0);
+  // LeafNode calls print(n)
+  void printTree(unsigned n = 0);
+  // height for a Leaf Node is 1 
   unsigned height();
 };
 
-// Shirley
-// BranchNode object contains array of Branches with name of entries   
-// cur_offset_ specifis the current count of Branches in array entries
-  // to be fixed: 
-  // deleteSubtrees()
-  // remove()
-  // findLeaf()
-  // reinsert()  
-  // validate()
-  // bounding_box_validate()
+// entries is an array of size max_branch_factor of Branch 
+// cur_offset_ is the current number of branch in array 
 template <int min_branch_factor, int max_branch_factor, class strategy>
 requires(std::derived_from<strategy, BranchPartitionStrategy>)
 class BranchNode {
 public:
-  // members: 
-  // have a space for possible overflow and splitting ? 
-  std::array<Branch, max_branch_factor+1> entries;
+  std::array<Branch, max_branch_factor> entries;
   unsigned cur_offset_;
 
   // Constructors and destructors
-  BranchNode(): cur_offset_(0) {
-  static_assert(sizeof(BranchNode<min_branch_factor, max_branch_factor, strategy>) <= PAGE_DATA_SIZE);
-  }
-  // FIXME 
-  // ??? should the root be freed separately? 
+  BranchNode(): cur_offset_(0) {}
+
+  // free the entire subtree starting from the current Branch Node 
   void deleteSubtrees();
 
-  // Data structure interface functions: 
-  // insert a Point/BranchAtLevel where selfHandle should be root 
-  tree_node_handle insert(std::variant<BranchAtLevel, Point> &nodeEntry, 
-                          std::vector<bool> &hasReinsertedOnLevel,
-                          // added arguments 
-                          NIRTreeDisk<min_branch_factor, max_branch_factor, strategy> *treeRef,
-                          tree_node_handle selfHandle);
-  // FIXME
-  void reInsert(std::vector<bool> &hasReinsertedOnLevel);
-  // FIXME
-  tree_node_handle remove(Point givenPoint);
-  // search is done by point_search() or rectangle_search()
-  // Shirley: why search functions are not defined as class methods ???
-  //void exhaustiveSearch(Point &requestedPoint, std::vector<Point> &accumulator);
-
-
   // Helper functions
-  // locateBranch: locate Branch at BranchNode
+  // boxing box of the current branch node 
+  Rectangle boundingBox();
+  // return the branch object which contains the tree_node_handle child 
   Branch &locateBranch(tree_node_handle child) {
     for (unsigned i = 0; i < this->cur_offset_; i++) {
       Branch &b = entries.at(i);
@@ -260,85 +222,31 @@ public:
     // If we are here, panic
     assert(false);
   };
-  // addBranchToNode: add Branch at the end of array and increase cur_offset_
+
+  // this should be changed (incorrect)
+  // update the branch.boundingbox in current node 
+  void updateBranch(tree_node_handle child, const InlineBoundedIsotheticPolygon &boundingPoly);
+  // should be updated for polygon in map 
+  // remove a branch from the current node 
+  void removeBranch(const tree_node_handle &handle);
+
+  // add a new branch object to the current branch node 
   void addBranchToNode(const Branch &entry) {
     entries.at(this->cur_offset_++) = entry;
   }
-  // removeBranch: remove branch from BranchNode and free the memory associated with Branch
-  //  as well as removing polygon associated with this node from map 
-  void removeBranch(const tree_node_handle handle, NIRTreeDisk<min_branch_factor, max_branch_factor, strategy> *treeRef);
-  // updateBranch() is not used (seems like this is should be the same as update_branch_polygon)
-  //void updateBranch(tree_node_handle child, const InlineBoundedIsotheticPolygon &boundingPoly);
-  // chooseNode: choose a LeafNode for adding Point of a BranchNode for adding Branch at stopping_level
-  tree_node_handle chooseNode(std::variant<BranchAtLevel, Point> &nodeEntry, uint8_t stopping_level,
-                            // added arguments 
-                            NIRTreeDisk<min_branch_factor, max_branch_factor, strategy> *treeRef,
-                            tree_node_handle selfHandle,
-                            std::stack<tree_node_handle> &parentHandles);
-  // findLeaf: returns the LeafNode which contains the point or nullptr if none node contains it 
-  // FIXME 
+
+  // ** FIX THIS 
+  tree_node_handle chooseNode(std::variant<Branch, Point> &nodeEntry, uint8_t stopping_level);
+  // find leaf node which contains a given Point or tree_node_handle(nullptr)
+  // ** FIX THIS 
   tree_node_handle findLeaf(Point givenPoint);
-  // entry function for partitionPartitionNode()
-  Partition partitionNode(NIRTreeDisk<min_branch_factor, max_branch_factor, strategy> *treeRef);
-  //FIXME
-  // Partition partitionBranchNode(typename std::enable_if<std::is_same<strategy, LineMinimizeDownsplits>::value, strategy>::type * = 0);
-  // //FIXME
-  // Partition partitionBranchNode(typename std::enable_if<std::is_same<strategy, LineMinimizeDistanceFromMean>::value, strategy>::type * = 0); 
+  // calls partition Branch Node directly 
+  Partition partitionNode();
 
-  // Partition partitionBranchNode(NIRTreeDisk<min_branch_factor, max_branch_factor, strategy> *treeRef,
-  //                               typename std::enable_if<std::is_same<strategy, ExperimentalStrategy>::value, strategy>::type * = 0);
-  // // clip polygon if it overlaps with its siblings and ignore polygon 
-  // assocaited with handle_to_skip
-  void make_disjoint_from_children(IsotheticPolygon &polygon, tree_node_handle handle_to_skip,
-                        NIRTreeDisk<min_branch_factor, max_branch_factor, strategy> *treeRef);
-  // entry function for splitNode()
-  SplitResult splitNode(NIRTreeDisk<min_branch_factor, max_branch_factor, strategy> *treeRef,
-                        tree_node_handle current_handle,
-                        tree_node_handle parent_handle);
-  // splitNode: splits BranchNode with current_handle into two BranchNode object according to p 
-  SplitResult splitNode(Partition p, bool is_downsplit,
-                        // added arguments 
-                        NIRTreeDisk<min_branch_factor, max_branch_factor, strategy> *treeRef,
-                        tree_node_handle current_handle,
-                        tree_node_handle parent_handle);
-
-  //condenseTree() is undefined for BranchNode 
-  //void condenseTree();
-
-  // Miscellaneous
-  // boundingBox() returns a MBB of all branches on BranchNode
-  Rectangle boundingBox();
-  // checksum: return sum of all points for each dimension of all subtrees 
-  unsigned checksum(NIRTreeDisk<min_branch_factor, max_branch_factor, strategy> *treeRef);
-  // FIXME
-  bool validate(tree_node_handle expectedParent, unsigned index);
-  // FIXME
-  std::vector<Point> bounding_box_validate();
-  void print(NIRTreeDisk<min_branch_factor, max_branch_factor, strategy> *treeRef,
-            tree_node_handle current_handle, tree_node_handle parent_handle, unsigned n = 0);
-  void printTree(NIRTreeDisk<min_branch_factor, max_branch_factor, strategy> *treeRef,
-            tree_node_handle current_handle, tree_node_handle parent_handle, unsigned n = 0);
-  // height: returns the height of subtree where LeafNode has height 1 
-  unsigned height(NIRTreeDisk<min_branch_factor, max_branch_factor, strategy> *treeRef,
-                  tree_node_handle selfHandle);
-
-  // LEGACY ???
-  #if 0 
-  std::pair<uint16_t, std::vector<std::optional<std::pair<char *, int>>>>
-  compute_packed_size(
-          tree_node_allocator *existing_allocator, tree_node_allocator *new_allocator,
-          unsigned &maximum_repacked_rect_size
-  );
-  tree_node_handle repack(
-          tree_node_allocator *existing_allocator,
-          tree_node_allocator *new_allocator
-  );
-  #endif 
-
-#if 0
-template <class S = strategy>
-  Partition partitionBranchNode(
-            typename std::enable_if<std::is_same<S, LineMinimizeDownsplits>::value, S>::type * = 0) {
+  // Partition Branch node with LineMinimizeDownsplits strategy 
+  // Partition is <dimension and location for partition>
+  template <class S = strategy>
+  Partition partitionBranchNode(typename std::enable_if<std::is_same<S, LineMinimizeDownsplits>::value, S>::type * = 0) {
     Partition defaultPartition;
 
     tree_node_allocator *allocator = get_node_allocator(this->treeRef);
@@ -427,15 +335,15 @@ template <class S = strategy>
     defaultPartition.location = best_candidate;
 
     return defaultPartition;
-// #endif
 
-//     // Unsupported
-//     abort();
+    // Unsupported
+    // abort();
   }
 
-template <class S = strategy>
-  Partition partitionBranchNode(
-            typename std::enable_if<std::is_same<S, LineMinimizeDistanceFromMean>::value,S>::type * = 0) {
+  // partition Branch Node with strategy LineMinimizeDistanceFromMean
+  template <class S = strategy>
+  Partition partitionBranchNode(typename std::enable_if<std::is_same<S, LineMinimizeDistanceFromMean>::value,
+                                                        S>::type * = 0) {
 // #if 0
     Partition defaultPartition;
 
@@ -573,12 +481,11 @@ template <class S = strategy>
     return defaultPartition;
 // #endif
 
-//     // Unsupported
-//     abort();
+    // Unsupported
+    // abort();
   }
-#endif 
 
-std::pair<bool, Partition> try_cut_geo_mean(std::vector<Rectangle> &all_branch_polys) {
+  std::pair<bool, Partition> try_cut_geo_mean(std::vector<Rectangle> &all_branch_polys) {
 // #if 0
     Partition defaultPartition;
     Point mean_point = Point::atOrigin;
@@ -587,6 +494,7 @@ std::pair<bool, Partition> try_cut_geo_mean(std::vector<Rectangle> &all_branch_p
     for (auto &branch_bounding_box : all_branch_polys) {
       mean_point += branch_bounding_box.lowerLeft;
       mean_point += branch_bounding_box.upperRight;
+      // number of point 
       mass += 2.0;
     }
 
@@ -645,27 +553,24 @@ std::pair<bool, Partition> try_cut_geo_mean(std::vector<Rectangle> &all_branch_p
     return std::make_pair(false, defaultPartition);
 // #endif
 
-//     // Unsupported
-//     abort();
+    // Unsupported
+    // abort();
   }
 
-template <class S = strategy>
-Partition partitionBranchNode(
-          NIRTreeDisk<min_branch_factor, max_branch_factor, strategy> *treeRef,
-          typename std::enable_if<std::is_same<S, ExperimentalStrategy>::value,S>::type * = 0) {
+  // partition Branch Node with strategy ExperimentalStrategy
+  template <class S = strategy>
+  Partition partitionBranchNode(typename std::enable_if<std::is_same<S, ExperimentalStrategy>::value,
+                                                        S>::type * = 0) {
 // #if 0
-// requires:
-//  treeRef
-//  
     Partition defaultPartition;
 
-    tree_node_allocator *allocator = get_node_allocator(treeRef);
+    tree_node_allocator *allocator = get_node_allocator(
+        this->treeRef);
     std::vector<Rectangle> all_branch_polys;
     for (unsigned i = 0; i < this->cur_offset_; i++) {
       Branch &b_i = entries.at(i);
-      IsotheticPolygon b_poly = find_polygon(treeRef, b_i);
-      // how is polygon's summary rectangle different from MBB ? 
-      all_branch_polys.push_back(b_poly.boundingBox);
+      all_branch_polys.push_back(b_i.get_summary_rectangle(
+          allocator));
     }
 
     auto geo_cut = try_cut_geo_mean(all_branch_polys);
@@ -681,14 +586,18 @@ Partition partitionBranchNode(
                 [d](Rectangle &poly1, Rectangle &poly2) {
                   if (poly1.upperRight[d] ==
                       poly2.upperRight[d]) {
-                    for (unsigned i = 0; i < dimensions; i++) {
-                      if (poly1.upperRight[i] == poly2.upperRight[i]) {
+                    for (unsigned i = 0; i < dimensions;
+                         i++) {
+                      if (poly1.upperRight[i] ==
+                          poly2.upperRight[i]) {
                         continue;
                       }
-                      return poly1.upperRight[i] < poly2.upperRight[i];
+                      return poly1.upperRight[i] <
+                             poly2.upperRight[i];
                     }
                   }
-                  return poly1.upperRight[d] < poly2.upperRight[d];
+                  return poly1.upperRight[d] <
+                         poly2.upperRight[d];
                 });
     }
 
@@ -804,14 +713,10 @@ Partition partitionBranchNode(
     // Sort per the dimension we need
     std::sort(entries.begin(), entries.begin() + this->cur_offset_,
               [this, allocator, best_dimension](Branch &b1, Branch &b2) {
-                // Rectangle poly1 = b1.get_summary_rectangle(
-                //     allocator);
-                // Rectangle poly2 = b2.get_summary_rectangle(
-                //     allocator);
-                // Rectangle poly1 = (find_polygon(treeRef, b1)).boundingBox;
-                // Rectangle poly2 = (find_polygon(treeRef, b2)).boundingBox;
-                Rectangle poly1 = b1.boundingBox;
-                Rectangle poly2 = b2.boundingBox;
+                Rectangle poly1 = b1.get_summary_rectangle(
+                    allocator);
+                Rectangle poly2 = b2.get_summary_rectangle(
+                    allocator);
                 if (poly1.upperRight[best_dimension] ==
                     poly2.upperRight[best_dimension]) {
                   for (unsigned i = 0; i < dimensions; i++) {
@@ -830,16 +735,60 @@ Partition partitionBranchNode(
     return defaultPartition;
 // #endif
 
-//     // Unsupported
-//     abort();
-}
+    // Unsupported
+    // abort();
+  }
 
 
+  // ** FIX IT
+  // Make this polygon disjoint from its siblings
+  // the implementation seems incorrect 
+  void make_disjoint_from_children(IsotheticPolygon &polygon, tree_node_handle handle_to_skip);
+  SplitResult splitNode(Partition p, bool is_downsplit);
+  // this just called splitNode with PartitionNode() 
+  SplitResult splitNode();
+  // this is not defined for Branch Node 
+  SplitResult adjustTree();
+  // undefined for Branch Node 
+  void condenseTree();
+
+  // Data structure interface functions
+  void exhaustiveSearch(Point &requestedPoint, std::vector<Point> &accumulator);
+  tree_node_handle insert(std::variant<Branch, Point> &nodeEntry, std::vector<bool> &hasReinsertedOnLevel);
+  void reInsert(std::vector<bool> &hasReinsertedOnLevel);
+  tree_node_handle remove(Point givenPoint);
+
+  // Miscellaneous
+  unsigned checksum();
+  // all points are contained in polygon ? 
+  // what is the differene between validate and bounding_box_validate ?? 
+  bool validate(tree_node_handle expectedParent, unsigned index);
+  // all points under the subtree from this branch Node should be within 
+  // both the polygon and the bounding box. This function validates that 
+  // this is true and returns all points under this subtree 
+  std::vector<Point> bounding_box_validate();
+  void print(unsigned n = 0);
+  void printTree(unsigned n = 0);
+  unsigned height();
+
+#if 0
+// packing is ignored 
+  std::pair<uint16_t, std::vector<std::optional<std::pair<char *, int>>>>
+  compute_packed_size(
+          tree_node_allocator *existing_allocator, tree_node_allocator *new_allocator,
+          unsigned &maximum_repacked_rect_size
+  );
+  tree_node_handle repack(
+          tree_node_allocator *existing_allocator,
+          tree_node_allocator *new_allocator
+  );
+#endif
 
 };
 
 
-
+// ==========================================
+// LEAf NODE
 template <int min_branch_factor, int max_branch_factor, class strategy>
 void LeafNode<min_branch_factor, max_branch_factor, strategy>::deleteSubtrees() {
   return;
@@ -847,7 +796,8 @@ void LeafNode<min_branch_factor, max_branch_factor, strategy>::deleteSubtrees() 
 
 template <int min_branch_factor, int max_branch_factor, class strategy>
 Rectangle LeafNode<min_branch_factor, max_branch_factor, strategy>::boundingBox() {
-  //assert(this->cur_offset_ > 0);
+  assert(this->cur_offset_ > 0);
+
   if (this->cur_offset_ <= 0) {
     std::cout << "Node has no entries!" << std::endl;
     abort();
@@ -861,7 +811,7 @@ Rectangle LeafNode<min_branch_factor, max_branch_factor, strategy>::boundingBox(
   return bb;
 }
 
-// Point: removes the point from the Leaf node
+// Point: removes the point from the node
 template <int min_branch_factor, int max_branch_factor, class strategy>
 void LeafNode<min_branch_factor, max_branch_factor, strategy>::removePoint(const Point &point) {
   // Locate the child
@@ -913,31 +863,26 @@ void shrink(IsotheticPolygon &polygon, iter begin, iter end, tree_node_allocator
 // Always called on root, this = root
 // This top-to-bottom sweep is only for adjusting bounding boxes to contain the point and
 // choosing a particular leaf
+// the current Node is Leaf, it means the current leaf is the only node in tree
+// therefore, the point should be added to the current leaf node 
 template <int min_branch_factor, int max_branch_factor, class strategy>
-tree_node_handle LeafNode<min_branch_factor, max_branch_factor, strategy>::chooseNode(Point givenPoint,
-                                                          // added arguments 
-                                                          tree_node_handle selfHandle) {
-  return selfHandle;
+tree_node_handle LeafNode<min_branch_factor, max_branch_factor, strategy>::chooseNode(Point givenPoint) {
+  return this->self_handle_;
 }
 
 template <int min_branch_factor, int max_branch_factor, class strategy>
-tree_node_handle LeafNode<min_branch_factor, max_branch_factor, strategy>::findLeaf(Point givenPoint,
-                                                          // added arguments 
-                                                          tree_node_handle selfHandle) {
+tree_node_handle LeafNode<min_branch_factor, max_branch_factor, strategy>::findLeaf(Point givenPoint) {
   // FL2 [Search leaf node for record]
   // Check each entry to see if it matches E
   for (unsigned i = 0; i < this->cur_offset_; i++) {
     Point &p = std::get<Point>(entries.at(i));
     if (p == givenPoint) {
-      return selfHandle;
+      return this->self_handle_;
     }
   }
   return tree_node_handle(nullptr);
 }
 
-// return the best dimension and location to partition on a LeafNode 
-// best partition dimension is the dimension with the highest variance 
-// best partition location is the average of all points on the best dimension
 template <int min_branch_factor, int max_branch_factor, class strategy>
 Partition LeafNode<min_branch_factor, max_branch_factor, strategy>::partitionLeafNode() {
   Partition defaultPartition;
@@ -981,50 +926,40 @@ Partition LeafNode<min_branch_factor, max_branch_factor, strategy>::partitionNod
 // The old one is freed in adjustTree using removeEntry
 // If we downsplit, then we won't call adjustTree for that split so we
 // need to delete the node ourselves.
-// Shirley: 
-// the old one is freed in adjust_tree_bottom_half using removeBranch
 template <int min_branch_factor, int max_branch_factor, class strategy>
-SplitResult LeafNode<min_branch_factor, max_branch_factor, strategy>::splitNode(
-              Partition p, 
-              bool is_downsplit,
-              // added arguments 
-              NIRTreeDisk<min_branch_factor, max_branch_factor, strategy> *treeRef,
-              tree_node_handle current_handle,
-              tree_node_handle parent_handle) {
-  
-  // requires:
-  // - treeRef
-  // - current_handle
-  // - parent_handle
-  assert(current_handle.get_type() == LEAF_NODE);
-  tree_node_allocator *allocator = get_node_allocator(treeRef);
+SplitResult LeafNode<min_branch_factor, max_branch_factor, strategy>::splitNode(Partition p, bool is_downsplit) {
+  tree_node_allocator *allocator = get_node_allocator(this->treeRef);
 
-  auto alloc_data = allocator->create_new_tree_node<LeafNode<min_branch_factor, max_branch_factor, strategy>>(
-                    NodeHandleType(LEAF_NODE));
+  auto alloc_data =
+          allocator->create_new_tree_node<LeafNode<min_branch_factor, max_branch_factor, strategy>>(
+                  NodeHandleType(LEAF_NODE));
   tree_node_handle left_handle = alloc_data.second;
   auto left_node = alloc_data.first; // take pin
-  new (&(*left_node)) LeafNode<min_branch_factor, max_branch_factor, strategy>();
+  new (&(*left_node)) LeafNode<min_branch_factor, max_branch_factor, strategy>(this->treeRef,
+                                            this->parent, left_handle, level_);
+  assert(left_node->self_handle_ == left_handle);
   assert(left_handle.get_type() == LEAF_NODE);
 
   alloc_data = allocator->create_new_tree_node<LeafNode<min_branch_factor, max_branch_factor, strategy>>(
-                NodeHandleType(LEAF_NODE));
+          NodeHandleType(LEAF_NODE));
   tree_node_handle right_handle = alloc_data.second;
   auto right_node = alloc_data.first; // take pin
-  new (&(*right_node)) LeafNode<min_branch_factor, max_branch_factor, strategy>();
+  new (&(*right_node)) LeafNode<min_branch_factor, max_branch_factor, strategy>(this->treeRef,
+                                             this->parent, right_handle, level_);
+  assert(right_node->self_handle_ == right_handle);
   assert(right_handle.get_type() == LEAF_NODE);
 
-  // SplitResult split = {
-  //         {tree_node_handle(nullptr), left_handle},
-  //         {tree_node_handle(nullptr), right_handle}};
-  SplitResult split = {{Rectangle(), left_handle},
-                       {Rectangle(), right_handle}};
+  SplitResult split = {
+          {tree_node_handle(nullptr), left_handle},
+          {tree_node_handle(nullptr), right_handle}};
+
   bool containedLeft, containedRight;
   for (unsigned i = 0; i < this->cur_offset_; i++) {
     Point &dataPoint = entries.at(i);
     containedLeft = dataPoint[p.dimension] < p.location; // Not inclusive
     containedRight = dataPoint[p.dimension] >= p.location;
-    assert(not(containedLeft and containedRight));
-    // split all data points in current LeafNode into one of left or right node 
+    assert(containedLeft or containedRight);
+
     if (containedLeft and not containedRight) {
       left_node->addPoint(dataPoint);
     } else if (not containedLeft and containedRight) {
@@ -1033,91 +968,77 @@ SplitResult LeafNode<min_branch_factor, max_branch_factor, strategy>::splitNode(
   }
 
   // All points have been routed.
+
   IsotheticPolygon left_polygon(left_node->boundingBox());
   IsotheticPolygon right_polygon(right_node->boundingBox());
-  // Shirley: split of Point on LeafNode on a dimension is guaranteed 
-  // to be disjoint 
   assert(left_polygon.disjoint(right_polygon));
-  // for a leaf node, the polygon size should be 1
-  // assert(left_polygon.basicRectangles.size() <= MAX_RECTANGLE_COUNT);
-  // assert(right_polygon.basicRectangles.size() <= MAX_RECTANGLE_COUNT);  
-  assert(left_polygon.basicRectangles.size() == 1);
-  assert(right_polygon.basicRectangles.size() == 1);
+
+  assert(left_polygon.basicRectangles.size() <=
+         MAX_RECTANGLE_COUNT);
+  assert(right_polygon.basicRectangles.size() <=
+         MAX_RECTANGLE_COUNT);
 
   // If we have a parent, we need to make these disjoint from our
   // siblings. If we don't, then we are automatically disjoint
-  // from our siblings since these are the only two polys and they
+  // from our siblings since these arethe only two polys and they
   // are disjoint from each other now.
-  if (parent_handle) {
-    auto parent_node = treeRef->get_branch_node(parent_handle);
+  if (this->parent) {
+    auto parent_node = this->treeRef->get_branch_node(this->parent);
     if (not is_downsplit) {
-      // split is from bottom to top 
-      // make left_polygon disjoint from its siblings 
-      parent_node->make_disjoint_from_children(left_polygon, current_handle, treeRef);
-      // Shirley: why we need to assert polygon size > 0 
+      parent_node->make_disjoint_from_children(left_polygon,
+                                               this->self_handle_);
       assert(left_polygon.basicRectangles.size() > 0);
-      // refine the polygon by removing duplicated rectangles 
       left_polygon.refine();
       assert(left_polygon.basicRectangles.size() > 0);
-      // make right_polygon disjoint from its siblings 
-      parent_node->make_disjoint_from_children(right_polygon, current_handle, treeRef);
+      parent_node->make_disjoint_from_children(right_polygon,
+                                               this->self_handle_);
       assert(right_polygon.basicRectangles.size() > 0);
       right_polygon.refine();
       assert(right_polygon.basicRectangles.size() > 0);
     } else {
-      // Shirley: this is for down_split situation: 
       // Intersect with our existing poly to avoid intersect
       // with other children
-      // Branch &b = parent_node->locateBranch(selfHandle);
-      //IsotheticPolygon parent_poly = b.materialize_polygon(allocator);
-      IsotheticPolygon parent_polygon = find_polygon(treeRef, parent_handle, 
-                                                  parent_node->boundingBox());
-      // none of polygons we work with should be empty 
-      assert(parent_polygon.basicRectangles.size() > 0);
+      Branch &b = parent_node->locateBranch(this->self_handle_);
+      IsotheticPolygon parent_poly = b.materialize_polygon(
+              allocator);
+      assert(parent_poly.basicRectangles.size() > 0);
       assert(left_polygon.basicRectangles.size() > 0);
       IsotheticPolygon poly_backup = left_polygon;
-      // left side 
-      // inserction() instead of calling make_disjoint_from_children()
-      // it seems to be very similar to make_disjoint_from_children()
-      // Shirley: What is the difference ? 
-      left_polygon.intersection(parent_polygon);
+      left_polygon.intersection(parent_poly);
       if (left_polygon.basicRectangles.size() == 0) {
-        std::cout << "Weird situation: " << poly_backup << " is disjoint from parent: " << parent_polygon << std::endl;
+        std::cout << "Weird situation: " << poly_backup << " is disjoint from parent: " << parent_poly << std::endl;
       }
       assert(left_polygon.basicRectangles.size() > 0);
       left_polygon.refine();
       assert(left_polygon.basicRectangles.size() > 0);
-      // right side
       assert(right_polygon.basicRectangles.size() > 0);
-      right_polygon.intersection(parent_polygon);
+      right_polygon.intersection(parent_poly);
       assert(right_polygon.basicRectangles.size() > 0);
       right_polygon.refine();
       assert(right_polygon.basicRectangles.size() > 0);
     }
   }
   this->cur_offset_ = 0;
-  // FIX : ******
+
   update_branch_polygon(split.leftBranch, left_polygon, treeRef, true);
   update_branch_polygon(split.rightBranch, right_polygon, treeRef, true);
+
   return split;
+
   // Unsupported
   // abort();
 }
 
 // Splitting a node will remove it from its this->parent node and its memory will be freed
 template <int min_branch_factor, int max_branch_factor, class strategy>
-SplitResult LeafNode<min_branch_factor, max_branch_factor, strategy>::splitNode(
-              NIRTreeDisk<min_branch_factor, max_branch_factor, strategy> *treeRef,
-              tree_node_handle current_handle,
-              tree_node_handle parent_handle
-) {
-      SplitResult returnSplit = splitNode(partitionNode(), false, treeRef, current_handle, parent_handle);
+SplitResult LeafNode<min_branch_factor, max_branch_factor, strategy>::splitNode() {
+      SplitResult returnSplit = splitNode(partitionNode(), false);
       return returnSplit;
 }
 
 template <int min_branch_factor, int max_branch_factor, class strategy>
 void LeafNode<min_branch_factor, max_branch_factor, strategy>::reInsert(std::vector<bool> &hasReinsertedOnLevel) {
-#if 0
+// #if 0
   // Taken from R*
   hasReinsertedOnLevel.at(level_) = true;
 
@@ -1168,10 +1089,10 @@ void LeafNode<min_branch_factor, max_branch_factor, strategy>::reInsert(std::vec
       root_handle = root_node->insert(ent, hasReinsertedOnLevel);
     }
   }
-#endif
+// #endif
 
   // Unsupported
-  abort();
+  // abort();
 }
 
 template <int min_branch_factor, int max_branch_factor, class strategy>
@@ -1179,7 +1100,7 @@ IsotheticPolygon get_polygon_path_constraints(
         tree_node_handle start_handle,
         NIRTreeDisk<min_branch_factor, max_branch_factor, strategy> *treeRef)
 {
-#if 0
+// #if 0
   tree_node_allocator *allocator = get_node_allocator(treeRef);
   tree_node_handle parent_handle;
   if (start_handle.get_type() == LEAF_NODE || start_handle.get_type() == REPACKED_LEAF_NODE) {
@@ -1215,10 +1136,10 @@ IsotheticPolygon get_polygon_path_constraints(
     current_handle = parent_handle;
   }
   return constraint_poly;
-#endif
+// #endif
 
   // Unsupported
-  abort();
+  // abort();
 }
 
 template <int min_branch_factor, int max_branch_factor, class strategy>
@@ -1226,19 +1147,9 @@ void update_branch_polygon(
         Branch &branch_to_update,
         IsotheticPolygon &polygon_to_write,
         NIRTreeDisk<min_branch_factor, max_branch_factor, strategy> *treeRef,
-        // this argument is not needed anymore shirley
         bool force_create = false)
 {
-// #if 0
-  // update boundingBox of Branch the same as bounding box of polygons
-  branch_to_update.boundingBox = polygon_to_write.boundingBox;
-  // If the MBR has not been split into a polygon, don't keep it in the map.
-  if (polygon_to_write.basicRectangles.size() != 1) {
-    // add polygon to map 
-    treeRef->polygons.insert({branch_to_update.child, polygon_to_write});
-  }
-
-#if 0 
+#if 0
   if (polygon_to_write.basicRectangles.size() <= MAX_RECTANGLE_COUNT) {
     // Could leak if we had an out of band rectangle before
     branch_to_update.boundingPoly = InlineBoundedIsotheticPolygon();
@@ -1260,6 +1171,7 @@ void update_branch_polygon(
     }
 
     uint8_t rect_count = force_create ? polygon_to_write.basicRectangles.size() : InlineUnboundedIsotheticPolygon::maximum_possible_rectangles_on_first_page();
+
     auto alloc_data =
             allocator->create_new_tree_node<InlineUnboundedIsotheticPolygon>(
                     compute_sizeof_inline_unbounded_polygon(
@@ -1271,16 +1183,15 @@ void update_branch_polygon(
     alloc_data.first->push_polygon_to_disk(polygon_to_write);
     branch_to_update.boundingPoly = alloc_data.second;
   }
-#endif 
-// #endif
+#endif
 
-//   // Unsupported
-//   abort();
+  // Unsupported
+  abort();
 }
 
 template <int min_branch_factor, int max_branch_factor, class strategy>
 void BranchNode<min_branch_factor, max_branch_factor, strategy>::reInsert(std::vector<bool> &hasReinsertedOnLevel) {
-#if 0
+// #if 0
   // Taken from R*
   hasReinsertedOnLevel.at(level_) = true;
 
@@ -1347,92 +1258,62 @@ void BranchNode<min_branch_factor, max_branch_factor, strategy>::reInsert(std::v
     std::variant<Branch, Point> ent = entry;
     root_handle = root_node->insert(ent, hasReinsertedOnLevel);
   }
-#endif
+// #endif
 
   // Unsupported
-  abort();
+  // abort();
 }
 
-// shirley: the splitted branch/leaf is removed from BranchNode, but splitted result 
-//    returned and not added to branch node. 
-// only called by adjustTreeSub
-// output: split result and parent node handle 
 template <class NT, class TR>
 std::pair<SplitResult, tree_node_handle> adjust_tree_bottom_half(
         NT current_node,
         TR *tree_ref_backup,
         int max_branch_factor,
-        std::vector<bool> &hasReinsertedOnLevel,
-        // added arguments 
-        std::stack<tree_node_handle> &parentHandles,
-        tree_node_handle current_handle)
+        std::vector<bool> &hasReinsertedOnLevel)
 {
-
-  // SplitResult propagationSplit = {
-  //         {InlineBoundedIsotheticPolygon(), tree_node_handle(nullptr)},
-  //         {InlineBoundedIsotheticPolygon(), tree_node_handle(nullptr)}};
+// #if 0
   SplitResult propagationSplit = {
-          {Rectangle(), tree_node_handle(nullptr)},
-          {Rectangle(), tree_node_handle(nullptr)}};
+          {InlineBoundedIsotheticPolygon(), tree_node_handle(nullptr)},
+          {InlineBoundedIsotheticPolygon(), tree_node_handle(nullptr)}};
+
   if (current_node->cur_offset_ <= (unsigned)max_branch_factor) {
-    // added branch fits into current branchNode, no split is needed 
-    // tree_node_handle(nullptr) will break the while loop in caller 
-    return std::make_pair(propagationSplit, tree_node_handle(nullptr));
+    return std::make_pair(propagationSplit,
+                          tree_node_handle(nullptr));
   }
 
   // Otherwise, split node
-  // the level of the node is the same as number of parents ?
-  //
-  //uint8_t current_level = parentHandles.size();
-  if (/*hasReinsertedOnLevel.at(current_level-1) or*/ true) {
-    // not considering reinsertion now 
-    tree_node_handle parent_handle; 
-    if ( !parentHandles.empty() ) {
-      parent_handle = parentHandles.top();
-      parentHandles.pop();
-    } else {
-      parent_handle = tree_node_handle(nullptr);
-    }
-    // here, we know the node has to be split 
-    propagationSplit = current_node->splitNode(tree_ref_backup, current_handle, parent_handle);
-    // get parent of current node 
-    // immediate parent should be the last item on vector 
-    // this modifes parentHandles, so parentHandles should always be passed as reference or pointer 
+  if (hasReinsertedOnLevel.at(current_node->level_) or true) {
+    tree_node_handle parent = current_node->parent;
+    auto propagationSplit = current_node->splitNode();
+
     // Cleanup before ascending
-    if ( parent_handle != nullptr) {
+    if (parent != nullptr) {
       // This will probably destroy current_node, so if we need
       // current node for anything, need to do it before the
       // removeEntry call.
 
-      // why is this called tree_ref_backup ? 
-      auto parent_node = tree_ref_backup->get_branch_node(parent_handle);
-      parent_node->removeBranch(current_handle, tree_ref_backup);
+      auto parent_node = tree_ref_backup->get_branch_node(parent);
+      parent_node->removeBranch(current_node->self_handle_);
     }
-    // if root node, it doesn't have a parent, then the branch/leaf node 
-    // will be freed in caller 
 
     // Ascend, propagating splits
-    return std::make_pair(propagationSplit, parent_handle);
+    return std::make_pair(propagationSplit, parent);
   } else {
-    // Shirley: not considering reinsertion for now 
-    abort(); 
     // Nothing is real after you make this call
     // The reinsert might have come back around again and split this
     // node, or other nodes, or everyting
     // Signal to the caller that we shoudl stop
     current_node->reInsert(hasReinsertedOnLevel);
     return std::make_pair(propagationSplit,
-                          tree_node_handle(nullptr));  
+                          tree_node_handle(nullptr));
   }
+// #endif
 
   // Unsupported
   // abort();
 }
 
 // This bottom-to-top sweep is only for splitting bounding boxes as necessary
-// Shirley: when is adjustTree ever called ? 
-
-#if 0
 template <int min_branch_factor, int max_branch_factor, class strategy>
 SplitResult LeafNode<min_branch_factor, max_branch_factor, strategy>::adjustTree(
         std::vector<bool> &hasReinsertedOnLevel)
@@ -1523,11 +1404,9 @@ SplitResult LeafNode<min_branch_factor, max_branch_factor, strategy>::adjustTree
   }
   return propagationSplit;
 
-
     // Unsupported
     // abort();
 }
-#endif
 
 template <int min_branch_factor, int max_branch_factor, class strategy>
 void fix_up_path_polys(
@@ -1578,7 +1457,6 @@ void cut_out_branch_region_in_path(
         IsotheticPolygon &region_to_cut_out,
         NIRTreeDisk<min_branch_factor, max_branch_factor, strategy> *treeRef)
 {
-#if 0
   tree_node_handle current_handle = start_handle;
   while (current_handle != nullptr) {
     // Regenerate this node's bounding polygon
@@ -1610,19 +1488,16 @@ void cut_out_branch_region_in_path(
     current_handle = parent_handle;
   }
   // Hit the root, done!
-#endif
 
   // Unsupported
-  abort();
+  // abort();
 }
 
 template <int min_branch_factor, int max_branch_factor, class strategy>
 SplitResult adjustTreeSub(
-            std::vector<bool> &hasReinsertedOnLevel,
-            // added arguments:
-            tree_node_handle start_handle,
-            NIRTreeDisk<min_branch_factor, max_branch_factor, strategy> *treeRef,
-            std::stack<tree_node_handle> &parentHandles)
+        std::vector<bool> &hasReinsertedOnLevel,
+        tree_node_handle start_handle,
+        NIRTreeDisk<min_branch_factor, max_branch_factor, strategy> *treeRef)
 {
   // N.B., as we walk up the tree, we may perform a bunch of splits,
   // which is liable to destroy nodes that are downsplit. These
@@ -1632,95 +1507,73 @@ SplitResult adjustTreeSub(
   // segfaults. It is important that any variables we reference are
   // those we know are alive.
 
-  // Shirley: how is memory reused here ? 
   tree_node_handle current_handle = start_handle;
 
-  // SplitResult is supposed to be two branches where each Branch is {rectangle, tree_node_handle}
-  // shirley: how should I replace with InlineBoundedIsotheticPolygon() ? 
-  // SplitResult propagationSplit = {
-  //         {InlineBoundedIsotheticPolygon(), tree_node_handle(nullptr)},
-  //         {InlineBoundedIsotheticPolygon(), tree_node_handle(nullptr)}};
-  
   SplitResult propagationSplit = {
-          {Rectangle(), tree_node_handle(nullptr)},
-          {Rectangle(), tree_node_handle(nullptr)}};
-  // Loop from the bottom to the very top (root)
+          {InlineBoundedIsotheticPolygon(), tree_node_handle(nullptr)},
+          {InlineBoundedIsotheticPolygon(), tree_node_handle(nullptr)}};
+
+  // Loop from the bottom to the very top
   while (current_handle != nullptr) {
+
     // If there was a split we were supposed to propagate then propagate it
     if (propagationSplit.leftBranch.child != nullptr and propagationSplit.rightBranch.child != nullptr) {
       // We are at least one level up, so have to be a branch
+
       auto current_branch_node = treeRef->get_branch_node(current_handle, true);
-      
-      if (propagationSplit.leftBranch.child.get_type() == LEAF_NODE){
-        // Shirley: Leaf and Right Branch should always be the same type? 
-        // Shirley: is it correct that I can expect the split to be not empty ? 
-        // Shirley: I may not need to get_leaf_node if I dont need to assert the size 
-        assert(propagationSplit.rightBranch.child.get_type() == LEAF_NODE);
-        auto left_node = treeRef->get_leaf_node(propagationSplit.leftBranch.child, false);
-        assert(left_node->cur_offset_ > 0);
-        auto right_node = treeRef->get_leaf_node(propagationSplit.rightBranch.child, false);
-        assert(right_node->cur_offset_ > 0);
-
-        current_branch_node->addBranchToNode(propagationSplit.leftBranch);
-        current_branch_node->addBranchToNode(propagationSplit.rightBranch);
-      } else {
-        assert(propagationSplit.rightBranch.child.get_type() == BRANCH_NODE);
-        auto left_node = treeRef->get_branch_node(propagationSplit.leftBranch.child, false);
-        assert(left_node->cur_offset_ > 0);
-        auto right_node = treeRef->get_branch_node(propagationSplit.rightBranch.child, false);
-        assert(right_node->cur_offset_ > 0);
-
-        current_branch_node->addBranchToNode(propagationSplit.leftBranch);
-        current_branch_node->addBranchToNode(propagationSplit.rightBranch);
+      {
+        if (propagationSplit.leftBranch.child.get_type() ==
+            LEAF_NODE) {
+          auto left_node =
+                  treeRef->get_leaf_node(propagationSplit.leftBranch.child, false);
+          if (left_node->cur_offset_ > 0) {
+            current_branch_node->addBranchToNode(
+                    propagationSplit.leftBranch);
+          }
+        } else {
+          auto left_node =
+                  treeRef->get_branch_node(propagationSplit.leftBranch.child, false);
+          if (left_node->cur_offset_ > 0) {
+            current_branch_node->addBranchToNode(
+                    propagationSplit.leftBranch);
+          }
+        }
       }
+      {
 
-      // {
-      //   // Left Branch 
-      //   if (propagationSplit.leftBranch.child.get_type() == LEAF_NODE) {
-      //     auto left_node = treeRef->get_leaf_node(propagationSplit.leftBranch.child, false);
-      //     assert(left_node->cur_offset_ > 0);
-      //     if (left_node->cur_offset_ > 0) {
-      //       current_branch_node->addBranchToNode(propagationSplit.leftBranch);
-      //     }
-      //   } else {
-      //     auto left_node = treeRef->get_branch_node(propagationSplit.leftBranch.child, false);
-      //     if (left_node->cur_offset_ > 0) {
-      //       current_branch_node->addBranchToNode(propagationSplit.leftBranch);
-      //     }
-      //   }
-      // }
-      // {
-      //   // Right Branch 
-      //   if (propagationSplit.rightBranch.child.get_type() == LEAF_NODE) {
-      //     auto right_node = treeRef->get_leaf_node(propagationSplit.rightBranch.child, false);
-      //     if (right_node->cur_offset_ > 0) {
-      //       current_branch_node->addBranchToNode(propagationSplit.rightBranch);
-      //     }
-      //   } else {
-      //     auto right_node = treeRef->get_branch_node(propagationSplit.rightBranch.child, false);
-      //     if (right_node->cur_offset_ > 0) {
-      //       current_branch_node->addBranchToNode(propagationSplit.rightBranch);
-      //     }
-      //   }
-      // }
+        if (propagationSplit.rightBranch.child.get_type() ==
+            LEAF_NODE) {
+          auto right_node = treeRef->get_leaf_node(propagationSplit.rightBranch.child, false);
+          if (right_node->cur_offset_ > 0) {
+
+            current_branch_node->addBranchToNode(propagationSplit.rightBranch);
+          }
+        } else {
+          auto right_node = treeRef->get_branch_node(propagationSplit.rightBranch.child, false);
+          if (right_node->cur_offset_ > 0) {
+
+            current_branch_node->addBranchToNode(propagationSplit.rightBranch);
+          }
+        }
+      }
     }
 
-    // parentHandles is expected to be in the scope of insert()
-    std::pair<SplitResult, tree_node_handle> split_res_and_new_handle;
+    std::pair<SplitResult, tree_node_handle>
+            split_res_and_new_handle;
     if (current_handle.get_type() == LEAF_NODE || current_handle.get_type() == REPACKED_LEAF_NODE) {
-      auto current_leaf_node = treeRef->get_leaf_node(current_handle, true);
-      // adjust_tree_bottom_half returns a <SplitResult, parentHandle> 
+      auto current_leaf_node = treeRef->get_leaf_node(
+              current_handle, true);
       split_res_and_new_handle = adjust_tree_bottom_half(
-                                  current_leaf_node, treeRef,
-                                  max_branch_factor, hasReinsertedOnLevel,
-                                  parentHandles, current_handle);
+              current_leaf_node, treeRef,
+              max_branch_factor, hasReinsertedOnLevel);
     } else {
-      auto current_branch_node = treeRef->get_branch_node(current_handle);
+      auto current_branch_node = treeRef->get_branch_node(
+              current_handle);
       split_res_and_new_handle = adjust_tree_bottom_half(
-                                  current_branch_node, treeRef,
-                                  max_branch_factor, hasReinsertedOnLevel,
-                                  parentHandles, current_handle);
+              current_branch_node, treeRef,
+              max_branch_factor, hasReinsertedOnLevel);
     }
+
     propagationSplit = split_res_and_new_handle.first;
     current_handle = split_res_and_new_handle.second;
   }
@@ -1735,57 +1588,44 @@ SplitResult adjustTreeSub(
 template <int min_branch_factor, int max_branch_factor, class strategy>
 tree_node_handle LeafNode<min_branch_factor, max_branch_factor, strategy>::insert(
         Point givenPoint,
-        std::vector<bool> &hasReinsertedOnLevel,
-        // added arguments 
-        // treeRef will be modified 
-        NIRTreeDisk<min_branch_factor, max_branch_factor, strategy> *treeRef,
-        tree_node_handle selfHandle)
+        std::vector<bool> &hasReinsertedOnLevel)
 {
   // This is a leaf, so we are the ONLY node.
   addPoint(givenPoint);
-  // shirley: why we need a backup reference ? 
+
   auto tree_ref_backup = treeRef;
-  // empty parents_handle 
-  // parentHandles is expected to be in scope of insert()
-  // pass it as reference pointer or pointer 
-  std::stack<tree_node_handle> parentHandles; 
-  // most of splitting work is done within adjustTreeSub 
-  // the only work left is for having two Branch at root level 
+
   SplitResult finalSplit = adjustTreeSub(hasReinsertedOnLevel,
-                                         selfHandle, treeRef, 
-                                         parentHandles);
+                                         self_handle_, treeRef);
 
   // Grow the tree taller if we need to
-  // there are two branches at root level 
   if (finalSplit.leftBranch.child != nullptr and finalSplit.rightBranch.child != nullptr) {
-    tree_node_allocator *allocator = get_node_allocator(treeRef);
+    tree_node_allocator *allocator = get_node_allocator(this->treeRef);
     auto alloc_data =
             allocator->create_new_tree_node<BranchNode<min_branch_factor, max_branch_factor, strategy>>(
                     NodeHandleType(BRANCH_NODE));
-    new (&(*alloc_data.first)) BranchNode<min_branch_factor, max_branch_factor, strategy>();
+    new (&(*alloc_data.first)) BranchNode<min_branch_factor, max_branch_factor, strategy>(this->treeRef,
+                                                       tree_node_handle(nullptr), alloc_data.second, level_ + 1);
     auto new_root_handle = alloc_data.second;
     assert(new_root_handle.get_type() == BRANCH_NODE);
     auto new_root_node = alloc_data.first;
 
-    // it is only possible for leaf and right tree node to be leaf as we are starting as one leaf node 
-    // auto left_node = treeRef->get_leaf_node(finalSplit.leftBranch.child);
-    // Shirley: there is no parent member in BranchNode now
-    // left_node->parent = new_root_handle;
+    auto left_node = this->treeRef->get_leaf_node(
+            finalSplit.leftBranch.child);
+    left_node->parent = new_root_handle;
     new_root_node->addBranchToNode(finalSplit.leftBranch);
 
-    // auto right_node = treeRef->get_leaf_node(finalSplit.rightBranch.child);
-    // right_node->parent = new_root_handle;
+    auto right_node = this->treeRef->get_leaf_node(
+            finalSplit.rightBranch.child);
+    right_node->parent = new_root_handle;
     new_root_node->addBranchToNode(finalSplit.rightBranch);
 
-    // duplicated assert 
-    //assert(new_root_handle.get_type() == BRANCH_NODE);
+    assert(new_root_handle.get_type() == BRANCH_NODE);
     treeRef->root = new_root_handle;
-  
-    assert(selfHandle.get_type() == LEAF_NODE);
-    // the original root (which is the only leaf node) is deleted from disk 
-    allocator->free(selfHandle, sizeof(LeafNode<min_branch_factor, max_branch_factor, strategy>));
-    // write root to nullptr which will be overwritten to new_root_handle
-    selfHandle = tree_node_handle(nullptr);
+
+    assert(this->self_handle_.get_type() == LEAF_NODE);
+    allocator->free(this->self_handle_, sizeof(LeafNode<min_branch_factor, max_branch_factor, strategy>));
+
     // Fix the reinserted length
     hasReinsertedOnLevel.push_back(false);
 
@@ -1801,9 +1641,10 @@ tree_node_handle LeafNode<min_branch_factor, max_branch_factor, strategy>::inser
 }
 
 // To be called on a leaf
+// there is no treeRef ???
+// 
 template <int min_branch_factor, int max_branch_factor, class strategy>
 void LeafNode<min_branch_factor, max_branch_factor, strategy>::condenseTree() {
-#if 0
   auto current_node_handle = this->self_handle_;
   auto previous_node_handle = tree_node_handle(nullptr);
 
@@ -1833,22 +1674,21 @@ void LeafNode<min_branch_factor, max_branch_factor, strategy>::condenseTree() {
     }
     previous_node_handle = current_node_handle;
   }
-#endif
 
     // Unsupported
-    abort();
+    // abort();
 }
 
 // Always called on root, this = root
 template <int min_branch_factor, int max_branch_factor, class strategy>
 tree_node_handle LeafNode<min_branch_factor, max_branch_factor, strategy>::remove(Point givenPoint) {
-#if 0
+
   removePoint(givenPoint);
   return this->self_handle_;
-#endif
+
 
   // Unsupported
-  abort();
+  // abort();
 }
 
 template <int min_branch_factor, int max_branch_factor, class strategy>
@@ -1875,7 +1715,6 @@ std::vector<Point> LeafNode<min_branch_factor, max_branch_factor, strategy>::bou
 
 template <int min_branch_factor, int max_branch_factor, class strategy>
 bool LeafNode<min_branch_factor, max_branch_factor, strategy>::validate(tree_node_handle expectedParent, unsigned index) {
-#if 0
   if (expectedParent != nullptr and (this->parent != expectedParent ||
                                      this->cur_offset_ > max_branch_factor)) {
     std::cout << "node = " << (void *)this << std::endl;
@@ -1891,6 +1730,7 @@ bool LeafNode<min_branch_factor, max_branch_factor, strategy>::validate(tree_nod
     auto parent_node = treeRef->get_branch_node(parent, false);
     Branch &branch = parent_node->locateBranch(this->self_handle_);
 
+// FIX : 
     IsotheticPolygon poly;
     if (std::holds_alternative<InlineBoundedIsotheticPolygon>(
             branch.boundingPoly)) {
@@ -1917,20 +1757,16 @@ bool LeafNode<min_branch_factor, max_branch_factor, strategy>::validate(tree_nod
     }
   }
   return true;
-#endif
 
   // Unsupported
-  abort();
+  // abort();
 }
 
 template <int min_branch_factor, int max_branch_factor, class strategy>
-void LeafNode<min_branch_factor, max_branch_factor, strategy>::print(tree_node_handle current_handle,
-                                                                     tree_node_handle parent_handle,
-                                                                     unsigned n) {
+void LeafNode<min_branch_factor, max_branch_factor, strategy>::print(unsigned n) {
   std::string indentation(n * 4, ' ');
   std::cout << indentation << "Node " << (void *)this << std::endl;
-  std::cout << indentation << "    Parent: " << parent_handle << std::endl;
-  std::cout << indentation << "    Current: " << current_handle << std::endl;
+  std::cout << indentation << "    Parent: " << this->parent << std::endl;
   std::cout << indentation << "    Data: ";
   for (unsigned i = 0; i < this->cur_offset_; i++) {
     std::cout << entries.at(i);
@@ -1939,11 +1775,9 @@ void LeafNode<min_branch_factor, max_branch_factor, strategy>::print(tree_node_h
 }
 
 template <int min_branch_factor, int max_branch_factor, class strategy>
-void LeafNode<min_branch_factor, max_branch_factor, strategy>::printTree(tree_node_handle current_handle,
-                                                                         tree_node_handle parent_handle, 
-                                                                         unsigned n) {
+void LeafNode<min_branch_factor, max_branch_factor, strategy>::printTree(unsigned n) {
   // Print this node first
-  print(current_handle, parent_handle, n);
+  print(n);
   std::cout << std::endl;
 }
 
@@ -1954,7 +1788,6 @@ unsigned LeafNode<min_branch_factor, max_branch_factor, strategy>::height() {
 
 template <int min_branch_factor, int max_branch_factor, class strategy>
 void BranchNode<min_branch_factor, max_branch_factor, strategy>::deleteSubtrees() {
-#if 0
   tree_node_allocator *allocator = get_node_allocator(this->treeRef);
   for (unsigned i = 0; i < this->cur_offset_; i++) {
     Branch &b = entries.at(i);
@@ -1978,10 +1811,9 @@ void BranchNode<min_branch_factor, max_branch_factor, strategy>::deleteSubtrees(
               sizeof(BranchNode<min_branch_factor, max_branch_factor, strategy>));
     }
   }
-#endif
 
   // Unsupported
-  abort();
+  // abort();
 }
 
 template <int min_branch_factor, int max_branch_factor, class strategy>
@@ -1996,7 +1828,7 @@ Rectangle BranchNode<min_branch_factor, max_branch_factor, strategy>::boundingBo
   return boundingBox;
 }
 
-#if 0 
+// this should be changed 
 template <int min_branch_factor, int max_branch_factor, class strategy>
 void BranchNode<min_branch_factor, max_branch_factor, strategy>::updateBranch(
         tree_node_handle child_handle,
@@ -2010,25 +1842,19 @@ void BranchNode<min_branch_factor, max_branch_factor, strategy>::updateBranch(
   }
 
   // Update the child
+  // incorrect boundingPoly 
   entries.at(childIndex).boundingPoly = boundingPoly;
 }
-#endif 
 
 // Removes a child logical pointer from a this->parent node, freeing that
 // child's memory and the memory of the associated polygon (if external
 // to the node).
 template <int min_branch_factor, int max_branch_factor, class strategy>
 void BranchNode<min_branch_factor, max_branch_factor, strategy>::removeBranch(
-        const tree_node_handle entry,
-        // added arguments
-        NIRTreeDisk<min_branch_factor, max_branch_factor, strategy> *treeRef)
+        const tree_node_handle &entry)
 {
-// #if 0
-// need arguments:
-// treeRef
-
   unsigned found_index = 0;
-  // find branch with handle entry 
+  // find the branch within current branch node whose tree_node_handle equals to entry 
   while (found_index < this->cur_offset_) {
     Branch &b = entries.at(found_index);
     if (b.child == entry) {
@@ -2038,62 +1864,33 @@ void BranchNode<min_branch_factor, max_branch_factor, strategy>::removeBranch(
   }
   assert(entries.at(found_index).child == entry);
   Branch &b = entries.at(found_index);
+  tree_node_allocator *allocator = get_node_allocator(this->treeRef);
 
-  // if (std::holds_alternative<tree_node_handle>(b.boundingPoly)) {
-  //   tree_node_handle free_poly_handle = std::get<tree_node_handle>(
-  //           b.boundingPoly);
-  //   auto poly_pin =
-  //           InlineUnboundedIsotheticPolygon::read_polygon_from_disk(
-  //                   allocator, free_poly_handle);
-  //   poly_pin->free_subpages(allocator);
-  //   uint16_t alloc_size = compute_sizeof_inline_unbounded_polygon(
-  //           poly_pin->get_max_rectangle_count_on_first_page());
-  //   allocator->free(free_poly_handle, alloc_size);
-  // }
-
-  // remove the polygon associated with this node from map 
-  auto itr = treeRef->polygons.find(b.child);
-  if(itr != treeRef->polygons.end()){
-    // if this branch does have a polygon, remove it from map 
-    treeRef->polygons.erase(itr); 
+  // should be updated for polygon map 
+  if (std::holds_alternative<tree_node_handle>(b.boundingPoly)) {
+    tree_node_handle free_poly_handle = std::get<tree_node_handle>(
+            b.boundingPoly);
+    auto poly_pin =
+            InlineUnboundedIsotheticPolygon::read_polygon_from_disk(
+                    allocator, free_poly_handle);
+    poly_pin->free_subpages(allocator);
+    uint16_t alloc_size = compute_sizeof_inline_unbounded_polygon(
+            poly_pin->get_max_rectangle_count_on_first_page());
+    allocator->free(free_poly_handle, alloc_size);
   }
 
-  // free the branch/leaf Node disk page with handler entry 
-  tree_node_allocator *allocator = get_node_allocator(treeRef);
   if (b.child.get_type() == LEAF_NODE) {
     allocator->free(b.child, sizeof(LeafNode<min_branch_factor, max_branch_factor, strategy>));
   } else if (b.child.get_type() == BRANCH_NODE) {
     allocator->free(b.child, sizeof(BranchNode<min_branch_factor, max_branch_factor, strategy>));
   }
   b.child = tree_node_handle(nullptr);
-  // swap with last entry in array 
+
   entries.at(found_index) = entries.at(this->cur_offset_ - 1);
   this->cur_offset_--;
-// #endif
 
-//   // Unsupported
-//   abort();
-}
-
-template <int min_branch_factor, int max_branch_factor, class strategy, typename functor>
-void is_vertical_stripe(NIRTreeDisk<min_branch_factor, max_branch_factor, strategy> *treeRef, tree_node_handle root, functor &f) {
-  std::stack<tree_node_handle> context;
-  context.push(root);
-  tree_node_handle currentContext;
-
-  while (!context.empty()) {
-    currentContext = context.top();
-    context.pop();
-
-    f(treeRef, currentContext);
-
-    if (currentContext.get_type() == BRANCH_NODE) {
-      auto node = treeRef->get_branch_node(currentContext);
-      for (unsigned i = 0; i < node->cur_offset_; i++) {
-        context.push(node->entries.at(i).child);
-      }
-    }
-  }
+  // Unsupported
+  // abort();
 }
 
 template <int min_branch_factor, int max_branch_factor, class strategy, typename functor>
@@ -2116,18 +1913,7 @@ void treeWalker(NIRTreeDisk<min_branch_factor, max_branch_factor, strategy> *tre
     }
   }
 }
-// ======================================================================================
-// functions for searching methods:
-// interface
-//    point_search()
-//    rectangle_search()
-// search helper functions: 
-//    point_search_leaf_node()
-//    point_search_branch_node()
-//    rectangle_search_leaf_node()
-//    rectangle_search_branch_node()
-// not used:
-//    parent_handle_point_search 
+
 template <int min_branch_factor, int max_branch_factor, class strategy>
 void point_search_leaf_node(LeafNode<min_branch_factor, max_branch_factor, strategy> &node,
                             Point &requestedPoint,
@@ -2225,7 +2011,6 @@ tree_node_handle parent_handle_point_search(
         Point &requestedPoint,
         NIRTreeDisk<min_branch_factor, max_branch_factor, strategy> *treeRef,
         tree_node_handle child_to_stop_at) {
-#if 0
   std::stack<tree_node_handle> context;
   context.push(start_point);
   tree_node_allocator *allocator = treeRef->node_allocator_.get();
@@ -2249,10 +2034,9 @@ tree_node_handle parent_handle_point_search(
   }
 
   return tree_node_handle(nullptr);
-#endif
 
   // Unsupported
-  abort();
+  // abort();
 }
 
 template <int min_branch_factor, int max_branch_factor, class strategy>
@@ -2348,8 +2132,6 @@ std::vector<Point> rectangle_search(
 #endif
   return accumulator;
 }
-// == SEARCH ====================================================================================
-
 
 // Always called on root, this = root
 // This top-to-bottom sweep is only for adjusting bounding boxes to contain the point and
@@ -2357,65 +2139,51 @@ std::vector<Point> rectangle_search(
 template <int min_branch_factor, int max_branch_factor, class strategy>
 tree_node_handle
 BranchNode<min_branch_factor, max_branch_factor, strategy>::chooseNode(
-        std::variant<BranchAtLevel, Point> &nodeEntry,
-        uint8_t stopping_level, 
-        // added arguments:
-        NIRTreeDisk<min_branch_factor, max_branch_factor, strategy> *treeRef,
-        tree_node_handle selfHandle,
-        std::stack<tree_node_handle> &parentHandles) {
+        std::variant<Branch, Point> &nodeEntry,
+        uint8_t stopping_level) {
 
-  // requires:
-  //    treeRef
-  //    selfHandle 
-  //    height()
   // FIXME: try and avoid all these materialize calls
 
   // CL1 [Initialize]
-  assert(selfHandle != nullptr);
-  // insert() should always be called at the root level
-  assert(treeRef->root == selfHandle); 
-  tree_node_handle current_handle = selfHandle; 
-  // get tree height to calculate branch node level 
-  uint8_t height = this->height(treeRef,selfHandle);
+  tree_node_handle cur_node_handle = this->self_handle_;
+
+  assert(cur_node_handle != nullptr);
+
   for (;;) {
-    assert(current_handle != nullptr);
-    // REPACK NODE is no longer supported 
-    // if (cur_node_handle.get_type() == REPACKED_LEAF_NODE) {
-    //   cur_node_handle = treeRef->get_leaf_node(cur_node_handle, true)->self_handle_;
-    // } else if (cur_node_handle.get_type() == REPACKED_BRANCH_NODE) {
-    //   cur_node_handle = treeRef->get_branch_node(cur_node_handle, true)->self_handle_;
-    // }
+    assert(cur_node_handle != nullptr);
+    if (cur_node_handle.get_type() == REPACKED_LEAF_NODE) {
+      cur_node_handle = treeRef->get_leaf_node(cur_node_handle, true)->self_handle_;
+    } else if (cur_node_handle.get_type() == REPACKED_BRANCH_NODE) {
+      cur_node_handle = treeRef->get_branch_node(cur_node_handle, true)->self_handle_;
+    }
 
-    if (current_handle.get_type() == LEAF_NODE) {
-      // if we found a Leaf Node, we must be working with Point 
+    if (cur_node_handle.get_type() == LEAF_NODE) {
       assert(std::holds_alternative<Point>(nodeEntry));
-      return current_handle;
+      return cur_node_handle;
     } else {
-      assert(current_handle.get_type() == BRANCH_NODE);
-      auto current_node = treeRef->get_branch_node(current_handle);
-      assert(current_node->cur_offset_ > 0);
-      // if we are at the stopping level, it means we have found the
-      // Branch Node 
-      uint8_t current_level = height - parentHandles.size() - 1; 
-      if (current_level == stopping_level) {
-        return current_handle;
-      }
-      
-      // tree_node_allocator *allocator = get_node_allocator(treeRef);
-      // inline_poly node_poly = cur_node->entries.at(0).get_inline_polygon(
-      //         allocator);
-      // bool node_poly_unbounded = std::holds_alternative<unbounded_poly_pin>(node_poly);
-      // if (node_poly_unbounded) {
-      //   assert(std::get<unbounded_poly_pin>(node_poly)->get_total_rectangle_count() > 0);
-      // } else {
-      //   assert(std::get<InlineBoundedIsotheticPolygon>(node_poly).get_rectangle_count() > 0);
-      // }
+      assert(cur_node_handle.get_type() == BRANCH_NODE);
 
-      // find polygon of current node 
-      IsotheticPolygon node_poly = find_polygon(treeRef, current_handle, current_node->boundingBox());
+      auto cur_node = treeRef->get_branch_node(cur_node_handle);
+      // Compute the smallest expansion
+      assert(cur_node->cur_offset_ > 0);
+      if (cur_node->level_ == stopping_level) {
+        return cur_node_handle;
+      }
+
+      tree_node_allocator *allocator = get_node_allocator(this->treeRef);
+      inline_poly node_poly = cur_node->entries.at(0).get_inline_polygon(
+              allocator);
+      bool node_poly_unbounded = std::holds_alternative<unbounded_poly_pin>(node_poly);
+      if (node_poly_unbounded) {
+        assert(std::get<unbounded_poly_pin>(node_poly)->get_total_rectangle_count() > 0);
+      } else {
+        assert(std::get<InlineBoundedIsotheticPolygon>(node_poly).get_rectangle_count() > 0);
+      }
+
       // This is the minimum amount of additional area we need in
       // one of the branches to encode our expansion
-      double minimal_area_expansion = std::numeric_limits<double>::max();
+      double minimal_area_expansion =
+              std::numeric_limits<double>::max();
       double minimal_poly_area = std::numeric_limits<double>::max();
 
       // This is the branch that gives us that minimum area
@@ -2426,68 +2194,55 @@ BranchNode<min_branch_factor, max_branch_factor, strategy>::chooseNode(
       // to get the bounding box/bounding polygon
       std::vector<IsotheticPolygon::OptimalExpansion> expansions;
 
-      
-      if (std::holds_alternative<BranchAtLevel>(nodeEntry)) {
-        Branch &b = std::get<BranchAtLevel>(nodeEntry).branch; 
-        // polygon of to-be-inserted branch 
-        IsotheticPolygon branch_poly = find_polygon(treeRef, b); 
-        std::pair<double, std::vector<IsotheticPolygon::OptimalExpansion>> exp = computeExpansionArea(node_poly, branch_poly); 
-        minimal_area_expansion = exp.first; 
-        expansions = exp.second;
-        // Shirley: Question: why does minimal_poly_area represent ? 
-        minimal_poly_area = branch_poly.area(); 
-        #if 0 
-        inline_poly branch_poly = std::get<Branch>(nodeEntry).get_inline_polygon(allocator);
-        IsotheticPolygon branch_poly = treeRef->polygons.find(current_handle)->second; 
+      if (std::holds_alternative<Branch>(nodeEntry)) {
+        inline_poly branch_poly =
+                std::get<Branch>(nodeEntry).get_inline_polygon(allocator);
         auto expansion_computation_results = computeExpansionArea(node_poly, branch_poly);
-        minimal_area_expansion = expansion_computation_results.first; 
-        #endif  
-        // bool branch_poly_unbounded = std::holds_alternative<unbounded_poly_pin>(branch_poly);
-        // if (branch_poly_unbounded) {
-        //   minimal_poly_area = std::get<unbounded_poly_pin>(branch_poly)->area();
-        // } else {
-        //   minimal_poly_area = std::get<InlineBoundedIsotheticPolygon>(branch_poly).area();
-        // }
+        minimal_area_expansion = expansion_computation_results.first;
 
-        //expansions = expansion_computation_results.second;
+        bool branch_poly_unbounded = std::holds_alternative<unbounded_poly_pin>(branch_poly);
+        if (branch_poly_unbounded) {
+          minimal_poly_area = std::get<unbounded_poly_pin>(branch_poly)->area();
+        } else {
+          minimal_poly_area = std::get<InlineBoundedIsotheticPolygon>(branch_poly).area();
+        }
 
-        // if( minimal_area_expansion == -1.0 ) {
-        //     abort();
-        // }
-
+        expansions = expansion_computation_results.second;
+        /*
+                if( minimal_area_expansion == -1.0 ) {
+                    abort();
+                }
+                */
       } else {
-        // NodeEntry is a Point 
-        // IsotheticPolygon::OptimalExpansion exp;
-        // if (node_poly_unbounded) {
-        //   auto unb_node_poly = std::get<unbounded_poly_pin>(node_poly);
-        //   auto inline_exp = computeExpansionArea<InlineUnboundedIsotheticPolygon, InlineUnboundedIsotheticPolygon::Iterator>(
-        //           *unb_node_poly, unb_node_poly->begin(), unb_node_poly->end(), std::get<Point>(nodeEntry));
-        //   exp = inline_exp;
-        // } else {
-        //   auto b_node_poly = std::get<InlineBoundedIsotheticPolygon>(node_poly);
-        //   exp = computeExpansionArea<InlineBoundedIsotheticPolygon, InlineBoundedIsotheticPolygon::iterator>(
-        //           b_node_poly, b_node_poly.begin(), b_node_poly.end(), std::get<Point>(nodeEntry));
-        // }
-        IsotheticPolygon::OptimalExpansion exp = node_poly.computeExpansionArea(std::get<Point>(nodeEntry));
+        IsotheticPolygon::OptimalExpansion exp;
+        if (node_poly_unbounded) {
+          auto unb_node_poly = std::get<unbounded_poly_pin>(node_poly);
+          auto inline_exp = computeExpansionArea<InlineUnboundedIsotheticPolygon, InlineUnboundedIsotheticPolygon::Iterator>(
+                  *unb_node_poly, unb_node_poly->begin(), unb_node_poly->end(), std::get<Point>(nodeEntry));
+          exp = inline_exp;
+        } else {
+          auto b_node_poly = std::get<InlineBoundedIsotheticPolygon>(node_poly);
+          exp = computeExpansionArea<InlineBoundedIsotheticPolygon, InlineBoundedIsotheticPolygon::iterator>(
+                  b_node_poly, b_node_poly.begin(), b_node_poly.end(), std::get<Point>(nodeEntry));
+        }
         minimal_area_expansion = exp.area;
         expansions.push_back(exp);
       }
 
-      // checking each branch/child of current Branch Node 
-      for (unsigned i = 1; i < current_node->cur_offset_; i++) {
-        Branch &b = current_node->entries.at(i);
-        //node_poly = b.get_inline_polygon(allocator);
-        // bool node_poly_unbounded = std::holds_alternative<unbounded_poly_pin>(node_poly);
-        // if (node_poly_unbounded) {
-        //   assert(std::get<unbounded_poly_pin>(node_poly)->get_total_rectangle_count() > 0);
-        // } else {
-        //   assert(std::get<InlineBoundedIsotheticPolygon>(node_poly).get_rectangle_count() > 0);
-        // }
-        node_poly = find_polygon(treeRef, b); 
-        if (std::holds_alternative<BranchAtLevel>(nodeEntry)) {
-          // inline_poly branch_poly =
-          //         std::get<Branch>(nodeEntry).get_inline_polygon(
-          //                 allocator);
+      for (unsigned i = 1; i < cur_node->cur_offset_; i++) {
+        Branch &b = cur_node->entries.at(i);
+        node_poly = b.get_inline_polygon(allocator);
+        bool node_poly_unbounded = std::holds_alternative<unbounded_poly_pin>(node_poly);
+        if (node_poly_unbounded) {
+          assert(std::get<unbounded_poly_pin>(node_poly)->get_total_rectangle_count() > 0);
+        } else {
+          assert(std::get<InlineBoundedIsotheticPolygon>(node_poly).get_rectangle_count() > 0);
+        }
+
+        if (std::holds_alternative<Branch>(nodeEntry)) {
+          inline_poly branch_poly =
+                  std::get<Branch>(nodeEntry).get_inline_polygon(
+                          allocator);
           // Walk every rectangle in the branch's polygon
           // Find rectangle in our polygon that needs to be
           // expanded the least to fit the branch's rectangle
@@ -2497,26 +2252,23 @@ BranchNode<min_branch_factor, max_branch_factor, strategy>::chooseNode(
           // distinct polygons. So as a result of doing this
           // the polygon's constituent rectangles may now
           // overlap.
-          //auto expansion_computation_results = computeExpansionArea(node_poly, branch_poly);
+          auto expansion_computation_results = computeExpansionArea(node_poly, branch_poly);
+          double poly_area;
 
-          Branch &b = std::get<BranchAtLevel>(nodeEntry).branch; 
-          // polygon of to-be-inserted branch 
-          IsotheticPolygon branch_poly = find_polygon(treeRef, b); 
-          auto expansion_computation_results = computeExpansionArea(node_poly, branch_poly); 
-          double poly_area = node_poly.area(); 
+          if (node_poly_unbounded) {
+            poly_area = std::get<unbounded_poly_pin>(node_poly)->area();
+          } else {
+            poly_area = std::get<InlineBoundedIsotheticPolygon>(node_poly).area();
+          }
 
-          // double poly_area;
-
-          // if (node_poly_unbounded) {
-          //   poly_area = std::get<unbounded_poly_pin>(node_poly)->area();
-          // } else {
-          //   poly_area = std::get<InlineBoundedIsotheticPolygon>(node_poly).area();
-          // }
-
-          if (expansion_computation_results.first < minimal_area_expansion or
-             (expansion_computation_results.first == minimal_area_expansion and
-               poly_area < minimal_poly_area)) {
-            minimal_area_expansion = expansion_computation_results.first;
+          if (expansion_computation_results.first <
+              minimal_area_expansion or
+              (expansion_computation_results.first ==
+               minimal_area_expansion and
+               poly_area <
+               minimal_poly_area)) {
+            minimal_area_expansion =
+                    expansion_computation_results.first;
             minimal_poly_area = poly_area;
             expansions = expansion_computation_results.second;
             smallestExpansionBranchIndex = i;
@@ -2527,21 +2279,19 @@ BranchNode<min_branch_factor, max_branch_factor, strategy>::chooseNode(
                     }
                     */
         } else {
-          // working with Point Case 
-          // IsotheticPolygon::OptimalExpansion exp;
-          // if (node_poly_unbounded) {
-          //   auto unb_node_poly = std::get<unbounded_poly_pin>(node_poly);
-          //   auto inline_exp = computeExpansionArea<InlineUnboundedIsotheticPolygon, InlineUnboundedIsotheticPolygon::Iterator>(
-          //           *unb_node_poly, unb_node_poly->begin(), unb_node_poly->end(), std::get<Point>(nodeEntry));
-          //   exp = inline_exp;
-          // } else {
-          //   auto b_node_poly = std::get<InlineBoundedIsotheticPolygon>(node_poly);
-          //   auto inline_exp = computeExpansionArea<InlineBoundedIsotheticPolygon, InlineBoundedIsotheticPolygon::iterator>(
-          //           b_node_poly, b_node_poly.begin(), b_node_poly.end(), std::get<Point>(nodeEntry));
-          //   exp = inline_exp;
-          // }
-          IsotheticPolygon::OptimalExpansion exp = node_poly.computeExpansionArea(std::get<Point>(nodeEntry));
-      
+          IsotheticPolygon::OptimalExpansion exp;
+          if (node_poly_unbounded) {
+            auto unb_node_poly = std::get<unbounded_poly_pin>(node_poly);
+            auto inline_exp = computeExpansionArea<InlineUnboundedIsotheticPolygon, InlineUnboundedIsotheticPolygon::Iterator>(
+                    *unb_node_poly, unb_node_poly->begin(), unb_node_poly->end(), std::get<Point>(nodeEntry));
+            exp = inline_exp;
+          } else {
+            auto b_node_poly = std::get<InlineBoundedIsotheticPolygon>(node_poly);
+            auto inline_exp = computeExpansionArea<InlineBoundedIsotheticPolygon, InlineBoundedIsotheticPolygon::iterator>(
+                    b_node_poly, b_node_poly.begin(), b_node_poly.end(), std::get<Point>(nodeEntry));
+            exp = inline_exp;
+          }
+
           if (exp.area < minimal_area_expansion) {
             minimal_area_expansion = exp.area;
             expansions.clear();
@@ -2551,52 +2301,43 @@ BranchNode<min_branch_factor, max_branch_factor, strategy>::chooseNode(
         }
       }
 
-      // Shirley: Question what is the meaning of minimal_area_expansion == -1.0 ? 
-      // we do the following actions when 
       if (minimal_area_expansion != -1.0) {
 #ifndef NDEBUG
-        for (unsigned i = 0; i < current_node->cur_offset_; i++) {
-          for (unsigned j = 0; j < current_node->cur_offset_; j++) {
+        for (unsigned i = 0; i < cur_node->cur_offset_; i++) {
+          for (unsigned j = 0; j < cur_node->cur_offset_; j++) {
             if (i == j) {
               continue;
             }
-            Branch &b_i = current_node->entries.at(i);
-            Branch &b_j = current_node->entries.at(j);
-            // IsotheticPolygon poly_i =
-            //         b_i.materialize_polygon(allocator);
-            // IsotheticPolygon poly_j =
-            //         b_j.materialize_polygon(allocator);
-            IsotheticPolygon poly_i = find_polygon(treeRef, b_i); 
-            IsotheticPolygon poly_j = find_polygon(treeRef, b_j); 
+            Branch &b_i = cur_node->entries.at(i);
+            Branch &b_j = cur_node->entries.at(j);
+            IsotheticPolygon poly_i =
+                    b_i.materialize_polygon(allocator);
+            IsotheticPolygon poly_j =
+                    b_j.materialize_polygon(allocator);
             assert(poly_i.disjoint(poly_j));
           }
         }
 #endif
 
-        Branch &chosen_branch = current_node->entries.at(smallestExpansionBranchIndex);
-        node_poly = find_polygon(treeRef, chosen_branch); 
-        //node_poly = chosen_branch.get_inline_polygon(allocator);
-        //IsotheticPolygon mat_node_poly = chosen_branch.materialize_polygon(allocator);
+        Branch &chosen_branch =
+                cur_node->entries.at(smallestExpansionBranchIndex);
+        node_poly = chosen_branch.get_inline_polygon(allocator);
 
-        if (std::holds_alternative<BranchAtLevel>(nodeEntry)) {
+        IsotheticPolygon mat_node_poly = chosen_branch.materialize_polygon(allocator);
+
+        if (std::holds_alternative<Branch>(nodeEntry)) {
           // Fragment them on the way down.
-          Branch &b = std::get<BranchAtLevel>(nodeEntry).branch; 
-          IsotheticPolygon insertion_poly = find_polygon(treeRef, b); 
-          // Branch &inserting_branch = std::get<Branch>(nodeEntry);
-          // IsotheticPolygon insertion_poly = inserting_branch.materialize_polygon(allocator);
-          for (unsigned i = 0; i < current_node->cur_offset_; i++) {
+          Branch &inserting_branch = std::get<Branch>(nodeEntry);
+          IsotheticPolygon insertion_poly = inserting_branch.materialize_polygon(allocator);
+          for (unsigned i = 0; i < cur_node->cur_offset_; i++) {
             if (i == smallestExpansionBranchIndex) {
               continue;
             }
-            Branch &other_branch = current_node->entries.at(i);
-            IsotheticPolygon other_poly = find_polygon(treeRef, other_branch); 
-            // IsotheticPolygon other_poly =
-            //         other_branch.materialize_polygon(allocator);
+            Branch &other_branch = cur_node->entries.at(i);
+            IsotheticPolygon other_poly =
+                    other_branch.materialize_polygon(allocator);
 
-            // Shirley: so we clip other_polygon at the current BranchNode according to 
-            // the to-be-inserted polygon ? 
             other_poly.increaseResolution(Point::atInfinity, insertion_poly);
-            // is this refine() necessary ? 
             other_poly.refine();
             other_poly.recomputeBoundingBox();
 
@@ -2608,17 +2349,18 @@ BranchNode<min_branch_factor, max_branch_factor, strategy>::chooseNode(
         // responsible for the new point/branch
         // Everyone else needs to fragment around my nodeEntry,
         // then we expand and fragment around them.
-        if (std::holds_alternative<BranchAtLevel>(nodeEntry)) {
-          // TODO: FIX
-          Branch &b = std::get<BranchAtLevel>(nodeEntry).branch; 
-          IsotheticPolygon insertion_poly = find_polygon(treeRef, b); 
-          // Branch &inserting_branch = std::get<Branch>(nodeEntry);
-          // IsotheticPolygon insertion_poly = inserting_branch.materialize_polygon(allocator);
-          assert(insertion_poly.basicRectangles.size() == expansions.size());
-          for (unsigned i = 0; i < insertion_poly.basicRectangles.size(); i++) {
+        if (std::holds_alternative<Branch>(nodeEntry)) {
+          Branch &inserting_branch = std::get<Branch>(nodeEntry);
+          IsotheticPolygon insertion_poly = inserting_branch.materialize_polygon(allocator);
+          assert(insertion_poly.basicRectangles.size() ==
+                 expansions.size());
+          for (unsigned i = 0; i <
+                               insertion_poly.basicRectangles.size();
+               i++) {
             auto &expansion = expansions.at(i);
             auto &insertion_rect = insertion_poly.basicRectangles.at(i);
-            Rectangle &existing_rect = node_poly.basicRectangles.at(expansion.index);
+            Rectangle &existing_rect =
+                    mat_node_poly.basicRectangles.at(expansion.index);
             // Expand the existing rectangle. This rectangle
             // might now overlap with other rectangles in
             // the polygon. But if we make it not overlap,
@@ -2626,27 +2368,29 @@ BranchNode<min_branch_factor, max_branch_factor, strategy>::chooseNode(
             // rectangles, which kind of sucks, So, leave it
             // for now.
             existing_rect.expand(insertion_rect);
-            assert(existing_rect.containsRectangle(insertion_rect));
+            assert(existing_rect.containsRectangle(
+                    insertion_rect));
           }
-          node_poly.recomputeBoundingBox();
+          mat_node_poly.recomputeBoundingBox();
         } else {
-          // Point Case: 
           assert(expansions.size() == 1);
           Point &p = std::get<Point>(nodeEntry);
-          Rectangle &existing_rect = node_poly.basicRectangles.at(expansions.at(0).index);
+          Rectangle &existing_rect =
+                  mat_node_poly.basicRectangles.at(expansions.at(0).index);
           existing_rect.expand(p);
-          node_poly.recomputeBoundingBox();
-          assert(node_poly.containsPoint(p));
+          mat_node_poly.recomputeBoundingBox();
+          assert(mat_node_poly.containsPoint(p));
         }
 
         // Dodge all the other branches
-        for (unsigned i = 0; i < current_node->cur_offset_; i++) {
+        for (unsigned i = 0; i < cur_node->cur_offset_;
+             i++) {
           if (i == smallestExpansionBranchIndex) {
             continue;
           }
-          Branch &other_branch = current_node->entries.at(i);
-          IsotheticPolygon other_poly = find_polygon(treeRef, other_branch); 
-          node_poly.increaseResolution(Point::atInfinity, other_poly);
+          Branch &other_branch = cur_node->entries.at(i);
+          mat_node_poly.increaseResolution(Point::atInfinity,
+                                           other_branch.materialize_polygon(allocator));
         }
 
         /*
@@ -2670,17 +2414,16 @@ BranchNode<min_branch_factor, max_branch_factor, strategy>::chooseNode(
                 }
                 */
 
-        node_poly.refine();
-        node_poly.recomputeBoundingBox();
+        mat_node_poly.refine();
+        mat_node_poly.recomputeBoundingBox();
 
-        update_branch_polygon(chosen_branch, node_poly, treeRef);
+        update_branch_polygon(chosen_branch, mat_node_poly, treeRef);
       }
 
       // Descend
-      parentHandles.push(current_handle);
-      Branch &b = current_node->entries.at(smallestExpansionBranchIndex);
-      current_handle = b.child;
-      assert(current_handle != nullptr);
+      Branch &b = cur_node->entries.at(smallestExpansionBranchIndex);
+      cur_node_handle = b.child;
+      assert(cur_node_handle != nullptr);
     }
   }
 
@@ -2688,10 +2431,8 @@ BranchNode<min_branch_factor, max_branch_factor, strategy>::chooseNode(
   // abort();
 }
 
-// called by remove()
 template <int min_branch_factor, int max_branch_factor, class strategy>
 tree_node_handle BranchNode<min_branch_factor, max_branch_factor, strategy>::findLeaf(Point givenPoint) {
-#if 0
   // Initialize our context stack
   std::stack<tree_node_handle> context;
   context.push(this->self_handle_);
@@ -2762,15 +2503,15 @@ tree_node_handle BranchNode<min_branch_factor, max_branch_factor, strategy>::fin
   }
 
   return tree_node_handle(nullptr);
-#endif
+
 
   // Unsupported
-  abort();
+  // abort();
 }
 
 template <int min_branch_factor, int max_branch_factor, class strategy>
-Partition BranchNode<min_branch_factor, max_branch_factor, strategy>::partitionNode(NIRTreeDisk<min_branch_factor, max_branch_factor, strategy> *treeRef) {
-  return partitionBranchNode(treeRef);
+Partition BranchNode<min_branch_factor, max_branch_factor, strategy>::partitionNode() {
+  return partitionBranchNode();
 }
 
 struct summary_rectangle_sorter {
@@ -2787,7 +2528,7 @@ struct summary_rectangle_sorter {
 
     template <class NE>
     bool operator()(NE &n1, NE &n2) {
-#if 0
+// #if 0
       Branch &b1 = std::get<Branch>(n1);
       Branch &b2 = std::get<Branch>(n2);
 
@@ -2799,10 +2540,10 @@ struct summary_rectangle_sorter {
         return bb1.lowerLeft[dimension_] <= bb2.lowerLeft[dimension_];
       }
       return bb1.upperRight[dimension_] <= bb2.upperRight[dimension_];
-#endif
+// #endif
 
       // Unsupported
-      abort();
+      // abort();
     }
 
     unsigned dimension_;
@@ -2813,114 +2554,106 @@ struct summary_rectangle_sorter {
 template <int min_branch_factor, int max_branch_factor, class strategy>
 void BranchNode<min_branch_factor, max_branch_factor, strategy>::make_disjoint_from_children(
         IsotheticPolygon &polygon,
-        tree_node_handle handle_to_skip,
-        // added arguments 
-        NIRTreeDisk<min_branch_factor, max_branch_factor, strategy> *treeRef) {
+        tree_node_handle handle_to_skip) {
 // #if 0
-  tree_node_allocator *allocator = get_node_allocator(treeRef);
-  for (auto iter = entries.begin(); iter != entries.begin() + this->cur_offset_; iter++) {
+  tree_node_allocator *allocator = get_node_allocator(this->treeRef);
+  for (auto iter = entries.begin(); iter !=
+                                    entries.begin() + this->cur_offset_;
+       iter++) {
     Branch &b = *iter;
     if (b.child == handle_to_skip) {
       continue;
     }
-    //IsotheticPolygon child_poly = b.materialize_polygon(allocator);
-    // get each siblings' polygon from map 
-    IsotheticPolygon child_poly = find_polygon(treeRef, b); 
-    // if polygon overlaps with child_poly, polygon is clipped according to child_poly
+    IsotheticPolygon child_poly = b.materialize_polygon(allocator);
     polygon.increaseResolution(Point::atInfinity, child_poly);
   }
   polygon.recomputeBoundingBox();
 // #endif
 
-//   // Unsupported
-//   abort();
+  // Unsupported
+  // abort();
 }
 
 // We create two new nodes and free the old one.
 // The old one is freed in adjustTree using removeEntry
 // If we downsplit, then we won't call adjustTree for that split so we
 // need to delete the node ourselves.
-// Shirley: 
-// the old node is freed in adjust_tree_bottom_half using removeBranch
 template <int min_branch_factor, int max_branch_factor, class strategy>
-SplitResult BranchNode<min_branch_factor, max_branch_factor, strategy>::splitNode(
-              Partition p, 
-              bool is_downsplit,
-              // added arguments 
-              NIRTreeDisk<min_branch_factor, max_branch_factor, strategy> *treeRef,
-              tree_node_handle current_handle,
-              tree_node_handle parent_handle) {
+SplitResult BranchNode<min_branch_factor, max_branch_factor, strategy>::splitNode(Partition p, bool is_downsplit) {
+// #if 0
+  assert(this->self_handle_.get_type() == BRANCH_NODE);
+  using NodeType = BranchNode<min_branch_factor, max_branch_factor, strategy>;
+  tree_node_allocator *allocator = get_node_allocator(this->treeRef);
 
-  assert(current_handle.get_type() == BRANCH_NODE);
-  //using NodeType = BranchNode<min_branch_factor, max_branch_factor, strategy>;
-  tree_node_allocator *allocator = get_node_allocator(treeRef);
-
-  auto alloc_data = allocator->create_new_tree_node<BranchNode<min_branch_factor, max_branch_factor, strategy>>(
+  auto alloc_data =
+          allocator->create_new_tree_node<BranchNode<min_branch_factor, max_branch_factor, strategy>>(
                   NodeHandleType(BRANCH_NODE));
   tree_node_handle left_handle = alloc_data.second;
   auto left_node = alloc_data.first; // take pin
-  new (&(*left_node)) BranchNode<min_branch_factor, max_branch_factor, strategy>();
-  //assert(left_node->self_handle == left_handle);
+  new (&(*left_node)) NodeType(this->treeRef, this->parent,
+                               left_handle, level_);
+  assert(left_node->self_handle_ == left_handle);
 
-  alloc_data = allocator->create_new_tree_node<BranchNode<min_branch_factor, max_branch_factor, strategy>>(
+  alloc_data =
+          allocator->create_new_tree_node<BranchNode<min_branch_factor, max_branch_factor, strategy>>(
                   NodeHandleType(BRANCH_NODE));
   tree_node_handle right_handle = alloc_data.second;
   auto right_node = alloc_data.first; // take pin
-  new (&(*right_node)) BranchNode<min_branch_factor, max_branch_factor, strategy>();
-  //assert(right_node->self_handle == right_handle);
+  new (&(*right_node)) NodeType(this->treeRef, this->parent,
+                                right_handle, level_);
+  assert(right_node->self_handle_ == right_handle);
 
-  // SplitResult split = {
-  //         {tree_node_handle(nullptr), left_handle},
-  //         {tree_node_handle(nullptr), right_handle}};
-  SplitResult split = {{Rectangle(), left_handle},
-                       {Rectangle(), right_handle}};
+  SplitResult split = {
+          {tree_node_handle(nullptr), left_handle},
+          {tree_node_handle(nullptr), right_handle}};
 
   // So we are going to split this branch node.
   for (unsigned i = 0; i < this->cur_offset_; i++) {
     Branch &branch = entries.at(i);
-    // pinned_node_ptr<InlineUnboundedIsotheticPolygon>
-    //         branch_poly_pin(allocator->buffer_pool_, nullptr,
-    //                         nullptr);
-    // Rectangle summary_rectangle = branch.get_summary_rectangle(allocator);
-    IsotheticPolygon branch_poly = find_polygon(treeRef, branch); 
-    Rectangle summary_rectangle = branch_poly.boundingBox; 
 
-    // Shirley: question: why is_contained_left inclusive ?? 
-    bool is_contained_left = summary_rectangle.upperRight[p.dimension] <= p.location;
-    bool is_contained_right = summary_rectangle.lowerLeft[p.dimension] >= p.location;
-    assert( not(is_contained_left and is_contained_right));
+    pinned_node_ptr<InlineUnboundedIsotheticPolygon>
+            branch_poly_pin(allocator->buffer_pool_, nullptr,
+                            nullptr);
 
-    // IsotheticPolygon child_poly = branch.materialize_polygon(
-    //         allocator);
+    Rectangle summary_rectangle =
+            branch.get_summary_rectangle(allocator);
 
-    // Shirley: REPACKED is not considered 
-    // if (branch.child.get_type() == REPACKED_LEAF_NODE) {
-    //   branch.child = treeRef->get_leaf_node(branch.child, true)->self_handle_;
-    // } else if (branch.child.get_type() == REPACKED_BRANCH_NODE) {
-    //   branch.child = treeRef->get_branch_node(branch.child, true)->self_handle_;
-    // }
+    bool is_contained_left =
+            summary_rectangle.upperRight[p.dimension] <= p.location;
+    bool is_contained_right =
+            summary_rectangle.lowerLeft[p.dimension] >= p.location;
+    assert(not(is_contained_left and is_contained_right));
+
+    IsotheticPolygon child_poly = branch.materialize_polygon(
+            allocator);
+
+    if (branch.child.get_type() == REPACKED_LEAF_NODE) {
+      branch.child = treeRef->get_leaf_node(branch.child, true)->self_handle_;
+    } else if (branch.child.get_type() == REPACKED_BRANCH_NODE) {
+      branch.child = treeRef->get_branch_node(branch.child, true)->self_handle_;
+    }
 
     // Entirely contained in the left polygon
     if (is_contained_left and not is_contained_right) {
-      // if (branch.child.get_type() == LEAF_NODE) {
-      //   auto child = treeRef->get_leaf_node(branch.child);
-      //   //child->parent = split.leftBranch.child;
-      // } else {
-      //   auto child = treeRef->get_branch_node(branch.child);
-      //   //child->parent = split.leftBranch.child;
-      // }
+      if (branch.child.get_type() == LEAF_NODE) {
+        auto child = this->treeRef->get_leaf_node(branch.child);
+        child->parent = split.leftBranch.child;
+      } else {
+        auto child = this->treeRef->get_branch_node(branch.child);
+        child->parent = split.leftBranch.child;
+      }
 
       assert(split.leftBranch.child == left_handle);
       left_node->addBranchToNode(branch);
       // Entirely contained in the right polygon
     } else if (is_contained_right and not is_contained_left) {
-      // if (branch.child.get_type() == LEAF_NODE) {
-      //   auto child = this->treeRef->get_leaf_node(branch.child);
-      //   child->parent = split.rightBranch.child;
-      // } else {
-      //   auto child = this->treeRef->get_branch_node(branch.child);
-      //   child->parent = split.rightBranch.child;
-      // }
+      if (branch.child.get_type() == LEAF_NODE) {
+        auto child = this->treeRef->get_leaf_node(branch.child);
+        child->parent = split.rightBranch.child;
+      } else {
+        auto child = this->treeRef->get_branch_node(branch.child);
+        child->parent = split.rightBranch.child;
+      }
       assert(split.rightBranch.child == right_handle);
       right_node->addBranchToNode(branch);
     } else if (summary_rectangle.upperRight[p.dimension] ==
@@ -2929,96 +2662,87 @@ SplitResult BranchNode<min_branch_factor, max_branch_factor, strategy>::splitNod
                p.location) {
       // These go left or right situationally
       if (left_node->cur_offset_ <= right_node->cur_offset_) {
-        // if (branch.child.get_type() == LEAF_NODE) {
-        //   auto child = this->treeRef->get_leaf_node(branch.child);
-        //   child->parent = split.leftBranch.child;
-        // } else {
-        //   auto child = this->treeRef->get_branch_node(branch.child);
-        //   child->parent = split.leftBranch.child;
-        // }
+        if (branch.child.get_type() == LEAF_NODE) {
+          auto child = this->treeRef->get_leaf_node(branch.child);
+          child->parent = split.leftBranch.child;
+        } else {
+          auto child = this->treeRef->get_branch_node(branch.child);
+          child->parent = split.leftBranch.child;
+        }
         assert(split.leftBranch.child == left_handle);
         left_node->addBranchToNode(branch);
       } else {
-        // if (branch.child.get_type() == LEAF_NODE) {
-        //   auto child = this->treeRef->get_leaf_node(branch.child);
-        //   child->parent = split.rightBranch.child;
-        // } else {
-        //   auto child = this->treeRef->get_branch_node(branch.child);
-        //   child->parent = split.rightBranch.child;
-        // }
+        if (branch.child.get_type() == LEAF_NODE) {
+          auto child = this->treeRef->get_leaf_node(branch.child);
+          child->parent = split.rightBranch.child;
+        } else {
+          auto child = this->treeRef->get_branch_node(branch.child);
+          child->parent = split.rightBranch.child;
+        }
         assert(split.rightBranch.child == right_handle);
         right_node->addBranchToNode(branch);
       }
       // Partially spanned by both nodes, need to downsplit
     } else {
-      // IsotheticPolygon branch_poly = branch.materialize_polygon(
-      //         allocator);
-      // branch_poly is defined above 
+      IsotheticPolygon branch_poly = branch.materialize_polygon(
+              allocator);
       SplitResult downwardSplit;
-      // Shirley:
-      // why we can just free branch.child ? is it guaranteed 
-      // why we don't call removeBranch ? 
-      // the originl code doesn't update the array? why? 
-      // maybe I don't need downsplit as the branch has not been added to BranchNode 
-      // QUESTION: I don't see branch removed from BranchNode 
+
       if (branch.child.get_type() == LEAF_NODE) {
         auto child = treeRef->get_leaf_node(branch.child);
-        downwardSplit = child->splitNode(p, true, treeRef, branch.child, current_handle);
-        // allocator->free(branch.child, sizeof(
-        //         LeafNode<min_branch_factor, max_branch_factor, strategy>));
+        downwardSplit = child->splitNode(p, true);
+        allocator->free(branch.child, sizeof(
+                LeafNode<min_branch_factor, max_branch_factor, strategy>));
       } else {
         auto child = treeRef->get_branch_node(branch.child);
-        downwardSplit = child->splitNode(p, true, treeRef, branch.child, current_handle);
-        // allocator->free(branch.child, sizeof(
-        //         BranchNode<min_branch_factor, max_branch_factor, strategy>));
+        downwardSplit = child->splitNode(p, true);
+        allocator->free(branch.child, sizeof(
+                BranchNode<min_branch_factor, max_branch_factor, strategy>));
       }
-      
-      // if (std::holds_alternative<tree_node_handle>(
-      //         branch.boundingPoly)) {
-      //   // We can free this
-      //   tree_node_handle free_poly_handle = std::get<tree_node_handle>(
-      //           branch.boundingPoly);
-      //   auto free_poly_pin = InlineUnboundedIsotheticPolygon::read_polygon_from_disk(
-      //           allocator, free_poly_handle);
-      //   free_poly_pin->free_subpages(allocator);
-      //   uint16_t alloc_size = compute_sizeof_inline_unbounded_polygon(
-      //           free_poly_pin->get_max_rectangle_count_on_first_page());
 
-      //   allocator->free(free_poly_handle, alloc_size);
-      // }
-      // remove polygon from map 
-      // auto itr = treeRef->polygons.find(branch.child);
-      // if(itr != treeRef->polygons.end()){
-      //   // if this branch does have a polygon, remove it from map 
-      //   treeRef->polygons.erase(itr); 
-      // }
-      this->removeBranch(branch.child, treeRef); 
+      if (std::holds_alternative<tree_node_handle>(
+              branch.boundingPoly)) {
+        // We can free this
+        tree_node_handle free_poly_handle = std::get<tree_node_handle>(
+                branch.boundingPoly);
+        auto free_poly_pin = InlineUnboundedIsotheticPolygon::read_polygon_from_disk(
+                allocator, free_poly_handle);
+        free_poly_pin->free_subpages(allocator);
+        uint16_t alloc_size = compute_sizeof_inline_unbounded_polygon(
+                free_poly_pin->get_max_rectangle_count_on_first_page());
+
+        allocator->free(free_poly_handle, alloc_size);
+      }
 
       if (downwardSplit.leftBranch.child.get_type() == LEAF_NODE) {
-        auto left_child = treeRef->get_leaf_node(downwardSplit.leftBranch.child);
+        auto left_child =
+                treeRef->get_leaf_node(downwardSplit.leftBranch.child);
         if (left_child->cur_offset_ > 0) {
-          //left_child->parent = split.leftBranch.child;
+          left_child->parent = split.leftBranch.child;
           left_node->addBranchToNode(downwardSplit.leftBranch);
         }
       } else {
-        auto left_child = treeRef->get_branch_node(downwardSplit.leftBranch.child);
+        auto left_child =
+                treeRef->get_branch_node(downwardSplit.leftBranch.child);
         if (left_child->cur_offset_ > 0) {
-          //left_child->parent = split.leftBranch.child;
+          left_child->parent = split.leftBranch.child;
           left_node->addBranchToNode(downwardSplit.leftBranch);
         }
       }
 
       if (downwardSplit.rightBranch.child.get_type() == LEAF_NODE) {
-        auto right_child = treeRef->get_leaf_node(downwardSplit.rightBranch.child);
+        auto right_child =
+                treeRef->get_leaf_node(downwardSplit.rightBranch.child);
         if (right_child->cur_offset_ > 0) {
-          //right_child->parent = split.rightBranch.child;
+          right_child->parent = split.rightBranch.child;
           right_node->addBranchToNode(downwardSplit.rightBranch);
         }
 
       } else {
-        auto right_child = treeRef->get_branch_node(downwardSplit.rightBranch.child);
+        auto right_child =
+                treeRef->get_branch_node(downwardSplit.rightBranch.child);
         if (right_child->cur_offset_ > 0) {
-          //right_child->parent = split.rightBranch.child;
+          right_child->parent = split.rightBranch.child;
           right_node->addBranchToNode(downwardSplit.rightBranch);
         }
       }
@@ -3064,36 +2788,30 @@ SplitResult BranchNode<min_branch_factor, max_branch_factor, strategy>::splitNod
   // a lot more work than just intersectingw ith our existing
   // polygon, which is already guaranteed to be disjoint from
   // our siblings. So, we do the latter.
-  if (parent_handle) {
-    auto parent_node = treeRef->get_branch_node(parent_handle);
+  if (this->parent) {
+    auto parent_node = treeRef->get_branch_node(parent);
     if (not is_downsplit) {
       parent_node->make_disjoint_from_children(left_polygon,
-                                               current_handle,
-                                               treeRef);
+                                               this->self_handle_);
       assert(left_polygon.basicRectangles.size() > 0);
       left_polygon.refine();
       assert(left_polygon.basicRectangles.size() > 0);
       parent_node->make_disjoint_from_children(right_polygon,
-                                               current_handle,
-                                               treeRef);
+                                               this->self_handle_);
       assert(right_polygon.basicRectangles.size() > 0);
       right_polygon.refine();
       assert(right_polygon.basicRectangles.size() > 0);
     } else {
       // Intersect with our existing poly to avoid intersect
       // with other children
-      // Branch &b = parent_node->locateBranch(this->self_handle_);
-      // IsotheticPolygon parent_poly = b.materialize_polygon(
-      //         allocator);
-      IsotheticPolygon parent_polygon = find_polygon(treeRef, parent_handle, 
-                                          parent_node->boundingBox());
-      assert(parent_polygon.basicRectangles.size() > 0);
-      assert(left_polygon.basicRectangles.size() > 0);
-      left_polygon.intersection(parent_polygon);
+      Branch &b = parent_node->locateBranch(this->self_handle_);
+      IsotheticPolygon parent_poly = b.materialize_polygon(
+              allocator);
+      left_polygon.intersection(parent_poly);
       assert(left_polygon.basicRectangles.size() > 0);
       left_polygon.refine();
       assert(left_polygon.basicRectangles.size() > 0);
-      right_polygon.intersection(parent_polygon);
+      right_polygon.intersection(parent_poly);
       assert(right_polygon.basicRectangles.size() > 0);
       right_polygon.refine();
       assert(right_polygon.basicRectangles.size() > 0);
@@ -3101,219 +2819,185 @@ SplitResult BranchNode<min_branch_factor, max_branch_factor, strategy>::splitNod
   }
 
   // Writeback our polygons
-  // if (left_polygon.basicRectangles.size() > MAX_RECTANGLE_COUNT) {
-  //   unsigned overfull_rect_count = (unsigned)(2 *
-  //                                             left_polygon.basicRectangles.size());
+  if (left_polygon.basicRectangles.size() > MAX_RECTANGLE_COUNT) {
+    unsigned overfull_rect_count = (unsigned)(2 *
+                                              left_polygon.basicRectangles.size());
 
-  //   overfull_rect_count =
-  //           std::min(overfull_rect_count,
-  //                    (unsigned)InlineUnboundedIsotheticPolygon::maximum_possible_rectangles_on_first_page());
+    overfull_rect_count =
+            std::min(overfull_rect_count,
+                     (unsigned)InlineUnboundedIsotheticPolygon::maximum_possible_rectangles_on_first_page());
 
-  //   auto alloc_data =
-  //           allocator->create_new_tree_node<InlineUnboundedIsotheticPolygon>(
-  //                   compute_sizeof_inline_unbounded_polygon(
-  //                           overfull_rect_count),
-  //                   NodeHandleType(
-  //                           BIG_POLYGON));
-  //   new (&(*alloc_data.first))
-  //           InlineUnboundedIsotheticPolygon(allocator,
-  //                                           overfull_rect_count);
-  //   split.leftBranch.boundingPoly = alloc_data.second;
-  //   alloc_data.first->push_polygon_to_disk(left_polygon);
-  // } else {
-  //   split.leftBranch.boundingPoly =
-  //           InlineBoundedIsotheticPolygon();
-  //   std::get<InlineBoundedIsotheticPolygon>(split.leftBranch.boundingPoly).push_polygon_to_disk(left_polygon);
-  //   assert(std::get<InlineBoundedIsotheticPolygon>(
-  //           split.leftBranch.boundingPoly)
-  //                  .get_summary_rectangle() ==
-  //          left_polygon.boundingBox);
-  // }
-  // if (right_polygon.basicRectangles.size() > MAX_RECTANGLE_COUNT) {
-  //   unsigned overfull_rect_count = (unsigned)(2 *
-  //                                             right_polygon.basicRectangles.size());
+    auto alloc_data =
+            allocator->create_new_tree_node<InlineUnboundedIsotheticPolygon>(
+                    compute_sizeof_inline_unbounded_polygon(
+                            overfull_rect_count),
+                    NodeHandleType(
+                            BIG_POLYGON));
+    new (&(*alloc_data.first))
+            InlineUnboundedIsotheticPolygon(allocator,
+                                            overfull_rect_count);
+    split.leftBranch.boundingPoly = alloc_data.second;
+    alloc_data.first->push_polygon_to_disk(left_polygon);
+  } else {
+    split.leftBranch.boundingPoly =
+            InlineBoundedIsotheticPolygon();
+    std::get<InlineBoundedIsotheticPolygon>(split.leftBranch.boundingPoly).push_polygon_to_disk(left_polygon);
+    assert(std::get<InlineBoundedIsotheticPolygon>(
+            split.leftBranch.boundingPoly)
+                   .get_summary_rectangle() ==
+           left_polygon.boundingBox);
+  }
+  if (right_polygon.basicRectangles.size() > MAX_RECTANGLE_COUNT) {
+    unsigned overfull_rect_count = (unsigned)(2 *
+                                              right_polygon.basicRectangles.size());
 
-  //   overfull_rect_count =
-  //           std::min(overfull_rect_count,
-  //                    (unsigned)InlineUnboundedIsotheticPolygon::maximum_possible_rectangles_on_first_page());
+    overfull_rect_count =
+            std::min(overfull_rect_count,
+                     (unsigned)InlineUnboundedIsotheticPolygon::maximum_possible_rectangles_on_first_page());
 
-  //   auto alloc_data =
-  //           allocator->create_new_tree_node<InlineUnboundedIsotheticPolygon>(
-  //                   compute_sizeof_inline_unbounded_polygon(
-  //                           overfull_rect_count),
-  //                   NodeHandleType(
-  //                           BIG_POLYGON));
-  //   new (&(*alloc_data.first))
-  //           InlineUnboundedIsotheticPolygon(allocator,
-  //                                           overfull_rect_count);
-  //   split.rightBranch.boundingPoly = alloc_data.second;
-  //   alloc_data.first->push_polygon_to_disk(right_polygon);
-  // } else {
-  //   split.rightBranch.boundingPoly =
-  //           InlineBoundedIsotheticPolygon();
-  //   std::get<InlineBoundedIsotheticPolygon>(split.rightBranch.boundingPoly).push_polygon_to_disk(right_polygon);
-  // }
+    auto alloc_data =
+            allocator->create_new_tree_node<InlineUnboundedIsotheticPolygon>(
+                    compute_sizeof_inline_unbounded_polygon(
+                            overfull_rect_count),
+                    NodeHandleType(
+                            BIG_POLYGON));
+    new (&(*alloc_data.first))
+            InlineUnboundedIsotheticPolygon(allocator,
+                                            overfull_rect_count);
+    split.rightBranch.boundingPoly = alloc_data.second;
+    alloc_data.first->push_polygon_to_disk(right_polygon);
+  } else {
+    split.rightBranch.boundingPoly =
+            InlineBoundedIsotheticPolygon();
+    std::get<InlineBoundedIsotheticPolygon>(split.rightBranch.boundingPoly).push_polygon_to_disk(right_polygon);
+  }
   this->cur_offset_ = 0;
-  update_branch_polygon(split.leftBranch, left_polygon, treeRef, true);
-  update_branch_polygon(split.rightBranch, right_polygon, treeRef, true);
-  return split;
 
+  return split;
+// #endif
+
+  // Unsupported
+  // abort();
 }
 
 // Splitting a node will remove it from its this->parent node and its memory will be freed
-
 template <int min_branch_factor, int max_branch_factor, class strategy>
-SplitResult BranchNode<min_branch_factor, max_branch_factor, strategy>::splitNode(
-                        NIRTreeDisk<min_branch_factor, max_branch_factor, strategy> *treeRef,
-                        tree_node_handle current_handle,
-                        tree_node_handle parent_handle) {
-  SplitResult returnSplit = splitNode(partitionNode(treeRef), false, treeRef, current_handle, parent_handle);
+SplitResult BranchNode<min_branch_factor, max_branch_factor, strategy>::splitNode() {
+  SplitResult returnSplit = splitNode(partitionNode(), false);
   return returnSplit;
 }
 
-
-// insert() is done from top to bottom, so it is always called on root node 
 template <int min_branch_factor, int max_branch_factor, class strategy>
 tree_node_handle BranchNode<min_branch_factor, max_branch_factor, strategy>::insert(
-        std::variant<BranchAtLevel, Point> &nodeEntry,
-        std::vector<bool> &hasReinsertedOnLevel,
-        // added arguments 
-        NIRTreeDisk<min_branch_factor, max_branch_factor, strategy> *treeRef,
-        tree_node_handle selfHandle)
+        std::variant<Branch, Point> &nodeEntry,
+        std::vector<bool> &hasReinsertedOnLevel)
 {
 // #if 0
-// nodeEntry can be a Branch or a Point 
-// only Point is supported on nirtreeDisk side 
-// Shirley: in which case, nodeEntry will be a Branch ????? 
   bool givenIsPoint = std::holds_alternative<Point>(nodeEntry);
   uint8_t stopping_level = 0;
-  // if nodeEntry is Branch case: 
   if (not givenIsPoint) {
-    BranchAtLevel &bl = std::get<BranchAtLevel>(nodeEntry);
-    Branch &b = bl.branch;
+    Branch &b = std::get<Branch>(nodeEntry);
     auto child_handle = b.child;
     if (child_handle.get_type() == LEAF_NODE || child_handle.get_type() == REPACKED_LEAF_NODE) {
       stopping_level = 1;
     } else {
-      stopping_level = bl.level + 1;
+      auto child_node = treeRef->get_branch_node(child_handle, false);
+      stopping_level = child_node->level_ + 1;
     }
   }
 
-  assert(selfHandle.get_type() == BRANCH_NODE);
-  std::stack<tree_node_handle> parentHandles; 
+  assert(this->self_handle_.get_type() == BRANCH_NODE);
+
   // Find the appropriate position for the entry
   // Should stop at appropriate depth level
-  // FIXME: chooseNode!!!  
-  // in the process of choosing Node, we also want to generate the path from root to node 
-  tree_node_handle current_handle = chooseNode(nodeEntry, stopping_level, treeRef, selfHandle, parentHandles);
-
-  tree_node_allocator *allocator = get_node_allocator(treeRef);
+  tree_node_handle current_handle = chooseNode(nodeEntry, stopping_level);
+  tree_node_allocator *allocator = get_node_allocator(this->treeRef);
   SplitResult finalSplit;
   auto tree_ref_backup = treeRef;
 
-  // if (current_handle.get_type() == REPACKED_LEAF_NODE) {
-  //   current_handle = treeRef->get_leaf_node(current_handle, true)->self_handle_;
-  // } else if (current_handle.get_type() == REPACKED_BRANCH_NODE) {
-  //   current_handle = treeRef->get_branch_node(current_handle, true)->self_handle_;
-  // }
-  // we are not working with REPACKED NODE any more
-  // Shirley: what are repacked nodes and when they are used ? 
-  assert(current_handle.get_type() != REPACKED_LEAF_NODE && current_handle.get_type() != REPACKED_BRANCH_NODE); 
+  if (current_handle.get_type() == REPACKED_LEAF_NODE) {
+    current_handle = treeRef->get_leaf_node(current_handle, true)->self_handle_;
+  } else if (current_handle.get_type() == REPACKED_BRANCH_NODE) {
+    current_handle = treeRef->get_branch_node(current_handle, true)->self_handle_;
+  }
 
   if (std::holds_alternative<Point>(nodeEntry)) {
-    // working with inserting Point to Leaf Node 
     assert(current_handle.get_type() == LEAF_NODE);
     auto current_node = treeRef->get_leaf_node(current_handle);
-    // add the Point to the Leaf Node 
+
     current_node->addPoint(std::get<Point>(nodeEntry));
-    // current_handle here is a LeafNode
+
     finalSplit = adjustTreeSub(hasReinsertedOnLevel,
-                               current_handle, treeRef,
-                               parentHandles);
+                               current_handle, treeRef);
 
   } else {
-    // working with inserting Branch to Branch Node 
-    // Check this: 
     assert(current_handle.get_type() == BRANCH_NODE);
-    // current_node is the branch node to add Branch nodeEntry 
     auto current_node = treeRef->get_branch_node(current_handle);
-    BranchAtLevel &sub_bl = std::get<BranchAtLevel>(nodeEntry);
-    Branch &sub_branch = sub_bl.branch; 
+    Branch &sub_branch = std::get<Branch>(nodeEntry);
 
+    IsotheticPolygon insertion_polygon =
+            sub_branch.materialize_polygon(allocator);
 
-    // IsotheticPolygon insertion_polygon =
-    //         sub_branch.materialize_polygon(allocator);
-    IsotheticPolygon insertion_polygon  = find_polygon(treeRef, sub_branch); 
     // Before I add this node in, I need to fragment everyone else
     // around it
     for (unsigned int i = 0; i < current_node->cur_offset_; i++) {
       Branch &b = current_node->entries.at(i);
-      // IsotheticPolygon branch_polygon = b.materialize_polygon(
-      //         allocator);
-      IsotheticPolygon branch_polygon = find_polygon(treeRef, b); 
-      // Shirley: polygons on chosen Node is clipped according to the polygon 
-      // we are going to insert. Is this expected ??????? 
-      // shouldn't we clip the inserted polygon before calling addBranchToNode() ??
-      // QUESTION!!
+      IsotheticPolygon branch_polygon = b.materialize_polygon(
+              allocator);
       branch_polygon.increaseResolution(Point::atInfinity, insertion_polygon);
-      // do I need refine() ??
-      //branch_polygon.refine(); 
       branch_polygon.recomputeBoundingBox();
       update_branch_polygon(b, branch_polygon, treeRef);
     }
 
     current_node->addBranchToNode(sub_branch);
-    // we don't record parent and level information anymore 
-    // if (sub_branch.child.get_type() == LEAF_NODE || sub_branch.child.get_type() == REPACKED_LEAF_NODE) {
-    //   auto child_node = treeRef->get_leaf_node(sub_branch.child, true);
-    //   assert(child_node->level_ == current_node->level_ - 1);
-    //   child_node->parent = current_handle;
-    // } else {
-    //   auto child_node = treeRef->get_branch_node(sub_branch.child, true);
-    //   assert(child_node->level_ == current_node->level_ - 1);
-    //   child_node->parent = current_handle;
-    // }
-    // current_handle here is a BranchNode 
+    if (sub_branch.child.get_type() == LEAF_NODE || sub_branch.child.get_type() == REPACKED_LEAF_NODE) {
+      auto child_node = treeRef->get_leaf_node(sub_branch.child, true);
+      assert(child_node->level_ == current_node->level_ - 1);
+      child_node->parent = current_handle;
+    } else {
+      auto child_node = treeRef->get_branch_node(sub_branch.child, true);
+      assert(child_node->level_ == current_node->level_ - 1);
+      child_node->parent = current_handle;
+    }
+
     finalSplit = adjustTreeSub(hasReinsertedOnLevel,
-                               current_handle, treeRef,
-                               parentHandles);
+                               current_handle, treeRef);
   }
 
   // Grow the tree taller if we need to
-  // there are two branches at root level now
   if (finalSplit.leftBranch.child != nullptr and finalSplit.rightBranch.child != nullptr) {
     auto alloc_data =
             allocator->create_new_tree_node<BranchNode<min_branch_factor, max_branch_factor, strategy>>(
                     NodeHandleType(BRANCH_NODE));
-    new (&(*alloc_data.first)) BranchNode<min_branch_factor, max_branch_factor, strategy>();
+    new (&(*alloc_data.first)) BranchNode<min_branch_factor, max_branch_factor, strategy>(
+            tree_ref_backup, tree_node_handle(nullptr), alloc_data.second, level_ + 1);
     auto new_root_handle = alloc_data.second;
     auto new_root_node = alloc_data.first;
 
-    // shirley: we don't keep parent/level/handle information on BranchNode now 
-    // if (finalSplit.leftBranch.child.get_type() == LEAF_NODE || finalSplit.leftBranch.child.get_type() == REPACKED_LEAF_NODE) {
-    //   auto left_node = tree_ref_backup->get_leaf_node(finalSplit.leftBranch.child, true);
-    //   left_node->parent = new_root_handle;
-    // } else {
-    //   auto left_node = tree_ref_backup->get_branch_node(finalSplit.leftBranch.child, true);
-    //   left_node->parent = new_root_handle;
-    // }
+    if (finalSplit.leftBranch.child.get_type() == LEAF_NODE || finalSplit.leftBranch.child.get_type() == REPACKED_LEAF_NODE) {
+      auto left_node = tree_ref_backup->get_leaf_node(finalSplit.leftBranch.child, true);
+      left_node->parent = new_root_handle;
+    } else {
+      auto left_node = tree_ref_backup->get_branch_node(finalSplit.leftBranch.child, true);
+      left_node->parent = new_root_handle;
+    }
     new_root_node->addBranchToNode(finalSplit.leftBranch);
 
-    // if (finalSplit.rightBranch.child.get_type() == LEAF_NODE || finalSplit.rightBranch.child.get_type() == REPACKED_LEAF_NODE) {
-    //   auto right_node = tree_ref_backup->get_leaf_node(finalSplit.rightBranch.child, true);
-    //   right_node->parent = new_root_handle;
-    // } else {
-    //   auto right_node = tree_ref_backup->get_branch_node(finalSplit.rightBranch.child, true);
-    //   right_node->parent = new_root_handle;
-    // }
+    if (finalSplit.rightBranch.child.get_type() == LEAF_NODE || finalSplit.rightBranch.child.get_type() == REPACKED_LEAF_NODE) {
+      auto right_node = tree_ref_backup->get_leaf_node(finalSplit.rightBranch.child, true);
+      right_node->parent = new_root_handle;
+    } else {
+      auto right_node = tree_ref_backup->get_branch_node(finalSplit.rightBranch.child, true);
+      right_node->parent = new_root_handle;
+    }
     new_root_node->addBranchToNode(finalSplit.rightBranch);
 
     tree_ref_backup->root = new_root_handle;
 
-    assert(selfHandle.get_type() == BRANCH_NODE);
-    allocator->free(selfHandle, sizeof(BranchNode<min_branch_factor, max_branch_factor, strategy>));
-    // write root to nullptr which will be overwritten to new_root_handle
-    selfHandle = tree_node_handle(nullptr);
+    assert(this->self_handle_.get_type() == BRANCH_NODE);
+    allocator->free(this->self_handle_, sizeof(BranchNode<min_branch_factor, max_branch_factor, strategy>));
+    this->self_handle_ = tree_node_handle(nullptr);
+
     // Fix the reinserted length
     hasReinsertedOnLevel.push_back(false);
 
@@ -3327,7 +3011,7 @@ tree_node_handle BranchNode<min_branch_factor, max_branch_factor, strategy>::ins
 // Always called on root, this = root
 template <int min_branch_factor, int max_branch_factor, class strategy>
 tree_node_handle BranchNode<min_branch_factor, max_branch_factor, strategy>::remove(Point givenPoint) {
-#if 0
+// #if 0
   // D1 [Find node containing record]
   tree_node_handle leaf_handle = findLeaf(givenPoint);
   // Record not in the tree
@@ -3360,15 +3044,14 @@ tree_node_handle BranchNode<min_branch_factor, max_branch_factor, strategy>::rem
   }
 
   return this->self_handle_;
-#endif
+// #endif
 
   // Unsupported
-  abort();
+  // abort();
 }
 
 template <int min_branch_factor, int max_branch_factor, class strategy>
-unsigned BranchNode<min_branch_factor, max_branch_factor, strategy>::checksum(
-        NIRTreeDisk<min_branch_factor, max_branch_factor, strategy> *treeRef) {
+unsigned BranchNode<min_branch_factor, max_branch_factor, strategy>::checksum() {
 // #if 0
   unsigned sum = 0;
 
@@ -3376,24 +3059,24 @@ unsigned BranchNode<min_branch_factor, max_branch_factor, strategy>::checksum(
     // Recurse
     Branch &branch = entries.at(i);
     if (branch.child.get_type() == LEAF_NODE || branch.child.get_type() == REPACKED_LEAF_NODE) {
-      auto child = treeRef->get_leaf_node(branch.child);
+      auto child = this->treeRef->get_leaf_node(branch.child);
       sum += child->checksum();
     } else {
-      auto child = treeRef->get_branch_node(branch.child);
-      sum += child->checksum(treeRef);
+      auto child = this->treeRef->get_branch_node(branch.child);
+      sum += child->checksum();
     }
   }
 
   return sum;
 // #endif
 
-//   // Unsupported
-//   abort();
+  // Unsupported
+  // abort();
 }
 
 template <int min_branch_factor, int max_branch_factor, class strategy>
 std::vector<Point> BranchNode<min_branch_factor, max_branch_factor, strategy>::bounding_box_validate() {
-#if 0
+// #if 0
   tree_node_allocator *allocator = get_node_allocator(this->treeRef);
   std::vector<Point> all_child_points;
   for (unsigned i = 0; i < this->cur_offset_; i++) {
@@ -3437,15 +3120,15 @@ std::vector<Point> BranchNode<min_branch_factor, max_branch_factor, strategy>::b
     }
   }
   return all_child_points;
-#endif
+// #endif
 
   // Unsupported
-  abort();
+  // abort();
 }
 
 template <int min_branch_factor, int max_branch_factor, class strategy>
 bool BranchNode<min_branch_factor, max_branch_factor, strategy>::validate(tree_node_handle expectedParent, unsigned index) {
-#if 0
+// #if 0
   tree_node_allocator *allocator = get_node_allocator(this->treeRef);
 
   if (expectedParent != nullptr and (this->parent != expectedParent ||
@@ -3524,30 +3207,25 @@ bool BranchNode<min_branch_factor, max_branch_factor, strategy>::validate(tree_n
   }
 
   return valid;
-#endif
+// #endif
 
   // Unsupported
-  abort();
+  // abort();
 }
 
 template <int min_branch_factor, int max_branch_factor, class strategy>
-void BranchNode<min_branch_factor, max_branch_factor, strategy>::print(NIRTreeDisk<min_branch_factor, max_branch_factor, strategy> *treeRef,
-                                                                       tree_node_handle current_handle,
-                                                                       tree_node_handle parent_handle, 
-                                                                       unsigned n) {
+void BranchNode<min_branch_factor, max_branch_factor, strategy>::print(unsigned n) {
 // #if 0
   std::string indentation(n * 4, ' ');
   std::cout << indentation << "Node " << (void *)this << std::endl;
-  std::cout << indentation << "    Parent: " << parent_handle << std::endl;  
-  std::cout << indentation << "    Current: " << current_handle << std::endl;
+  std::cout << indentation << "    Parent: " << this->parent << std::endl;
   std::cout << indentation << "    Branches: " << std::endl;
   for (unsigned i = 0; i < this->cur_offset_; i++) {
     Branch &branch = entries.at(i);
-    auto poly = find_polygon(treeRef, branch); 
     // FIXME: out of band poly
-    // auto poly = std::get<InlineBoundedIsotheticPolygon>(
-    //         branch.boundingPoly)
-    //         .materialize_polygon();
+    auto poly = std::get<InlineBoundedIsotheticPolygon>(
+            branch.boundingPoly)
+            .materialize_polygon();
     std::cout << indentation << "		" << branch.child << std::endl;
     std::cout << indentation << "		" << poly << std::endl;
   }
@@ -3558,41 +3236,35 @@ void BranchNode<min_branch_factor, max_branch_factor, strategy>::print(NIRTreeDi
   // abort();
 }
 
-// if parent_handle == nullptr, then we know the current node is root 
 template <int min_branch_factor, int max_branch_factor, class strategy>
-void BranchNode<min_branch_factor, max_branch_factor, strategy>::printTree(NIRTreeDisk<min_branch_factor, max_branch_factor, strategy> *treeRef,
-                                                                           tree_node_handle current_handle,
-                                                                           tree_node_handle parent_handle, 
-                                                                           unsigned n) {
+void BranchNode<min_branch_factor, max_branch_factor, strategy>::printTree(unsigned n) {
   // Print this node first
-  print(treeRef, current_handle, parent_handle, n);
+  print(n);
 
   // Print any of our children with one more level of indentation
   std::string indendtation(n * 4, ' ');
   for (unsigned i = 0; i < this->cur_offset_; i++) {
     Branch &branch = entries.at(i);
     if (branch.child.get_type() == LEAF_NODE || branch.child.get_type() == REPACKED_LEAF_NODE) {
-      auto child = treeRef->get_leaf_node(branch.child, false);
+      auto child = this->treeRef->get_leaf_node(branch.child, false);
 
       // Recurse
-      child->printTree(branch.child, current_handle, n + 1);
+      child->printTree(n + 1);
     } else {
       auto child = this->treeRef->get_branch_node(branch.child, false);
 
       // Recurse
-      child->printTree(treeRef, branch.child, current_handle, n + 1);
+      child->printTree(n + 1);
     }
   }
   std::cout << std::endl;
 }
 
 template <int min_branch_factor, int max_branch_factor, class strategy>
-unsigned BranchNode<min_branch_factor, max_branch_factor, strategy>::height(
-                    NIRTreeDisk<min_branch_factor, max_branch_factor, strategy> *treeRef,
-                    tree_node_handle selfHandle) {
+unsigned BranchNode<min_branch_factor, max_branch_factor, strategy>::height() {
 // #if 0
   unsigned ret = 0;
-  tree_node_handle current_handle = selfHandle;
+  tree_node_handle current_handle = this->self_handle_;
 
   for (;;) {
     ret++;
@@ -3606,7 +3278,6 @@ unsigned BranchNode<min_branch_factor, max_branch_factor, strategy>::height(
 // #endif
 }
 
-// called by NIRTreeDisk<min_branch_factor, max_branch_factor, strategy>::stat()
 template <int min_branch_factor, int max_branch_factor, class strategy>
 void stat_node(tree_node_handle start_handle, NIRTreeDisk<min_branch_factor, max_branch_factor, strategy> *treeRef) {
   std::stack<tree_node_handle> context;
@@ -4048,55 +3719,4 @@ static std::vector<Point> tree_validate_recursive(tree_node_handle current_handl
     }
   }
 }
-
-template <int min_branch_factor, int max_branch_factor, class strategy>
-IsotheticPolygon find_polygon(
-                  NIRTreeDisk<min_branch_factor, max_branch_factor, strategy> *treeRef,
-                  tree_node_handle node_handle,
-                  Rectangle rectangle){
-  std::map<tree_node_handle, IsotheticPolygon>::iterator it;
-  it = treeRef->polygons.find(node_handle);
-  if(it != treeRef->polygons.end()){
-    return it->second;
-  } else {
-    // if polygon is not found, polygon is the same as bounding box  
-    return IsotheticPolygon(rectangle); 
-  }
-}
-
-template <int min_branch_factor, int max_branch_factor, class strategy>
-IsotheticPolygon find_polygon(
-                  NIRTreeDisk<min_branch_factor, max_branch_factor, strategy> *treeRef,
-                  Branch &branch){
-  std::map<tree_node_handle, IsotheticPolygon>::iterator it;
-  tree_node_handle node_handle = branch.child; 
-  Rectangle rectangle = branch.boundingBox; 
-  it = treeRef->polygons.find(node_handle);
-  if(it != treeRef->polygons.end()){
-    return it->second;
-  } else {
-    // if polygon is not found, polygon is the same as bounding box  
-    return IsotheticPolygon(rectangle); 
-  }
-}
-
-
-inline std::pair<double, std::vector<IsotheticPolygon::OptimalExpansion>>
-computeExpansionArea( const IsotheticPolygon &this_poly, const IsotheticPolygon &other_poly )
-{
-    std::vector<IsotheticPolygon::OptimalExpansion> expansions;
-    double totalAreas = 0.0;
-
-    for (const Rectangle &rect : other_poly.basicRectangles) {
-        IsotheticPolygon::OptimalExpansion exp = this_poly.computeExpansionArea(rect);
-        if( exp.area != 0.0 and exp.area != -1.0 ) {
-            totalAreas += exp.area;
-        }
-        expansions.push_back( exp );
-    }
-    return std::make_pair( totalAreas == 0.0 ? -1.0 : totalAreas, expansions );
-}
-
 } // namespace nirtreedisk
-
-// #endif

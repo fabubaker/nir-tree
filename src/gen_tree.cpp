@@ -79,6 +79,9 @@ void generate_tree(std::map<std::string, size_t> &configU, std::map<std::string,
   }
 
   double bulk_load_pct = 1.0;
+  if (configU["bulk_load_pct"] != NULL){
+    bulk_load_pct = configU["bulk_load_pct"] * 0.01;
+  }
   uint64_t cut_off_bulk_load = std::floor(bulk_load_pct * all_points.size());
   std::cout << "Bulk loading " << cut_off_bulk_load << " points." << std::endl;
   std::cout << "Sequential Inserting " << all_points.size() - cut_off_bulk_load << " points." << std::endl;
@@ -90,8 +93,11 @@ void generate_tree(std::map<std::string, size_t> &configU, std::map<std::string,
     std::cout << "Bulk Loading..." << std::endl;
     std::cout << "Creating tree with " << configU["buffer_pool_memory"] << "bytes" << std::endl;
     bulk_load_tree(tree, configU, all_points.begin(), all_points.begin() + cut_off_bulk_load, NIR_FANOUT);
+  
+    std::cout << "Sequential Inserting..." << std::endl;
+    // insert the rest of points:
+    tree->sequentialInsert(all_points.begin() + cut_off_bulk_load, all_points.end());
     std::cout << "Created NIRTree." << std::endl;
-
     spatialIndex = tree;
     tree->stat();
     exit(0);
@@ -146,7 +152,7 @@ int main(int argc, char **argv) {
   configU.emplace("distribution", CALIFORNIA);
   configU.emplace("seed", 0);
 
-  while ((option = getopt(argc, argv, "t:m:n:s:p:g:z:B:A:")) != -1) {
+  while ((option = getopt(argc, argv, "t:m:n:s:p:g:z:B:A:b:")) != -1) {
     switch (option) {
     case 't': {
       configU["tree"] = (TreeType)std::stoull(optarg);
@@ -184,6 +190,10 @@ int main(int argc, char **argv) {
     case 'A':
     {
       configU["bulk_load_alg"] = std::stoull(optarg);
+      break;
+    }
+    case 'b': {
+      configU["bulk_load_pct"] = std::stoull(optarg);
       break;
     }
     }

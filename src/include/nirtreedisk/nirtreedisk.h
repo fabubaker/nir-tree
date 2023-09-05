@@ -93,11 +93,9 @@ public:
   // Datastructure interface
   // shirley: exhaustiveSearch is the same as search(point) ???
   std::vector<Point> exhaustiveSearch(Point requestedPoint);
-  // Maybe not ? 
   std::vector<Point> search(Point requestedPoint);
-  // Maybe not ? 
   std::vector<Point> search(Rectangle requestedRectangle);
-  // TO FIX 
+  void sequentialInsert(std::vector<Point>::iterator begin, std::vector<Point>::iterator end);
   void insert(Point givenPoint);
   // TO FIX 
   void remove(Point givenPoint);
@@ -188,6 +186,24 @@ template <int min_branch_factor, int max_branch_factor, class strategy>
 std::vector<Point>
 NIRTreeDisk<min_branch_factor, max_branch_factor, strategy>::search(Rectangle requestedRectangle) {
   return rectangle_search(root, requestedRectangle, this, true /* track */);
+}
+
+template <int min_branch_factor, int max_branch_factor, class strategy>
+void NIRTreeDisk<min_branch_factor, max_branch_factor, strategy>::sequentialInsert(
+                                                std::vector<Point>::iterator begin, 
+                                                std::vector<Point>::iterator end) {
+  // begin is inclusive, end is exclusive 
+  uint64_t num_els = (end - begin);
+  std::cout << "Num els: " << num_els << std::endl;
+  std::chrono::high_resolution_clock::time_point begin_time = std::chrono::high_resolution_clock::now();
+  for(auto iter = begin ; iter < end; iter++){
+      this->insert(*iter); 
+  }
+  std::cout << "Out of line size: " << this->node_allocator_.get()->out_of_line_nodes_size << std::endl;
+  std::chrono::high_resolution_clock::time_point end_time = std::chrono::high_resolution_clock::now();
+  std::chrono::duration<double> delta = std::chrono::duration_cast<std::chrono::duration<double>>(end_time - begin_time);
+  std::cout << "Sequential Inserting "<< num_els << " points to NIRTree took: " << delta.count() << std::endl;
+  std::cout << "Total pages occupied: " << this->node_allocator_->cur_page_ << std::endl;
 }
 
 template <int min_branch_factor, int max_branch_factor, class strategy>
