@@ -58,8 +58,8 @@ public:
     // If this is a fresh tree, we need a root
     // Update: We disable this for bulk-loading since the root node
     // will be created anyways.
-    // Update: For now, we will assume that insert only happens after
-    // bulk load, otherwise a root node may be required here (shirley)
+    // Shirley: we will assume that insertion only happens after
+    // bulk load, otherwise a root node may be required here 
     if (existing_page_count == 0) {
 
 //      auto alloc = node_allocator_->create_new_tree_node<LeafNode<min_branch_factor, max_branch_factor, strategy>>(NodeHandleType(LEAF_NODE));
@@ -91,13 +91,12 @@ public:
   }
 
   // Datastructure interface
-  // shirley: exhaustiveSearch is the same as search(point) ???
+  // shirley: is exhaustiveSearch the same as search(point) ???
   std::vector<Point> exhaustiveSearch(Point requestedPoint);
   std::vector<Point> search(Point requestedPoint);
   std::vector<Point> search(Rectangle requestedRectangle);
-  void sequentialInsert(std::vector<Point>::iterator begin, std::vector<Point>::iterator end);
+
   void insert(Point givenPoint);
-  // TO FIX 
   void remove(Point givenPoint);
 
   // Miscellaneous
@@ -107,7 +106,7 @@ public:
   void print();
   void visualize();
 
-  // where is this function called ? 
+  // where is this function called and how is it used ? 
   // get one (any Point) in a subtree starting from the given node_handle 
   inline Point get_a_contained_point(tree_node_handle node_handle) {
     tree_node_allocator *allocator = node_allocator_.get();
@@ -189,24 +188,6 @@ NIRTreeDisk<min_branch_factor, max_branch_factor, strategy>::search(Rectangle re
 }
 
 template <int min_branch_factor, int max_branch_factor, class strategy>
-void NIRTreeDisk<min_branch_factor, max_branch_factor, strategy>::sequentialInsert(
-                                                std::vector<Point>::iterator begin, 
-                                                std::vector<Point>::iterator end) {
-  // begin is inclusive, end is exclusive 
-  uint64_t num_els = (end - begin);
-  std::cout << "Num els: " << num_els << std::endl;
-  std::chrono::high_resolution_clock::time_point begin_time = std::chrono::high_resolution_clock::now();
-  for(auto iter = begin ; iter < end; iter++){
-      this->insert(*iter); 
-  }
-  std::cout << "Out of line size: " << this->node_allocator_.get()->out_of_line_nodes_size << std::endl;
-  std::chrono::high_resolution_clock::time_point end_time = std::chrono::high_resolution_clock::now();
-  std::chrono::duration<double> delta = std::chrono::duration_cast<std::chrono::duration<double>>(end_time - begin_time);
-  std::cout << "Sequential Inserting "<< num_els << " points to NIRTree took: " << delta.count() << std::endl;
-  std::cout << "Total pages occupied: " << this->node_allocator_->cur_page_ << std::endl;
-}
-
-template <int min_branch_factor, int max_branch_factor, class strategy>
 void NIRTreeDisk<min_branch_factor, max_branch_factor, strategy>::insert(Point givenPoint) {
   std::fill(hasReinsertedOnLevel.begin(), hasReinsertedOnLevel.end(), false);
   if (root.get_type() == LEAF_NODE) {
@@ -223,10 +204,10 @@ template <int min_branch_factor, int max_branch_factor, class strategy>
 void NIRTreeDisk<min_branch_factor, max_branch_factor, strategy>::remove(Point givenPoint) {
   if (root.get_type() == LEAF_NODE) {
     auto root_node = get_leaf_node(root);
-    root = root_node->remove(givenPoint);
+    root = root_node->remove(givenPoint, root, this);
   } else {
     auto root_node = get_branch_node(root);
-    root = root_node->remove(givenPoint);
+    root = root_node->remove(givenPoint, root, this);
   }
 }
 

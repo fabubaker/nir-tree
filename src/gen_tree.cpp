@@ -19,6 +19,7 @@ void parameters(std::map<std::string, uint64_t> &configU, std::map<std::string, 
   std::cout << "  size = " << configU["size"] << std::endl;
   std::cout << "  seed = " << configU["seed"] << std::endl;
   std::cout << "  buffer pool memory = " << configU["buffer_pool_memory"] << std::endl;
+  std::cout << "  bulk load percent = " << configD["bulk_load_pct"] << std::endl;
   std::cout << "### ### ### ### ### ###" << std::endl << std::endl;
 }
 
@@ -78,10 +79,9 @@ void generate_tree(std::map<std::string, size_t> &configU, std::map<std::string,
     }
   }
 
-  double bulk_load_pct = 1.0;
-  if (configU["bulk_load_pct"] != NULL){
-    bulk_load_pct = configU["bulk_load_pct"] * 0.01;
-  }
+  // default = 1.0
+  double bulk_load_pct = configD["bulk_load_pct"];
+
   uint64_t cut_off_bulk_load = std::floor(bulk_load_pct * all_points.size());
   std::cout << "Bulk loading " << cut_off_bulk_load << " points." << std::endl;
   std::cout << "Sequential Inserting " << all_points.size() - cut_off_bulk_load << " points." << std::endl;
@@ -96,29 +96,36 @@ void generate_tree(std::map<std::string, size_t> &configU, std::map<std::string,
   
     std::cout << "Sequential Inserting..." << std::endl;
     // insert the rest of points:
-    tree->sequentialInsert(all_points.begin() + cut_off_bulk_load, all_points.end());
+    sequential_insert_tree(tree, configU, all_points.begin() + cut_off_bulk_load, all_points.end(), NIR_FANOUT);
     std::cout << "Created NIRTree." << std::endl;
     spatialIndex = tree;
     tree->stat();
-    exit(0);
+    // shirley: why we exit here ? 
+    //exit(0);
   } else if (configU["tree"] == R_STAR_TREE) {
     rstartreedisk::RStarTreeDisk<5, R_STAR_FANOUT> *tree = new rstartreedisk::RStarTreeDisk<5, R_STAR_FANOUT>(configU["buffer_pool_memory"], backing_file);
     std::cout << "Bulk Loading..." << std::endl;
+    std::cout << "Creating tree with " << configU["buffer_pool_memory"] << "bytes" << std::endl;
     bulk_load_tree(tree, configU, all_points.begin(), all_points.begin() + cut_off_bulk_load, R_STAR_FANOUT);
+    // insert the rest of points:
+    sequential_insert_tree(tree, configU, all_points.begin() + cut_off_bulk_load, all_points.end(), NIR_FANOUT);
     std::cout << "Created R*Tree" << std::endl;
-
     spatialIndex = tree;
     tree->stat();
     exit(0);
   } else {
+    std::cout << "Only Supports NIR_Tree and R_STAR_TREE for gen_tree" << std::endl; 
     abort();
   }
 
   unsigned totalSearches = 0;
   double totalTimeSearches = 0.0;
-  for (Point p : all_points) {
+  //for (Point p : all_points) {
+  //[DEBUG] this is for debugging for now: 
+  for (auto iter = all_points.begin() + cut_off_bulk_load; iter < all_points.end(); iter++ ) {
+    Point p = *iter; 
     std::chrono::high_resolution_clock::time_point begin = std::chrono::high_resolution_clock::now();
-    std::cout << "Searching: for " << p << std::endl;
+    //std::cout << "Searching: for " << p << std::endl;
     std::vector<Point> out = spatialIndex->search(p);
     if (out.size() != 1) {
       std::cout << "Could not find " << p << std::endl;
@@ -151,6 +158,7 @@ int main(int argc, char **argv) {
   configU.emplace("tree", NIR_TREE);
   configU.emplace("distribution", CALIFORNIA);
   configU.emplace("seed", 0);
+  configD.emplace("bulk_load_pct", 1.0);
 
   while ((option = getopt(argc, argv, "t:m:n:s:p:g:z:B:A:b:")) != -1) {
     switch (option) {
@@ -193,7 +201,7 @@ int main(int argc, char **argv) {
       break;
     }
     case 'b': {
-      configU["bulk_load_pct"] = std::stoull(optarg);
+      configD["bulk_load_pct"] = std::stod(optarg);
       break;
     }
     }

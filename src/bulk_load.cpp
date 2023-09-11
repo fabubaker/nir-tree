@@ -1087,3 +1087,114 @@ void bulk_load_tree(
   std::cout << "Total pages occupied: " << tree->node_allocator_->cur_page_ << std::endl;
   tree->write_metadata();
 }
+
+
+template <>
+void sequential_insert_tree(
+    nirtreedisk::NIRTreeDisk<5, NIR_FANOUT, nirtreedisk::ExperimentalStrategy> *tree,
+    std::map<std::string, size_t> &configU,
+    std::vector<Point>::iterator begin,
+    std::vector<Point>::iterator end,
+    unsigned max_branch_factor
+) {
+  //intersection_count = 0;
+  auto tree_ptr = tree;
+  // begin is inclusive, end is exclusive 
+  uint64_t num_els = (end - begin);
+  std::cout << "Num els: " << num_els << std::endl;
+  std::chrono::high_resolution_clock::time_point begin_time = std::chrono::high_resolution_clock::now();
+  for(auto iter = begin ; iter < end; iter++){
+      tree_ptr->insert(*iter); 
+  }
+  std::cout << "Out of line size: " << tree->node_allocator_.get()->out_of_line_nodes_size << std::endl;
+  std::chrono::high_resolution_clock::time_point end_time = std::chrono::high_resolution_clock::now();
+  std::chrono::duration<double> delta = std::chrono::duration_cast<std::chrono::duration<double>>(end_time - begin_time);
+  
+  std::cout << "Sequential Inserting "<< num_els << " points to NIRTree took: " << delta.count() << std::endl;
+  //std::cout << "Completed with " << intersection_count << " intersections" << std::endl;
+  std::cout << "Total pages occupied now: " << tree->node_allocator_->cur_page_ << std::endl;
+  tree->write_metadata();
+}
+
+template <>
+void sequential_insert_tree(
+    rstartreedisk::RStarTreeDisk<5, R_STAR_FANOUT> *tree,
+    std::map<std::string, size_t> &configU,
+    std::vector<Point>::iterator begin,
+    std::vector<Point>::iterator end,
+    unsigned max_branch_factor
+) {
+  //intersection_count = 0;
+  auto tree_ptr = tree;
+  // begin is inclusive, end is exclusive 
+  uint64_t num_els = (end - begin);
+  std::cout << "Num els: " << num_els << std::endl;
+  std::chrono::high_resolution_clock::time_point begin_time = std::chrono::high_resolution_clock::now();
+  for(auto iter = begin ; iter < end; iter++){
+      tree_ptr->insert(*iter); 
+  }
+  std::cout << "Out of line size: " << tree->node_allocator_.get()->out_of_line_nodes_size << std::endl;
+  std::chrono::high_resolution_clock::time_point end_time = std::chrono::high_resolution_clock::now();
+  std::chrono::duration<double> delta = std::chrono::duration_cast<std::chrono::duration<double>>(end_time - begin_time);
+  
+  std::cout << "Sequential Inserting "<< num_els << " points to RStarTree took: " << delta.count() << std::endl;
+  //std::cout << "Completed with " << intersection_count << " intersections" << std::endl;
+  // this count may not be entirely accurate if page on free_list is re-used 
+  std::cout << "Total pages occupied now: " << tree->node_allocator_->cur_page_ << std::endl;
+  tree->node_allocator_->dump_free_list();
+  tree->write_metadata();
+}
+
+template <>
+void sequential_remove_tree(
+    nirtreedisk::NIRTreeDisk<5, NIR_FANOUT, nirtreedisk::ExperimentalStrategy> *tree,
+    std::map<std::string, size_t> &configU,
+    std::vector<Point>::iterator begin,
+    std::vector<Point>::iterator end,
+    unsigned max_branch_factor
+) {
+  //intersection_count = 0;
+  auto tree_ptr = tree;
+  // begin is inclusive, end is exclusive 
+  uint64_t num_els = (end - begin);
+  std::cout << "Num els: " << num_els << std::endl;
+  std::chrono::high_resolution_clock::time_point begin_time = std::chrono::high_resolution_clock::now();
+  for(auto iter = begin ; iter < end; iter++){
+      tree_ptr->remove(*iter); 
+  }
+  std::cout << "Out of line size: " << tree->node_allocator_.get()->out_of_line_nodes_size << std::endl;
+  std::chrono::high_resolution_clock::time_point end_time = std::chrono::high_resolution_clock::now();
+  std::chrono::duration<double> delta = std::chrono::duration_cast<std::chrono::duration<double>>(end_time - begin_time);
+  
+  std::cout << "Sequential Removing "<< num_els << " points from NIRTree took: " << delta.count() << std::endl;
+  //std::cout << "Completed with " << intersection_count << " intersections" << std::endl;
+  std::cout << "Total pages occupied now: " << tree->node_allocator_->cur_page_ << std::endl;
+  tree->write_metadata();
+}
+
+template <>
+void sequential_remove_tree(
+    rstartreedisk::RStarTreeDisk<5, R_STAR_FANOUT> *tree,
+    std::map<std::string, size_t> &configU,
+    std::vector<Point>::iterator begin,
+    std::vector<Point>::iterator end,
+    unsigned max_branch_factor
+) {
+  //intersection_count = 0;
+  auto tree_ptr = tree;
+  // begin is inclusive, end is exclusive 
+  uint64_t num_els = (end - begin);
+  std::cout << "Num els: " << num_els << std::endl;
+  std::chrono::high_resolution_clock::time_point begin_time = std::chrono::high_resolution_clock::now();
+  for(auto iter = begin ; iter < end; iter++){
+      tree_ptr->remove(*iter); 
+  }
+  std::cout << "Out of line size: " << tree->node_allocator_.get()->out_of_line_nodes_size << std::endl;
+  std::chrono::high_resolution_clock::time_point end_time = std::chrono::high_resolution_clock::now();
+  std::chrono::duration<double> delta = std::chrono::duration_cast<std::chrono::duration<double>>(end_time - begin_time);
+  
+  std::cout << "Sequential Removing "<< num_els << " points from RStarTree took: " << delta.count() << std::endl;
+  //std::cout << "Completed with " << intersection_count << " intersections" << std::endl;
+  std::cout << "Total pages occupied now: " << tree->node_allocator_->cur_page_ << std::endl;
+  tree->write_metadata();
+}
