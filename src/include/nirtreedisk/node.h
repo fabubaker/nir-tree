@@ -41,6 +41,12 @@
 #include <vector>
 #include <fstream>
 
+// #define DEBUG_TEST
+// #define DEBUG_TESTDISJOINT
+// #define DEBUG_TESTCONTAINPOINTS
+// #define DEBUG_TESTCOUNT
+
+
 #define ASSERT(condition, message) \
     do { \
         if (!(condition)) { \
@@ -132,7 +138,7 @@ computeExpansionArea( const IsotheticPolygon &this_poly, const IsotheticPolygon 
 // Shirley
 // Function helps for debugging 
 template <int min_branch_factor, int max_branch_factor, class strategy>
-void testDisjoint(tree_node_handle root, NIRTreeDisk<min_branch_factor, max_branch_factor, strategy> *treeRef )
+void testDisjoint(tree_node_handle root, NIRTreeDisk<min_branch_factor, max_branch_factor, strategy> *treeRef );
 template <int min_branch_factor, int max_branch_factor, class strategy>
 void testCount(tree_node_handle root, NIRTreeDisk<min_branch_factor, max_branch_factor, strategy> *treeRef);
 template <int min_branch_factor, int max_branch_factor, class strategy>
@@ -1285,7 +1291,12 @@ void update_branch_polygon(
   // If the MBR has not been split into a polygon, don't keep it in the map.
   if (polygon_to_write.basicRectangles.size() != 1) {
     // add polygon to map 
-    treeRef->polygons.insert({branch_to_update.child, polygon_to_write});
+    auto insert_res = treeRef->polygons.insert({branch_to_update.child, polygon_to_write});
+    if(! insert_res.second) {
+      // already exists in the map 
+      // update instead of insertion
+      insert_res.first->second = polygon_to_write; 
+    }
   }
 
 #if 0 
@@ -2780,7 +2791,7 @@ BranchNode<min_branch_factor, max_branch_factor, strategy>::chooseNodePoint(
     IsotheticPolygon::OptimalExpansion exp = node_poly.computeExpansionArea(point);
     minimal_area_expansion = exp.area;
     expansions.push_back(exp);
-    // This is the branch that gives us that minimum area expansion
+    // This is the index for minimum expansion 
     unsigned smallestExpansionBranchIndex = 0;
 
     // checking each branch/child of current Branch Node starting at index 1
@@ -2835,10 +2846,9 @@ BranchNode<min_branch_factor, max_branch_factor, strategy>::chooseNodePoint(
       chosen_poly.refine();
       chosen_poly.recomputeBoundingBox();
       assert(chosen_poly.containsPoint(point));
-      // branch should be passed as pointer !!!! update branch is going to change it 
-      
       update_branch_polygon(chosen_branch, chosen_poly, treeRef);
       assert(chosen_poly.containsPoint(point));
+      // for testing purpose
       chosen_poly = find_polygon(treeRef, chosen_branch);
       assert(chosen_poly.containsPoint(point));
     }
@@ -3604,6 +3614,7 @@ tree_node_handle BranchNode<min_branch_factor, max_branch_factor, strategy>::ins
                                parentHandles);
   }
 
+  tree_node_handle ret_handle; 
   // Grow the tree taller if we need to
   // there are two branches at root level now
   if (finalSplit.leftBranch.child != nullptr and finalSplit.rightBranch.child != nullptr) {
@@ -3623,18 +3634,17 @@ tree_node_handle BranchNode<min_branch_factor, max_branch_factor, strategy>::ins
     selfHandle = tree_node_handle(nullptr);
     // Fix the reinserted length
     hasReinsertedOnLevel.push_back(false);
-
-    std::cout << "inserted " << std::get<Point>(nodeEntry) << std::endl; 
-    testDisjoint(new_root_handle, treeRef);
-    testCount(new_root_handle, treeRef);
-    testContainPoints(new_root_handle, treeRef);
-    return new_root_handle;
+    ret_handle = new_root_handle;
+  } else {
+    ret_handle = tree_ref_backup->root;
   }
+#ifdef DEBUG_TEST
   std::cout << "inserted " << std::get<Point>(nodeEntry) << std::endl; 
-  testDisjoint( tree_ref_backup->root, treeRef);
-  testCount(tree_ref_backup->root, treeRef);
-  testContainPoints(tree_ref_backup->root, treeRef);
-  return tree_ref_backup->root;
+  testDisjoint( ret_handle, treeRef);
+  testCount(ret_handle, treeRef);
+  testContainPoints(ret_handle, treeRef);
+#endif 
+  return ret_handle;
 // #endif
 }
 
@@ -4389,7 +4399,7 @@ IsotheticPolygon find_polygon(
   if(it != treeRef->polygons.end()){
     return it->second;
   } else {
-    // if polygon is not found, polygon is the same as bounding box  
+    // if polygon is not found, polygon is the same as rectangle
     return IsotheticPolygon(rectangle); 
   }
 }
@@ -4471,6 +4481,7 @@ computeExpansionArea( const IsotheticPolygon &this_poly, const IsotheticPolygon 
 
 template <int min_branch_factor, int max_branch_factor, class strategy>
 void testDisjoint(tree_node_handle root, NIRTreeDisk<min_branch_factor, max_branch_factor, strategy> *treeRef ){
+#ifdef DEBUG_TESTDISJOINT
   std::stack<tree_node_handle> context; 
   context.push(root);
   while(not context.empty()){
@@ -4497,9 +4508,12 @@ void testDisjoint(tree_node_handle root, NIRTreeDisk<min_branch_factor, max_bran
       std::cout << pi << std::endl;
     }
   }
+#endif
 }
+
 template <int min_branch_factor, int max_branch_factor, class strategy>
 void testCount(tree_node_handle root, NIRTreeDisk<min_branch_factor, max_branch_factor, strategy> *treeRef ){
+#ifdef DEBUG_TESTCOUNT
   std::stack<tree_node_handle> context; 
   context.push(root);
   int total_count = 0; 
@@ -4518,10 +4532,12 @@ void testCount(tree_node_handle root, NIRTreeDisk<min_branch_factor, max_branch_
     }
     std::cout << "total " << total_count << std::endl;
   }
+#endif 
 }
 
 template <int min_branch_factor, int max_branch_factor, class strategy>
 void testContainPoints(tree_node_handle root, NIRTreeDisk<min_branch_factor, max_branch_factor, strategy> *treeRef ){
+#ifdef DEBUG_TESTCONTAINPOINTS
   std::stack<tree_node_handle> context; 
   context.push(root);
   while(not context.empty()){
@@ -4544,6 +4560,7 @@ void testContainPoints(tree_node_handle root, NIRTreeDisk<min_branch_factor, max
       }
     }
   }
+#endif 
 }
 
 
