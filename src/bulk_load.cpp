@@ -629,24 +629,27 @@ std::pair<tree_node_handle, Rectangle> quad_tree_style_load(
 // loop from point from begin to end once 
 // and create a MBB for points in this range
 Rectangle min_bounding_box(
-    std::vector<Point>::iterator begin, 
-    std::vector<Point>::iterator end )
-{
+    std::vector<Point>::iterator begin,
+    std::vector<Point>::iterator end
+) {
   if (end == begin) {
     // box contains only 1 point 
     assert(end != begin );
   }
+
   // assumes 2 dimensions 
   double smallest_x = (*begin)[0]; 
   double biggest_x = (*begin)[0]; 
   double smallest_y = (*begin)[1]; 
-  double biggest_y = (*begin)[1]; 
+  double biggest_y = (*begin)[1];
+
   for (auto iter = begin; iter != end; iter++) {
     if ((*iter)[0] < smallest_x){ smallest_x = (*iter)[0]; }
     if ((*iter)[0] > biggest_x){ biggest_x = (*iter)[0]; }
     if ((*iter)[1] < smallest_y){ smallest_y = (*iter)[0]; }
     if ((*iter)[1] > biggest_y){ biggest_y = (*iter)[0]; }
   }
+
   Rectangle mbb = Rectangle(smallest_x, smallest_y, biggest_x, biggest_y);
   return mbb;
 }
@@ -708,16 +711,17 @@ void basic_split_leaf(
   using LN = rstartreedisk::LeafNode<5, R_STAR_FANOUT>;
   using BN = rstartreedisk::BranchNode<5, R_STAR_FANOUT>;
   // count is number of points in this range 
-  uint64_t count = ends[0] - begins[0]; 
+  uint64_t count = ends[0] - begins[0];
+
   if (count <= M) {
     // there is no more split for this subrange 
     // if leaf node:
     // height = 0
-      // if we are height 0, then add all points to the current node 
+    // if we are height 0, then add all points to the current node
     for (auto iter = begins[0]; begins[0] != ends[0]; iter++) {
       leaf_node->addPoint(*iter);
-
     }
+
     return; 
   }
 
@@ -809,7 +813,6 @@ void basic_split_leaf(
   } else{
     assert (dimension != 0 && dimension != 1);
   }
-
 }
 
 void basic_split_branch(
@@ -821,15 +824,17 @@ void basic_split_branch(
         uint64_t M, 
         pinned_node_ptr<rstartreedisk::BranchNode<5, R_STAR_FANOUT>> branch_node)
 {
-        //NT tree_node){
   using LN = rstartreedisk::LeafNode<5, R_STAR_FANOUT>;
   using BN = rstartreedisk::BranchNode<5, R_STAR_FANOUT>;
-  // count is number of points in this range 
+
+  // count is number of points in this range
   uint64_t count = ends[0] - begins[0]; 
+
   if (count <= M) {
     // there is no more split for this subrange 
     //if branch node: 
     tree_node_allocator *allocator = tree->node_allocator_.get();
+
     if (height == 1) {
       // next level should be leaf node 
       // allocate a new leaf node at next level: 
@@ -848,7 +853,6 @@ void basic_split_branch(
       b.child = leaf_handle; 
       b.boundingBox = leaf_node->boundingBox();
       branch_node->addBranchToNode(b);
-      
     } else {
       // next level is still branch node:  
       // allocate a new branchnode at next level: 
@@ -868,6 +872,7 @@ void basic_split_branch(
       b.boundingBox = child_node->boundingBox();
       branch_node->addBranchToNode(b);
     }
+
     return; 
   }
 
@@ -876,11 +881,14 @@ void basic_split_branch(
   unsigned dimension = 0; 
   uint64_t best_cut; 
   double lowest_cost;
-  // checking x dimension 
+
+  // checking x dimension
   std::tie(lowest_cost, best_cut) = find_best_cut(begins[0], ends[0], 0, M, 0); 
-  // checking y dimension 
+
+  // checking y dimension
   auto ret = find_best_cut(begins[1], ends[1], 1, M, lowest_cost);
-  // if cut on y dimension is better: 
+
+  // if cut on y dimension is better:
   if (ret.first < lowest_cost) {
     lowest_cost = ret.first; 
     best_cut = ret.second; 
@@ -896,7 +904,8 @@ void basic_split_branch(
   std::vector<Point> points_copy_right; 
   std::vector<Point>::iterator begin;
   std::vector<Point>::iterator end;
-  if (dimension == 0){
+
+  if (dimension == 0) {
     // cut is in dimension x 
     begin = begins[0];
     end = ends[0];
@@ -926,7 +935,7 @@ void basic_split_branch(
     basic_split_branch(tree, new_begins_right, new_ends_right, branch_factor, height, M, branch_node);
     //basic_split(tree, new_begins_left, new_ends_left, branch_factor, height, M, branch_node, child_node);
     //basic_split(tree, new_begins_right, new_ends_right, branch_factor, height, M, branch_node, child_node);
-  } else if(dimension == 1){
+  } else if (dimension == 1) {
     // cut is in dimension y 
     begin = begins[1];
     end = ends[1];
@@ -956,10 +965,9 @@ void basic_split_branch(
     basic_split_branch(tree, new_begins_right, new_ends_right, branch_factor, height, M, branch_node);
     //basic_split(tree, new_begins_left, new_ends_left, branch_factor, height, M, branch_node, child_node);
     //basic_split(tree, new_begins_right, new_ends_right, branch_factor, height, M, branch_node, child_node);
-  } else{
+  } else {
     assert (dimension != 0 && dimension != 1);
-  }
-
+  };
 }
 
 // Bulk load method of a tree with Top Down Greedy Split
@@ -995,14 +1003,17 @@ tree_node_handle tgs_load(
   std::copy(begin, end, back_inserter(points_copy));  
   std::vector<Point>::iterator begin_y = points_copy.begin();
   std::vector<Point>::iterator end_y = begin_y + points_copy.size();
-  // sort on x dimension 
+
+  // sort on x dimension
   std::sort(begin, end, [](Point &l, Point &r) { return l[0] < r[0]; });
   // sort on y dimension 
   std::sort(begin_y, end_y, [](Point &l, Point &r) { return l[1] < r[1]; });
-  std::vector<std::vector<Point>::iterator> begins; 
-  std::vector<std::vector<Point>::iterator> ends; 
+
   // begins has [sorted_x.begin, sorted_y.begin]
   // ends has [sorted_x.end, sorted_y.end]
+  std::vector<std::vector<Point>::iterator> begins;
+  std::vector<std::vector<Point>::iterator> ends;
+
   begins.push_back(begin);
   begins.push_back(begin_y);
   ends.push_back(end);
@@ -1011,7 +1022,8 @@ tree_node_handle tgs_load(
   // height of the Rtree root node (leaf has height 0)
   unsigned height = std::ceil(log(end - begin) / log(branch_factor)) - 1;
   uint64_t M = pow(branch_factor, (std::ceil(log(end-begin) / log(branch_factor)) - 1));
-  // basic_split does the most work 
+
+  // basic_split does most of the work
   basic_split_branch(tree, begins, ends, branch_factor, height, M, root_node); 
   return root_handle;
 }
