@@ -658,7 +658,7 @@ double cost_function(Rectangle& B0, Rectangle& B1, double area_weight)
   return area_weight * sum_area + (1 - area_weight) * sum_margin; 
 }
 
-// basic_split returns a cut based on cost function 
+// find_best_cut returns a cut based on an arbitrary cost function
 std::pair<uint64_t, double> find_best_cut(
         std::vector<Point>::iterator begin,
         std::vector<Point>::iterator end,
@@ -668,19 +668,23 @@ std::pair<uint64_t, double> find_best_cut(
 ) {
   uint64_t best_cut = 0; 
   double curr_lowest_cost = lowest_cost; 
-  uint64_t range = std::ceil((end-begin)/M);
-  for ( uint64_t i = 1; i < range; i++ ) {
+  uint64_t range = std::ceil((end - begin) / M);
+
+  for (uint64_t i = 1; i < range; i++) {
     // cut is at [1 - M*i] | [M*i + 1, n]
     Rectangle B0 = mbb_from_iterator(begin, begin + i * M);
     Rectangle B1 = mbb_from_iterator(begin + i * M + 1, end);
-    // 1.0 is the weight of area cost 
+
+    // 1.0 is the weight of area cost
     double cut_cost = cost_function(B0, B1, 1.0); 
+
     if (lowest_cost == 0 || cut_cost < lowest_cost){
       best_cut = i * M; 
       curr_lowest_cost = cut_cost;
     }
   }
-  return std::make_pair(curr_lowest_cost, best_cut); 
+
+  return std::make_pair(best_cut, curr_lowest_cost);
 }
 
 // Basic Split: 
@@ -691,7 +695,6 @@ std::pair<uint64_t, double> find_best_cut(
 //        B1 = MBB(i*M + 1 to n)
 // 4.     compute f(B0, B1)
 // 5. split the input set based on i which has the highest f()
-
 void basic_split_leaf(
         rstartreedisk::RStarTreeDisk<5, R_STAR_FANOUT> *tree,
         std::vector<std::vector<Point>::iterator> begins,
@@ -703,7 +706,8 @@ void basic_split_leaf(
 {
   using LN = rstartreedisk::LeafNode<5, R_STAR_FANOUT>;
   using BN = rstartreedisk::BranchNode<5, R_STAR_FANOUT>;
-  // count is number of points in this range 
+
+  // count is number of points in this range
   uint64_t count = ends[0] - begins[0];
 
   if (count <= M) {
@@ -713,157 +717,6 @@ void basic_split_leaf(
     // if we are height 0, then add all points to the current node
     for (auto iter = begins[0]; begins[0] != ends[0]; iter++) {
       leaf_node->addPoint(*iter);
-    }
-
-    return; 
-  }
-
-  // find the best one cut from all dimensions: 
-  // starts with dimension x 
-  unsigned dimension = 0; 
-  uint64_t best_cut; 
-  double lowest_cost;
-  // checking x dimension 
-  std::tie(lowest_cost, best_cut) = find_best_cut(begins[0], ends[0], 0, M, 0); 
-  // checking y dimension 
-  auto ret = find_best_cut(begins[1], ends[1], 1, M, lowest_cost);
-  // if cut on y dimension is better: 
-  if (ret.first < lowest_cost) {
-    lowest_cost = ret.first; 
-    best_cut = ret.second; 
-    dimension = 1; 
-  }
-
-  // split the points into left and right based on the cut above 
-  std::vector<std::vector<Point>::iterator> new_begins_left; 
-  std::vector<std::vector<Point>::iterator> new_ends_left; 
-  std::vector<std::vector<Point>::iterator> new_begins_right; 
-  std::vector<std::vector<Point>::iterator> new_ends_right;
-  std::vector<Point> points_copy_left;
-  std::vector<Point> points_copy_right; 
-  std::vector<Point>::iterator begin;
-  std::vector<Point>::iterator end;
-  if (dimension == 0){
-    // cut is in dimension x 
-    begin = begins[0];
-    end = ends[0];
-    std::copy(begin, begin+best_cut, back_inserter(points_copy_left)); 
-    std::copy(begin+best_cut+1, end, back_inserter(points_copy_right)); 
-
-    // the original list doesn't need to be sorted 
-    std::vector<Point>::iterator begin_left = points_copy_left.begin();
-    std::vector<Point>::iterator end_left = begin_left + points_copy_left.size();
-    std::sort(begin_left, end_left, [](Point &l, Point &r) { return l[1] < r[1]; });
-
-    std::vector<Point>::iterator begin_right = points_copy_right.begin();
-    std::vector<Point>::iterator end_right = begin_right + points_copy_right.size();
-    std::sort(begin_right, end_right, [](Point &l, Point &r) { return l[1] < r[1]; });
-
-    new_begins_left.push_back(begin);
-    new_begins_left.push_back(begin_left);
-    new_ends_left.push_back(begin+best_cut);
-    new_ends_left.push_back(end_left);
-    
-    new_begins_right.push_back(begin+best_cut +1);
-    new_begins_right.push_back(begin_right);
-    new_ends_right.push_back(end);
-    new_ends_right.push_back(end_right);
-
-    basic_split_leaf(tree, new_begins_left, new_ends_left, branch_factor, height, M, leaf_node);
-    basic_split_leaf(tree, new_begins_right, new_ends_right, branch_factor, height, M, leaf_node);
-    //basic_split(tree, new_begins_left, new_ends_left, branch_factor, height, M, branch_node, child_node);
-    //basic_split(tree, new_begins_right, new_ends_right, branch_factor, height, M, branch_node, child_node);
-  } else if(dimension == 1){
-    // cut is in dimension y 
-    begin = begins[1];
-    end = ends[1];
-    std::copy(begin, begin+best_cut, back_inserter(points_copy_left)); 
-    std::copy(begin+best_cut+1, end, back_inserter(points_copy_right)); 
-
-    // the original list doesn't need to be sorted 
-    std::vector<Point>::iterator begin_left = points_copy_left.begin();
-    std::vector<Point>::iterator end_left = begin_left + points_copy_left.size();
-    std::sort(begin_left, end_left, [](Point &l, Point &r) { return l[0] < r[0]; });
-
-    std::vector<Point>::iterator begin_right = points_copy_right.begin();
-    std::vector<Point>::iterator end_right = begin_right + points_copy_right.size();
-    std::sort(begin_right, end_right, [](Point &l, Point &r) { return l[0] < r[0]; });
-
-    new_begins_left.push_back(begin_left);
-    new_begins_left.push_back(begin);
-    new_ends_left.push_back(end_left);
-    new_ends_left.push_back(begin+best_cut);
-    
-    new_begins_right.push_back(begin_right);
-    new_begins_right.push_back(begin+best_cut +1);
-    new_ends_right.push_back(end_right);
-    new_ends_right.push_back(end);
-
-    basic_split_leaf(tree, new_begins_left, new_ends_left, branch_factor, height, M, leaf_node);
-    basic_split_leaf(tree, new_begins_right, new_ends_right, branch_factor, height, M, leaf_node);
-    //basic_split(tree, new_begins_left, new_ends_left, branch_factor, height, M, branch_node, child_node);
-    //basic_split(tree, new_begins_right, new_ends_right, branch_factor, height, M, branch_node, child_node);
-  } else{
-    assert (dimension != 0 && dimension != 1);
-  }
-}
-
-void basic_split_branch(
-        rstartreedisk::RStarTreeDisk<5, R_STAR_FANOUT> *tree,
-        std::vector<std::vector<Point>::iterator> begins,
-        std::vector<std::vector<Point>::iterator> ends,
-        unsigned branch_factor,
-        unsigned height, 
-        uint64_t M, 
-        pinned_node_ptr<rstartreedisk::BranchNode<5, R_STAR_FANOUT>> branch_node)
-{
-  using LN = rstartreedisk::LeafNode<5, R_STAR_FANOUT>;
-  using BN = rstartreedisk::BranchNode<5, R_STAR_FANOUT>;
-
-  // count is number of points in this range
-  uint64_t count = ends[0] - begins[0]; 
-
-  if (count <= M) {
-    // there is no more split for this subrange 
-    //if branch node: 
-    tree_node_allocator *allocator = tree->node_allocator_.get();
-
-    if (height == 1) {
-      // next level should be leaf node 
-      // allocate a new leaf node at next level: 
-      auto alloc_data = allocator->create_new_tree_node<LN>(NodeHandleType(LEAF_NODE));
-      new (&(*(alloc_data.first))) LN();
-      auto leaf_node = alloc_data.first;
-      tree_node_handle leaf_handle = alloc_data.second;
-
-      // recursion 
-      uint64_t new_M = pow(branch_factor, (std::ceil(log(count) / log(branch_factor)) - 1));
-      basic_split_leaf(tree, begins, ends, branch_factor, height - 1, new_M, leaf_node);
-      //basic_split(tree, begins, ends, branch_factor, height - 1, new_M, NULL, child_node);
-      
-      // ready to create the current branch 
-      rstartreedisk::Branch b;
-      b.child = leaf_handle; 
-      b.boundingBox = leaf_node->boundingBox();
-      branch_node->addBranchToNode(b);
-    } else {
-      // next level is still branch node:  
-      // allocate a new branchnode at next level: 
-      auto alloc_data = allocator->create_new_tree_node<BN>(NodeHandleType(BRANCH_NODE));
-      new (&(*(alloc_data.first))) BN();
-      auto child_node = alloc_data.first;
-      tree_node_handle child_handle = alloc_data.second; 
-
-      // recursion 
-      uint64_t new_M = pow(branch_factor, (std::ceil(log(count) / log(branch_factor)) - 1));
-      basic_split_branch(tree, begins, ends, branch_factor, height - 1, new_M, child_node);
-      //basic_split(tree, begins, ends, branch_factor, height - 1, new_M, child_node, NULL);
-      
-      // ready to create the current branch 
-      rstartreedisk::Branch b;
-      b.child = child_handle; 
-      b.boundingBox = child_node->boundingBox();
-      branch_node->addBranchToNode(b);
     }
 
     return; 
@@ -893,113 +746,271 @@ void basic_split_branch(
   std::vector<std::vector<Point>::iterator> new_ends_left; 
   std::vector<std::vector<Point>::iterator> new_begins_right; 
   std::vector<std::vector<Point>::iterator> new_ends_right;
-  std::vector<Point> points_copy_left;
-  std::vector<Point> points_copy_right; 
+  std::vector<Point> points_left;
+  std::vector<Point> points_right;
   std::vector<Point>::iterator begin;
   std::vector<Point>::iterator end;
 
   if (dimension == 0) {
-    // cut is in dimension x 
-    begin = begins[0];
-    end = ends[0];
-    std::copy(begin, begin+best_cut, back_inserter(points_copy_left)); 
-    std::copy(begin+best_cut+1, end, back_inserter(points_copy_right)); 
+    // The best cut is in dimension x
+    auto begin_x_left = begins[0];
+    auto end_x_left = begin_x_left + best_cut;
+    auto begin_x_right = end_x_left + 1;
+    auto end_x_right = ends[0];
 
-    // the original list doesn't need to be sorted 
-    std::vector<Point>::iterator begin_left = points_copy_left.begin();
-    std::vector<Point>::iterator end_left = begin_left + points_copy_left.size();
-    std::sort(begin_left, end_left, [](Point &l, Point &r) { return l[1] < r[1]; });
+    // Create copies of the points vector to sort in the y-dimension
+    std::copy(begin_x_left, end_x_left, back_inserter(points_left));
+    std::copy(begin_x_right, end_x_right, back_inserter(points_right));
 
-    std::vector<Point>::iterator begin_right = points_copy_right.begin();
-    std::vector<Point>::iterator end_right = begin_right + points_copy_right.size();
-    std::sort(begin_right, end_right, [](Point &l, Point &r) { return l[1] < r[1]; });
+    // The original vector is already sorted in the x-dimension, now we sort in the y-dimension
+    auto begin_y_left = points_left.begin();
+    auto end_y_left = points_left.end();
+    std::sort(begin_y_left, end_y_left, [](Point &l, Point &r) { return l[1] < r[1]; });
 
-    new_begins_left.push_back(begin);
-    new_begins_left.push_back(begin_left);
-    new_ends_left.push_back(begin+best_cut);
-    new_ends_left.push_back(end_left);
-    
-    new_begins_right.push_back(begin+best_cut +1);
-    new_begins_right.push_back(begin_right);
-    new_ends_right.push_back(end);
-    new_ends_right.push_back(end_right);
+    auto begin_y_right = points_right.begin();
+    auto end_y_right = points_right.end();
+    std::sort(begin_y_right, end_y_right, [](Point &l, Point &r) { return l[1] < r[1]; });
+
+    new_begins_left.push_back(begin_x_left);
+    new_begins_left.push_back(begin_y_left);
+    new_ends_left.push_back(end_x_left);
+    new_ends_left.push_back(end_y_left);
+
+    new_begins_right.push_back(begin_x_right);
+    new_begins_right.push_back(begin_y_right);
+    new_ends_right.push_back(end_x_right);
+    new_ends_right.push_back(end_y_right);
+
+    basic_split_leaf(tree, new_begins_left, new_ends_left, branch_factor, height, M, leaf_node);
+    basic_split_leaf(tree, new_begins_right, new_ends_right, branch_factor, height, M, leaf_node);
+  } else if (dimension == 1){
+    // The best cut is in dimension y
+    auto begin_y_left = begins[1];
+    auto end_y_left = begin_y_left + best_cut;
+    auto begin_y_right = end_y_left + 1;
+    auto end_y_right = ends[1];
+
+    // Create copies of the points vector to sort in the x-dimension
+    std::copy(begin_y_left, end_y_left, back_inserter(points_left));
+    std::copy(begin_y_right, end_y_right, back_inserter(points_right));
+
+    // The original vector is already sorted in the y-dimension, we sort in the x-dimension
+    auto begin_x_left = points_left.begin();
+    auto end_x_left = points_left.end();
+    std::sort(begin_x_left, end_x_left, [](Point &l, Point &r) { return l[0] < r[0]; });
+
+    auto begin_x_right = points_right.begin();
+    auto end_x_right = begin_x_right + points_right.size();
+    std::sort(begin_x_right, end_x_right, [](Point &l, Point &r) { return l[0] < r[0]; });
+
+    new_begins_left.push_back(begin_x_left);
+    new_begins_left.push_back(begin_y_left);
+    new_ends_left.push_back(end_x_left);
+    new_ends_left.push_back(end_y_left);
+
+    new_begins_right.push_back(begin_x_right);
+    new_begins_right.push_back(begin_y_right);
+    new_ends_right.push_back(end_x_right);
+    new_ends_right.push_back(end_y_right);
+
+    basic_split_leaf(tree, new_begins_left, new_ends_left, branch_factor, height, M, leaf_node);
+    basic_split_leaf(tree, new_begins_right, new_ends_right, branch_factor, height, M, leaf_node);
+  } else {
+    assert (dimension != 0 && dimension != 1);
+  }
+}
+
+void basic_split_branch(
+        rstartreedisk::RStarTreeDisk<5, R_STAR_FANOUT> *tree,
+        std::vector<std::vector<Point>::iterator> begins,
+        std::vector<std::vector<Point>::iterator> ends,
+        unsigned branch_factor,
+        unsigned height, 
+        uint64_t M, 
+        pinned_node_ptr<rstartreedisk::BranchNode<5, R_STAR_FANOUT>> branch_node)
+{
+  using LN = rstartreedisk::LeafNode<5, R_STAR_FANOUT>;
+  using BN = rstartreedisk::BranchNode<5, R_STAR_FANOUT>;
+
+  // count is number of points in this range
+  uint64_t count = ends[0] - begins[0]; 
+
+  if (count <= M) {
+    // There are no more splits for this subrange
+    tree_node_allocator *allocator = tree->node_allocator_.get();
+
+    if (height == 1) {
+      // The next level is a leaf node, so we allocate a new leaf node
+      auto alloc_data = allocator->create_new_tree_node<LN>(NodeHandleType(LEAF_NODE));
+      new (&(*(alloc_data.first))) LN();
+      auto leaf_node = alloc_data.first;
+      tree_node_handle leaf_handle = alloc_data.second;
+
+      // Recurse onto next level
+      uint64_t new_M = pow(branch_factor, (std::ceil(log(count) / log(branch_factor)) - 1));
+      basic_split_leaf(tree, begins, ends, branch_factor, height - 1, new_M, leaf_node);
+      
+      // Create the current branch after recursing
+      rstartreedisk::Branch b;
+      b.child = leaf_handle;
+      b.boundingBox = leaf_node->boundingBox();
+      branch_node->addBranchToNode(b);
+    } else {
+      // The next level is a branch node, so we allocate a branch node
+      auto alloc_data = allocator->create_new_tree_node<BN>(NodeHandleType(BRANCH_NODE));
+      new (&(*(alloc_data.first))) BN();
+      auto child_node = alloc_data.first;
+      tree_node_handle child_handle = alloc_data.second;
+
+      // Recurse onto next level
+      uint64_t new_M = pow(branch_factor, (std::ceil(log(count) / log(branch_factor)) - 1));
+      basic_split_branch(tree, begins, ends, branch_factor, height - 1, new_M, child_node);
+
+      // Create the current branch after recursing
+      rstartreedisk::Branch b;
+      b.child = child_handle;
+      b.boundingBox = child_node->boundingBox();
+      branch_node->addBranchToNode(b);
+    }
+
+    return; 
+  }
+
+  // Find the best one split across all dimensions:
+  // Start with dimension x
+  unsigned dimension = 0; 
+  uint64_t best_cut; 
+  double lowest_cost;
+
+  // Checking x dimension...
+  std::tie(lowest_cost, best_cut) = find_best_cut(begins[0], ends[0], 0, M, 0); 
+
+  // Checking y dimension...
+  auto ret = find_best_cut(begins[1], ends[1], 1, M, lowest_cost);
+
+  // if cut on y dimension is better:
+  if (ret.first < lowest_cost) {
+    lowest_cost = ret.first; 
+    best_cut = ret.second; 
+    dimension = 1; 
+  }
+
+  // Split the points into left and right based on the cut above
+  std::vector<std::vector<Point>::iterator> new_begins_left; 
+  std::vector<std::vector<Point>::iterator> new_ends_left; 
+  std::vector<std::vector<Point>::iterator> new_begins_right; 
+  std::vector<std::vector<Point>::iterator> new_ends_right;
+  std::vector<Point> points_left;
+  std::vector<Point> points_right;
+
+  if (dimension == 0) {
+    // The best cut is in dimension x
+    auto begin_x_left = begins[0];
+    auto end_x_left = begin_x_left + best_cut;
+    auto begin_x_right = end_x_left + 1;
+    auto end_x_right = ends[0];
+
+    // Create copies of the points vector to sort in the y-dimension
+    std::copy(begin_x_left, end_x_left, back_inserter(points_left));
+    std::copy(begin_x_right, end_x_right, back_inserter(points_right));
+
+    // The original vector is already sorted in the x-dimension, now we sort in the y-dimension
+    auto begin_y_left = points_left.begin();
+    auto end_y_left = points_left.end();
+    std::sort(begin_y_left, end_y_left, [](Point &l, Point &r) { return l[1] < r[1]; });
+
+    auto begin_y_right = points_right.begin();
+    auto end_y_right = points_right.end();
+    std::sort(begin_y_right, end_y_right, [](Point &l, Point &r) { return l[1] < r[1]; });
+
+    new_begins_left.push_back(begin_x_left);
+    new_begins_left.push_back(begin_y_left);
+    new_ends_left.push_back(end_x_left);
+    new_ends_left.push_back(end_y_left);
+
+    new_begins_right.push_back(begin_x_right);
+    new_begins_right.push_back(begin_y_right);
+    new_ends_right.push_back(end_x_right);
+    new_ends_right.push_back(end_y_right);
 
     basic_split_branch(tree, new_begins_left, new_ends_left, branch_factor, height, M, branch_node);
     basic_split_branch(tree, new_begins_right, new_ends_right, branch_factor, height, M, branch_node);
-    //basic_split(tree, new_begins_left, new_ends_left, branch_factor, height, M, branch_node, child_node);
-    //basic_split(tree, new_begins_right, new_ends_right, branch_factor, height, M, branch_node, child_node);
   } else if (dimension == 1) {
-    // cut is in dimension y 
-    begin = begins[1];
-    end = ends[1];
-    std::copy(begin, begin+best_cut, back_inserter(points_copy_left)); 
-    std::copy(begin+best_cut+1, end, back_inserter(points_copy_right)); 
+    // The best cut is in dimension y
+    auto begin_y_left = begins[1];
+    auto end_y_left = begin_y_left + best_cut;
+    auto begin_y_right = end_y_left + 1;
+    auto end_y_right = ends[1];
 
-    // the original list doesn't need to be sorted 
-    std::vector<Point>::iterator begin_left = points_copy_left.begin();
-    std::vector<Point>::iterator end_left = begin_left + points_copy_left.size();
-    std::sort(begin_left, end_left, [](Point &l, Point &r) { return l[0] < r[0]; });
+    // Create copies of the points vector to sort in the x-dimension
+    std::copy(begin_y_left, end_y_left, back_inserter(points_left));
+    std::copy(begin_y_right, end_y_right, back_inserter(points_right));
 
-    std::vector<Point>::iterator begin_right = points_copy_right.begin();
-    std::vector<Point>::iterator end_right = begin_right + points_copy_right.size();
-    std::sort(begin_right, end_right, [](Point &l, Point &r) { return l[0] < r[0]; });
+    // The original vector is already sorted in the y-dimension, we sort in the x-dimension
+    auto begin_x_left = points_left.begin();
+    auto end_x_left = points_left.end();
+    std::sort(begin_x_left, end_x_left, [](Point &l, Point &r) { return l[0] < r[0]; });
 
-    new_begins_left.push_back(begin_left);
-    new_begins_left.push_back(begin);
-    new_ends_left.push_back(end_left);
-    new_ends_left.push_back(begin+best_cut);
-    
-    new_begins_right.push_back(begin_right);
-    new_begins_right.push_back(begin+best_cut +1);
-    new_ends_right.push_back(end_right);
-    new_ends_right.push_back(end);
+    auto begin_x_right = points_right.begin();
+    auto end_x_right = begin_x_right + points_right.size();
+    std::sort(begin_x_right, end_x_right, [](Point &l, Point &r) { return l[0] < r[0]; });
+
+    new_begins_left.push_back(begin_x_left);
+    new_begins_left.push_back(begin_y_left);
+    new_ends_left.push_back(end_x_left);
+    new_ends_left.push_back(end_y_left);
+
+    new_begins_right.push_back(begin_x_right);
+    new_begins_right.push_back(begin_y_right);
+    new_ends_right.push_back(end_x_right);
+    new_ends_right.push_back(end_y_right);
 
     basic_split_branch(tree, new_begins_left, new_ends_left, branch_factor, height, M, branch_node);
     basic_split_branch(tree, new_begins_right, new_ends_right, branch_factor, height, M, branch_node);
-    //basic_split(tree, new_begins_left, new_ends_left, branch_factor, height, M, branch_node, child_node);
-    //basic_split(tree, new_begins_right, new_ends_right, branch_factor, height, M, branch_node, child_node);
   } else {
     assert (dimension != 0 && dimension != 1);
   };
 }
 
-// Bulk load method of a tree with Top Down Greedy Split
+// Bulk load method of an R-tree with Top Down Greedy Split
 // algorithm:
 // 1. sort data on all dimensions individually with c orderings 
 //    points: just 1 ordering available 
 //    rectangles: (1) min coord (2) max coord (3) center 
 // 2. run basic_split to generate branch nodes and leaf nodes
-// Shirley's Notes: 
+//
+// Shirley's Notes:
 // this is an entry point 
-// for now, this is done for 2 dimensions individually, should be genralized 
-// to multi-dimensions later 
-
+// for now, this is done for 2 dimensions individually, should be generalized
+// to multi-dimensions later
 tree_node_handle tgs_load(
         rstartreedisk::RStarTreeDisk<5, R_STAR_FANOUT> *tree,
         std::vector<Point>::iterator begin,
         std::vector<Point>::iterator end,
         unsigned branch_factor
 ) {
-  using LN = rstartreedisk::LeafNode<5, R_STAR_FANOUT>;
   using BN = rstartreedisk::BranchNode<5, R_STAR_FANOUT>;
 
-  // allocate root branch node on buffer pool 
-  // todo: check for small tree size which can fit into a leaf node? 
+  // TODO: The number of points may be small enough to fit into a single leaf node.
+  //       We do not handle this case.
   tree_node_allocator *allocator = tree->node_allocator_.get();
   auto alloc_data = allocator->create_new_tree_node<BN>(NodeHandleType(BRANCH_NODE));
   new (&(*(alloc_data.first))) BN();
   auto root_node = alloc_data.first;
   tree_node_handle root_handle = alloc_data.second;
   
-  // make a copy of the Points vector in order to keep one for each dimension
-  std::vector<Point> points_copy;
-  std::copy(begin, end, back_inserter(points_copy));  
-  std::vector<Point>::iterator begin_y = points_copy.begin();
-  std::vector<Point>::iterator end_y = begin_y + points_copy.size();
+  // Copy the Points vector in order to sort it separately for each dimension
+  std::vector<Point> points;
+  std::copy(begin, end, back_inserter(points));
 
-  // sort on x dimension
-  std::sort(begin, end, [](Point &l, Point &r) { return l[0] < r[0]; });
-  // sort on y dimension 
+  auto begin_x = begin;
+  auto end_x = end;
+  auto begin_y = points.begin();
+  auto end_y = points.end();
+
+  // Sort on x dimension
+  std::sort(begin_x, end_x, [](Point &l, Point &r) { return l[0] < r[0]; });
+  // Sort on y dimension
   std::sort(begin_y, end_y, [](Point &l, Point &r) { return l[1] < r[1]; });
 
   // begins has [sorted_x.begin, sorted_y.begin]
@@ -1007,21 +1018,19 @@ tree_node_handle tgs_load(
   std::vector<std::vector<Point>::iterator> begins;
   std::vector<std::vector<Point>::iterator> ends;
 
-  begins.push_back(begin);
+  begins.push_back(begin_x);
   begins.push_back(begin_y);
-  ends.push_back(end);
+  ends.push_back(end_x);
   ends.push_back(end_y);
 
-  // height of the Rtree root node (leaf has height 0)
+  // Height of the R-tree root node (leaf has height 0)
   unsigned height = std::ceil(log(end - begin) / log(branch_factor)) - 1;
-  uint64_t M = pow(branch_factor, (std::ceil(log(end-begin) / log(branch_factor)) - 1));
+  uint64_t M = pow(branch_factor, height);
 
-  // basic_split does most of the work
   basic_split_branch(tree, begins, ends, branch_factor, height, M, root_node); 
+
   return root_handle;
 }
-
-
 
 template <>
 void bulk_load_tree(
