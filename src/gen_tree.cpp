@@ -120,17 +120,17 @@ void generate_tree(std::map<std::string, size_t> &configU, std::map<std::string,
 
   unsigned totalSearches = 0;
   double totalTimeSearches = 0.0;
-  //for (Point p : all_points) {
-  //[DEBUG] this is for debugging for now: 
-  for (auto iter = all_points.begin() + cut_off_bulk_load; iter < all_points.end(); iter++ ) {
+  for (auto iter = all_points.begin() /*+ cut_off_bulk_load*/; iter < all_points.end(); iter++ ) {
     Point p = *iter; 
     std::chrono::high_resolution_clock::time_point begin = std::chrono::high_resolution_clock::now();
     //std::cout << "Searching: for " << p << std::endl;
     std::vector<Point> out = spatialIndex->search(p);
     if (out.size() != 1) {
-      std::cout << "Could not find " << p << std::endl;
+      int index = std::distance(all_points.begin(), iter);
+      std::cout << "Could not find " << p << " at index "<< index << std::endl;
       std::cout << out.size() << std::endl;
       std::cout << "Total successful searches: " << totalSearches << std::endl;
+      //spatialIndex->print();
       abort();
     }
     std::chrono::high_resolution_clock::time_point end = std::chrono::high_resolution_clock::now();
