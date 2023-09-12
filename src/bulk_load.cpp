@@ -628,33 +628,26 @@ std::pair<tree_node_handle, Rectangle> quad_tree_style_load(
 
 // loop from point from begin to end once 
 // and create a MBB for points in this range
-Rectangle min_bounding_box(
+Rectangle mbb_from_iterator(
     std::vector<Point>::iterator begin,
     std::vector<Point>::iterator end
 ) {
   if (end == begin) {
     // box contains only 1 point 
-    assert(end != begin );
+    assert(end != begin);
   }
 
-  // assumes 2 dimensions 
-  double smallest_x = (*begin)[0]; 
-  double biggest_x = (*begin)[0]; 
-  double smallest_y = (*begin)[1]; 
-  double biggest_y = (*begin)[1];
+  // Use the first two points to create the initial rectangle
+  Rectangle mbb = Rectangle(*begin, *(++begin));
 
-  for (auto iter = begin; iter != end; iter++) {
-    if ((*iter)[0] < smallest_x){ smallest_x = (*iter)[0]; }
-    if ((*iter)[0] > biggest_x){ biggest_x = (*iter)[0]; }
-    if ((*iter)[1] < smallest_y){ smallest_y = (*iter)[0]; }
-    if ((*iter)[1] > biggest_y){ biggest_y = (*iter)[0]; }
+  for (auto iter = ++begin; iter != end; iter++) {
+    mbb.expand(*iter);
   }
 
-  Rectangle mbb = Rectangle(smallest_x, smallest_y, biggest_x, biggest_y);
   return mbb;
 }
 
-// cost_function calcualtes the weighted cost for cut 
+// cost_function calculates the weighted cost for cut
 double cost_function(Rectangle& B0, Rectangle& B1, double area_weight)
 {
   // option 1: just area (area_weight = 1)
@@ -678,8 +671,8 @@ std::pair<uint64_t, double> find_best_cut(
   uint64_t range = std::ceil((end-begin)/M);
   for ( uint64_t i = 1; i < range; i++ ) {
     // cut is at [1 - M*i] | [M*i + 1, n]
-    Rectangle B0 = min_bounding_box(begin, begin+i*M);
-    Rectangle B1 = min_bounding_box(begin+i*M+1, end);
+    Rectangle B0 = mbb_from_iterator(begin, begin + i * M);
+    Rectangle B1 = mbb_from_iterator(begin + i * M + 1, end);
     // 1.0 is the weight of area cost 
     double cut_cost = cost_function(B0, B1, 1.0); 
     if (lowest_cost == 0 || cut_cost < lowest_cost){
