@@ -311,6 +311,26 @@ Rectangle::Rectangle(Point lowerLeft, Point upperRight) :
     upperRight( upperRight )
 {}
 
+Rectangle::Rectangle(std::vector<Point>::iterator begin, std::vector<Point>::iterator end) {
+  auto count = end - begin;
+
+  if (count < 2) {
+    throw std::invalid_argument("Underlying container must contain at least 2 elements!");
+  }
+
+  // Use the first two points to create the initial rectangle
+  auto first = *begin;
+  auto second = *(++begin);
+  Rectangle mbb = Rectangle(first, second);
+
+  for (auto iter = ++begin; iter != end; iter++) {
+    mbb.expand(*iter);
+  }
+
+  lowerLeft = mbb.lowerLeft;
+  upperRight = mbb.upperRight;
+}
+
 double Rectangle::area() const
 {
 	double a = fabs( upperRight[0] - lowerLeft[0] );

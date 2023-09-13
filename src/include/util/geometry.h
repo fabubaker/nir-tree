@@ -153,6 +153,7 @@ class Rectangle
 		Rectangle();
 		Rectangle(double x, double y, double xp, double yp);
 		Rectangle(Point lowerLeft, Point upperRight);
+    Rectangle(std::vector<Point>::iterator begin, std::vector<Point>::iterator end);
 		Rectangle(const Rectangle &o) = default;
 
 		double area() const;
