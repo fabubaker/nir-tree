@@ -708,11 +708,9 @@ void basic_split_leaf(
   uint64_t count = ends[0] - begins[0];
 
   if (count <= M) {
-    // there is no more split for this subrange 
-    // if leaf node:
-    // height = 0
-    // if we are height 0, then add all points to the current node
-    for (auto iter = begins[0]; begins[0] != ends[0]; iter++) {
+    // There are no more splits for this subrange, and we're a leaf node,
+    // so add all points to the current node
+    for (auto iter = begins[0]; iter != ends[0]; iter++) {
       leaf_node->addPoint(*iter);
     }
 
