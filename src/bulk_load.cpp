@@ -659,7 +659,7 @@ double cost_function(Rectangle& B0, Rectangle& B1, double area_weight)
 }
 
 // find_best_cut returns a cut based on an arbitrary cost function
-std::pair<uint64_t, double> find_best_cut(
+std::pair<double, uint64_t> find_best_cut(
         std::vector<Point>::iterator begin,
         std::vector<Point>::iterator end,
         unsigned dimension,
@@ -684,7 +684,7 @@ std::pair<uint64_t, double> find_best_cut(
     }
   }
 
-  return std::make_pair(best_cut, curr_lowest_cost);
+  return std::make_pair(curr_lowest_cost, best_cut);
 }
 
 // Basic Split: 
@@ -704,9 +704,6 @@ void basic_split_leaf(
         uint64_t M, 
         pinned_node_ptr<rstartreedisk::LeafNode<5, R_STAR_FANOUT>> leaf_node)
 {
-  using LN = rstartreedisk::LeafNode<5, R_STAR_FANOUT>;
-  using BN = rstartreedisk::BranchNode<5, R_STAR_FANOUT>;
-
   // count is number of points in this range
   uint64_t count = ends[0] - begins[0];
 
