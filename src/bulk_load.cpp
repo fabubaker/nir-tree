@@ -668,17 +668,17 @@ std::pair<uint64_t, double> find_best_cut(
 ) {
   uint64_t best_cut = 0; 
   double curr_lowest_cost = lowest_cost; 
-  uint64_t range = std::ceil((end - begin) / M);
+  uint64_t num_cuts = std::ceil((end - begin) / (double) M) - 1;
 
-  for (uint64_t i = 1; i < range; i++) {
+  for (uint64_t i = 1; i <= num_cuts; i++) {
     // cut is at [1 - M*i] | [M*i + 1, n]
     Rectangle B0 = mbb_from_iterator(begin, begin + i * M);
-    Rectangle B1 = mbb_from_iterator(begin + i * M + 1, end);
+    Rectangle B1 = mbb_from_iterator(begin + i * M, end);
 
     // 1.0 is the weight of area cost
     double cut_cost = cost_function(B0, B1, 1.0); 
 
-    if (lowest_cost == 0 || cut_cost < lowest_cost){
+    if (cut_cost < curr_lowest_cost){
       best_cut = i * M; 
       curr_lowest_cost = cut_cost;
     }
@@ -726,13 +726,17 @@ void basic_split_leaf(
   // starts with dimension x 
   unsigned dimension = 0; 
   uint64_t best_cut; 
-  double lowest_cost;
+  double lowest_cost = std::numeric_limits<double>::max();
 
-  // checking x dimension
-  std::tie(lowest_cost, best_cut) = find_best_cut(begins[0], ends[0], 0, M, 0); 
+  // Checking x dimension...
+  auto begin_x = begins[0];
+  auto end_x = ends[0];
+  std::tie(lowest_cost, best_cut) = find_best_cut(begin_x, end_x, 0, M, lowest_cost);
 
-  // checking y dimension
-  auto ret = find_best_cut(begins[1], ends[1], 1, M, lowest_cost);
+  // Checking y dimension...
+  auto begin_y = begins[1];
+  auto end_y = ends[1];
+  auto ret = find_best_cut(begin_y, end_y, 1, M, lowest_cost);
 
   // if cut on y dimension is better:
   if (ret.first < lowest_cost) {
@@ -748,8 +752,6 @@ void basic_split_leaf(
   std::vector<std::vector<Point>::iterator> new_ends_right;
   std::vector<Point> points_left;
   std::vector<Point> points_right;
-  std::vector<Point>::iterator begin;
-  std::vector<Point>::iterator end;
 
   if (dimension == 0) {
     // The best cut is in dimension x
@@ -880,13 +882,17 @@ void basic_split_branch(
   // Start with dimension x
   unsigned dimension = 0; 
   uint64_t best_cut; 
-  double lowest_cost;
+  double lowest_cost = std::numeric_limits<double>::max();
 
   // Checking x dimension...
-  std::tie(lowest_cost, best_cut) = find_best_cut(begins[0], ends[0], 0, M, 0); 
+  auto begin_x = begins[0];
+  auto end_x = ends[0];
+  std::tie(lowest_cost, best_cut) = find_best_cut(begin_x, end_x, 0, M, lowest_cost);
 
   // Checking y dimension...
-  auto ret = find_best_cut(begins[1], ends[1], 1, M, lowest_cost);
+  auto begin_y = begins[1];
+  auto end_y = ends[1];
+  auto ret = find_best_cut(begin_y, end_y, 1, M, lowest_cost);
 
   // if cut on y dimension is better:
   if (ret.first < lowest_cost) {
