@@ -625,7 +625,8 @@ std::pair<tree_node_handle, Rectangle> quad_tree_style_load(
   return std::make_pair(branch_handle, bbox);
 }
 
-// cost_function calculates the weighted cost for cut
+// cost_function calculates the weighted cost for a cut
+// for the TGS bulk-loading algorithm.
 double cost_function(Rectangle& B0, Rectangle& B1, double area_weight)
 {
   // option 1: just area (area_weight = 1)
@@ -640,7 +641,6 @@ double cost_function(Rectangle& B0, Rectangle& B1, double area_weight)
 std::pair<double, uint64_t> find_best_cut(
         std::vector<Point>::iterator begin,
         std::vector<Point>::iterator end,
-        unsigned dimension,
         uint64_t M,
         double lowest_cost
 ) {
@@ -653,7 +653,8 @@ std::pair<double, uint64_t> find_best_cut(
     Rectangle B0 = Rectangle(begin, begin + i * M);
     Rectangle B1 = Rectangle(begin + i * M, end);
 
-    // 1.0 is the weight of area cost
+    // For now, we set area_weight to 1.0
+    double area_weight = 1.0;
     double cut_cost = cost_function(B0, B1, 1.0); 
 
     if (cut_cost < curr_lowest_cost){
@@ -665,12 +666,12 @@ std::pair<double, uint64_t> find_best_cut(
   return std::make_pair(curr_lowest_cost, best_cut);
 }
 
-// Basic Split: 
-// 1. if n <= M (fill a leaf node or create a leaf node or create a branch node )
+// Basic TGS Split:
+// 1. if n <= M (fill a leaf node or create a leaf node or create a branch node)
 // 2. for each dimension and for each ordering
 // 3.   for i from 1 to ceil(n/M) - 1
 //        B0 = MBB(1 to i*M)
-//        B1 = MBB(i*M + 1 to n)
+//        B1 = MBB(i*M to n)
 // 4.     compute f(B0, B1)
 // 5. split the input set based on i which has the highest f()
 void basic_split_leaf(
@@ -704,12 +705,12 @@ void basic_split_leaf(
   // Checking x dimension...
   auto begin_x = begins[0];
   auto end_x = ends[0];
-  std::tie(lowest_cost, best_cut) = find_best_cut(begin_x, end_x, 0, M, lowest_cost);
+  std::tie(lowest_cost, best_cut) = find_best_cut(begin_x, end_x, M, lowest_cost);
 
   // Checking y dimension...
   auto begin_y = begins[1];
   auto end_y = ends[1];
-  auto ret = find_best_cut(begin_y, end_y, 1, M, lowest_cost);
+  auto ret = find_best_cut(begin_y, end_y, M, lowest_cost);
 
   // if cut on y dimension is better:
   if (ret.first < lowest_cost) {
@@ -718,7 +719,7 @@ void basic_split_leaf(
     dimension = 1; 
   }
 
-  // split the points into left and right based on the cut above 
+  // Split the points into left and right based on the cut above
   std::vector<std::vector<Point>::iterator> new_begins_left; 
   std::vector<std::vector<Point>::iterator> new_ends_left; 
   std::vector<std::vector<Point>::iterator> new_begins_right; 
@@ -860,12 +861,12 @@ void basic_split_branch(
   // Checking x dimension...
   auto begin_x = begins[0];
   auto end_x = ends[0];
-  std::tie(lowest_cost, best_cut) = find_best_cut(begin_x, end_x, 0, M, lowest_cost);
+  std::tie(lowest_cost, best_cut) = find_best_cut(begin_x, end_x, M, lowest_cost);
 
   // Checking y dimension...
   auto begin_y = begins[1];
   auto end_y = ends[1];
-  auto ret = find_best_cut(begin_y, end_y, 1, M, lowest_cost);
+  auto ret = find_best_cut(begin_y, end_y, M, lowest_cost);
 
   // if cut on y dimension is better:
   if (ret.first < lowest_cost) {
@@ -957,11 +958,6 @@ void basic_split_branch(
 //    points: just 1 ordering available 
 //    rectangles: (1) min coord (2) max coord (3) center 
 // 2. run basic_split to generate branch nodes and leaf nodes
-//
-// Shirley's Notes:
-// this is an entry point 
-// for now, this is done for 2 dimensions individually, should be generalized
-// to multi-dimensions later
 tree_node_handle tgs_load(
         rstartreedisk::RStarTreeDisk<5, R_STAR_FANOUT> *tree,
         std::vector<Point>::iterator begin,
