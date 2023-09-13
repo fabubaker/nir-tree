@@ -845,8 +845,8 @@ void basic_split_branch(
       auto leaf_node = alloc_data.first;
       tree_node_handle leaf_handle = alloc_data.second;
 
-      // Recurse onto next level
-      uint64_t new_M = pow(branch_factor, (std::ceil(log(count) / log(branch_factor)) - 1));
+      // Recurse onto next level with M = branch factor
+      uint64_t new_M = branch_factor;
       basic_split_leaf(tree, begins, ends, branch_factor, height - 1, new_M, leaf_node);
       
       // Create the current branch after recursing
