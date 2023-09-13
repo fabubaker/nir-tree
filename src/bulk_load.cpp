@@ -754,7 +754,7 @@ void basic_split_leaf(
     // The best cut is in dimension x
     auto begin_x_left = begins[0];
     auto end_x_left = begin_x_left + best_cut;
-    auto begin_x_right = end_x_left + 1;
+    auto begin_x_right = end_x_left;
     auto end_x_right = ends[0];
 
     // Create copies of the points vector to sort in the y-dimension
@@ -786,7 +786,7 @@ void basic_split_leaf(
     // The best cut is in dimension y
     auto begin_y_left = begins[1];
     auto end_y_left = begin_y_left + best_cut;
-    auto begin_y_right = end_y_left + 1;
+    auto begin_y_right = end_y_left;
     auto end_y_right = ends[1];
 
     // Create copies of the points vector to sort in the x-dimension
@@ -910,7 +910,7 @@ void basic_split_branch(
     // The best cut is in dimension x
     auto begin_x_left = begins[0];
     auto end_x_left = begin_x_left + best_cut;
-    auto begin_x_right = end_x_left + 1;
+    auto begin_x_right = end_x_left;
     auto end_x_right = ends[0];
 
     // Create copies of the points vector to sort in the y-dimension
@@ -942,7 +942,7 @@ void basic_split_branch(
     // The best cut is in dimension y
     auto begin_y_left = begins[1];
     auto end_y_left = begin_y_left + best_cut;
-    auto begin_y_right = end_y_left + 1;
+    auto begin_y_right = end_y_left;
     auto end_y_right = ends[1];
 
     // Create copies of the points vector to sort in the x-dimension
