@@ -649,7 +649,7 @@ std::pair<double, uint64_t> find_best_cut(
   uint64_t num_cuts = std::ceil((end - begin) / (double) M) - 1;
 
   for (uint64_t i = 1; i <= num_cuts; i++) {
-    // cut is at [1 - M*i] | [M*i + 1, n]
+    // Cut is applied at [1, M * i] | [M * i + 1, n]
     Rectangle B0 = Rectangle(begin, begin + i * M);
     Rectangle B1 = Rectangle(begin + i * M, end);
 
@@ -670,10 +670,10 @@ std::pair<double, uint64_t> find_best_cut(
 // 1. if n <= M (fill a leaf node or create a leaf node or create a branch node)
 // 2. for each dimension and for each ordering
 // 3.   for i from 1 to ceil(n/M) - 1
-//        B0 = MBB(1 to i*M)
-//        B1 = MBB(i*M to n)
-// 4.     compute f(B0, B1)
-// 5. split the input set based on i which has the highest f()
+//        B0 = MBB of [1, M * i]
+//        B1 = MBB of [M * i + 1, n]
+// 4.     compute cost_function(B0, B1)
+// 5. split the input set based on i which has the lowest cost
 void basic_split_leaf(
         rstartreedisk::RStarTreeDisk<5, R_STAR_FANOUT> *tree,
         std::vector<std::vector<Point>::iterator> begins,
@@ -949,7 +949,7 @@ void basic_split_branch(
     basic_split_branch(tree, new_begins_right, new_ends_right, branch_factor, height, M, branch_node);
   } else {
     assert (dimension != 0 && dimension != 1);
-  };
+  }
 }
 
 // Bulk load method of an R-tree with Top Down Greedy Split
