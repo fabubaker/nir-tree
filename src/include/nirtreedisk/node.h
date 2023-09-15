@@ -41,11 +41,11 @@
 #include <vector>
 #include <fstream>
 
-//#define NDEBUG
-#define DEBUG_TEST
-#define DEBUG_TESTDISJOINT
-#define DEBUG_TESTCONTAINPOINTS
-//#define DEBUG_TESTCOUNT
+#define NDEBUG
+// #define DEBUG_TEST
+// #define DEBUG_TESTDISJOINT
+// #define DEBUG_TESTCONTAINPOINTS
+// #define DEBUG_TESTCOUNT
 
 
 namespace nirtreedisk {
@@ -2130,6 +2130,7 @@ BranchNode<min_branch_factor, max_branch_factor, strategy>::chooseNodePoint(
   
   // CN1 [Initialize]
   assert(selfHandle != nullptr);
+  assert(treeRef->root == selfHandle); 
   tree_node_handle current_handle = selfHandle; 
   // Starting root, searching for a Leaf node for insertion
   for (;;) {
@@ -2210,6 +2211,7 @@ BranchNode<min_branch_factor, max_branch_factor, strategy>::chooseNodePoint(
       chosen_poly.refine();
       chosen_poly.recomputeBoundingBox();
       assert(chosen_poly.containsPoint(point));
+      update_branch_polygon(treeRef, chosen_branch, chosen_poly);
     }
 
     // Descend
