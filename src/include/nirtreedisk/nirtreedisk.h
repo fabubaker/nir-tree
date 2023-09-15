@@ -192,11 +192,11 @@ void NIRTreeDisk<min_branch_factor, max_branch_factor, strategy>::insert(Point g
   std::fill(hasReinsertedOnLevel.begin(), hasReinsertedOnLevel.end(), false);
   if (root.get_type() == LEAF_NODE) {
     auto root_node = get_leaf_node(root, true);
-    root = root_node->insert(givenPoint, hasReinsertedOnLevel, this, root);
+    root = root_node->insert(this, root, givenPoint, hasReinsertedOnLevel);
   } else {
     auto root_node = get_branch_node(root, true);
     std::variant<BranchAtLevel, Point> entry = givenPoint;
-    root = root_node->insert(entry, hasReinsertedOnLevel, this, root);
+    root = root_node->insert(this, root, entry, hasReinsertedOnLevel);
   }
 }
 
@@ -204,10 +204,10 @@ template <int min_branch_factor, int max_branch_factor, class strategy>
 void NIRTreeDisk<min_branch_factor, max_branch_factor, strategy>::remove(Point givenPoint) {
   if (root.get_type() == LEAF_NODE) {
     auto root_node = get_leaf_node(root);
-    root = root_node->remove(givenPoint, root, this);
+    root = root_node->remove(this, root, givenPoint);
   } else {
     auto root_node = get_branch_node(root);
-    root = root_node->remove(givenPoint, root, this);
+    root = root_node->remove(this, root, givenPoint);
   }
 }
 
