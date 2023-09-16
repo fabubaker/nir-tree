@@ -76,7 +76,11 @@ public:
   void removePoint(const Point &givenPoint);
 
   tree_node_handle chooseSubtree(const NodeEntry &nodeEntry);
-  tree_node_handle findLeaf(const Point &givenPoint);
+  tree_node_handle findLeaf(
+          RStarTreeDisk<min_branch_factor, max_branch_factor> *treeRef,
+          tree_node_handle selfHandle,
+          const Point &givenPoint
+  );
   unsigned chooseSplitLeafAxis();
   unsigned chooseSplitNonLeafAxis();
   unsigned chooseSplitAxis();
@@ -133,7 +137,11 @@ public:
   bool updateBoundingBox(tree_node_handle child, Rectangle updatedBoundingBox);
   void removeChild(tree_node_handle child);
   tree_node_handle chooseSubtree(const NodeEntry &nodeEntry);
-  tree_node_handle findLeaf(const Point &givenPoint);
+  tree_node_handle findLeaf(
+          RStarTreeDisk<min_branch_factor, max_branch_factor> *treeRef,
+          tree_node_handle selfHandle,
+          const Point &givenPoint
+  );
   unsigned chooseSplitLeafAxis();
   unsigned chooseSplitNonLeafAxis();
   unsigned chooseSplitAxis();
@@ -264,17 +272,18 @@ tree_node_handle LeafNode<min_branch_factor, max_branch_factor>::chooseSubtree(c
 }
 
 template <int min_branch_factor, int max_branch_factor>
-tree_node_handle LeafNode<min_branch_factor, max_branch_factor>::findLeaf(const Point &givenPoint) {
-//  for (unsigned i = 0; i < cur_offset_; i++) {
-//    if (entries.at(i) == givenPoint) {
-//      return self_handle_;
-//    }
-//  }
-//
-//  return tree_node_handle(nullptr);
+tree_node_handle LeafNode<min_branch_factor, max_branch_factor>::findLeaf(
+    RStarTreeDisk<min_branch_factor, max_branch_factor> *treeRef,
+    tree_node_handle selfHandle,
+    const Point &givenPoint
+) {
+  for (unsigned i = 0; i < cur_offset_; i++) {
+    if (entries.at(i) == givenPoint) {
+      return selfHandle;
+    }
+  }
 
-// Unsupported
-  abort();
+  return tree_node_handle(nullptr);
 }
 
 template <int min_branch_factor, int max_branch_factor>
@@ -1420,8 +1429,11 @@ tree_node_handle BranchNode<min_branch_factor, max_branch_factor>::chooseSubtree
 }
 
 template <int min_branch_factor, int max_branch_factor>
-tree_node_handle BranchNode<min_branch_factor, max_branch_factor>::findLeaf(const Point &givenPoint) {
-#if 0
+tree_node_handle BranchNode<min_branch_factor, max_branch_factor>::findLeaf(
+        RStarTreeDisk<min_branch_factor, max_branch_factor> *treeRef,
+        tree_node_handle selfHandle,
+        const Point &givenPoint
+) {
   assert(cur_offset_ > 0);
 
   for (unsigned i = 0; i < cur_offset_; i++) {
@@ -1430,12 +1442,13 @@ tree_node_handle BranchNode<min_branch_factor, max_branch_factor>::findLeaf(cons
     if (b.boundingBox.containsPoint(givenPoint)) {
       tree_node_handle ret_handle(nullptr);
       tree_node_handle child_handle = b.child;
+
       if (child_handle.get_type() == LEAF_NODE) {
         auto child = treeRef->get_leaf_node(child_handle);
-        ret_handle = child->findLeaf(givenPoint);
+        ret_handle = child->findLeaf(treeRef, child_handle, givenPoint);
       } else {
         auto child = treeRef->get_branch_node(child_handle);
-        ret_handle = child->findLeaf(givenPoint);
+        ret_handle = child->findLeaf(treeRef, child_handle, givenPoint);
       }
 
       if (ret_handle) {
@@ -1447,10 +1460,6 @@ tree_node_handle BranchNode<min_branch_factor, max_branch_factor>::findLeaf(cons
   }
 
   return tree_node_handle(nullptr);
-#endif
-
-  // Unsupported
-  abort();
 }
 
 template <int min_branch_factor, int max_branch_factor>
