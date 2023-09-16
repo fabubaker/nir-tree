@@ -57,7 +57,9 @@ typedef std::variant<Branch, Point> NodeEntry;
 template <int min_branch_factor, int max_branch_factor>
 class LeafNode {
 public:
-  std::array<Point, max_branch_factor> entries;
+  // Obnoxiously, this needs to have a +1 so we can overflow
+  // by 1 entry and deal with it later.
+  std::array<Point, max_branch_factor + 1> entries;
   unsigned cur_offset_;
 
   // Constructors and destructors
@@ -112,7 +114,7 @@ public:
   // Obnoxiously, this needs to have a +1 so we can overflow
   // by 1 entry and deal with it later.
   // Brad: This is needed for R-star overflow insertion.
-  std::array<Branch, max_branch_factor> entries;
+  std::array<Branch, max_branch_factor + 1> entries;
   unsigned cur_offset_;
 
   // Constructors and destructors
@@ -258,11 +260,7 @@ void LeafNode<min_branch_factor, max_branch_factor>::exhaustiveSearch(const Poin
 
 template <int min_branch_factor, int max_branch_factor>
 tree_node_handle LeafNode<min_branch_factor, max_branch_factor>::chooseSubtree(const NodeEntry &givenNodeEntry) {
-  //    std::cout << "ChooseSubTree for point: " << std::get<Point>(
-  //           givenNodeEntry ) << std::endl;
-
-  // Unsupported
-  abort();
+    std::cout << "ChooseSubTree for point: " << std::get<Point>(givenNodeEntry) << std::endl;
 }
 
 template <int min_branch_factor, int max_branch_factor>
