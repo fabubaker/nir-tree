@@ -168,10 +168,8 @@ double computeOverlapGrowth(unsigned index, const std::array<B, N + 1> &entries,
   assert(els_to_consider > 0);
 
   // 1. Make a test rectangle we will use to not modify the original
-  const Rectangle &origRectangle =
-      entries[index].boundingBox;
-  Rectangle newRectangle =
-      entries[index].boundingBox;
+  const Rectangle &origRectangle = entries[index].boundingBox;
+  Rectangle newRectangle = entries[index].boundingBox;
 
   // 2. Add the point to the copied Rectangle
   newRectangle.expand(givenBox);
@@ -179,6 +177,7 @@ double computeOverlapGrowth(unsigned index, const std::array<B, N + 1> &entries,
   // 3. Compute the overlap expansion area
   double overlapDiff = 0;
   unsigned num_entries_els = els_to_consider;
+
   for (unsigned i = 0; i < num_entries_els; ++i) {
     const auto &entry = entries[i];
 
@@ -312,8 +311,7 @@ unsigned LeafNode<min_branch_factor, max_branch_factor>::chooseSplitLeafAxis() {
         boundingBoxA.expand(*groupA[i]);
       }
 
-      Rectangle boundingBoxB(*groupB[0],
-                             Point::closest_larger_point(*groupB[0]));
+      Rectangle boundingBoxB(*groupB[0],Point::closest_larger_point(*groupB[0]));
       for (unsigned i = 1; i < groupB.size(); i++) {
         boundingBoxB.expand(*groupB[i]);
       }
@@ -335,9 +333,7 @@ unsigned LeafNode<min_branch_factor, max_branch_factor>::chooseSplitLeafAxis() {
 
   // Sort along our best axis
   std::sort(entries.begin(), entries.begin() + cur_offset_,
-            [optimalAxis](Point &a, Point &b) {
-                return a[optimalAxis] < b[optimalAxis];
-            });
+            [optimalAxis](Point &a, Point &b) { return a[optimalAxis] < b[optimalAxis]; });
 
   return optimalAxis;
 }
