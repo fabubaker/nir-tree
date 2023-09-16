@@ -85,7 +85,11 @@ public:
   unsigned chooseSplitNonLeafAxis();
   unsigned chooseSplitAxis();
   unsigned chooseSplitIndex(unsigned axis);
-  tree_node_handle splitNode();
+  tree_node_handle splitNode(
+    RStarTreeDisk<min_branch_factor, max_branch_factor> *treeRef,
+    tree_node_handle current_handle,
+    tree_node_handle parent_handle
+  );
   tree_node_handle adjustTree(tree_node_handle siblingLeaf, std::vector<bool> &hasReinsertedOnLevel);
   tree_node_handle reInsert(std::vector<bool> &hasReinsertedOnLevel);
   tree_node_handle overflowTreatment(std::vector<bool> &hasReinsertedOnLevel);
@@ -429,15 +433,18 @@ unsigned LeafNode<min_branch_factor, max_branch_factor>::chooseSplitIndex(unsign
 }
 
 template <int min_branch_factor, int max_branch_factor>
-tree_node_handle LeafNode<min_branch_factor, max_branch_factor>::splitNode() {
-#if 0
+tree_node_handle LeafNode<min_branch_factor, max_branch_factor>::splitNode(
+      RStarTreeDisk<min_branch_factor, max_branch_factor> *treeRef,
+      tree_node_handle current_handle,
+      tree_node_handle parent_handle
+) {
   using NodeType = LeafNode<min_branch_factor, max_branch_factor>;
   // S1: Call chooseSplitAxis to determine the axis perpendicular to which the split is performed
   // S2: Invoke chooseSplitIndex given the axis to determine the best distribution along this axis
   // S3: Distribute the entries among these two groups
 
   // Call chooseSplitAxis to determine the axis perpendicular to which the split is performed
-  // For now we will save the axis as a int -> since this allows for room for growth in the future
+  // For now we will save the axis as an int -> since this allows for room for growth in the future
   // Call ChooseSplitIndex to create optimal splitting of data array
   unsigned splitAxis = chooseSplitAxis();
   unsigned splitIndex = chooseSplitIndex(splitAxis);
@@ -453,31 +460,24 @@ tree_node_handle LeafNode<min_branch_factor, max_branch_factor>::splitNode() {
         */
 
   tree_node_allocator *allocator = get_node_allocator(treeRef);
-  auto alloc_data =
-          allocator->create_new_tree_node<NodeType>(NodeHandleType(
-                  LEAF_NODE));
+  auto alloc_data = allocator->create_new_tree_node<NodeType>(NodeHandleType(LEAF_NODE));
+  uint16_t current_level = current_handle.get_level();
 
   auto newSibling = alloc_data.first;
   tree_node_handle sibling_handle = alloc_data.second;
 
-  new (&(*(newSibling))) NodeType(treeRef, sibling_handle, parent,
-                                  level);
-
-  newSibling->parent = parent;
-  newSibling->level = level;
-  newSibling->treeRef = treeRef;
-  newSibling->self_handle_ = sibling_handle;
+  new (&(*(newSibling))) NodeType();
+  sibling_handle.set_level(current_level);
 
 #if !defined(NDEBUG)
-  if (parent) {
-    auto parent_ptr = treeRef->get_branch_node(parent);
-    assert(level + 1 == parent_ptr->level);
+  if (parent_handle) {
+    auto parent_level = parent_handle.get_level();
+    assert(current_level + 1 == parent_level);
   }
 #endif
 
   // Copy everything to the right of the splitPoint (inclusive) to the new sibling
-  std::copy(entries.begin() + splitIndex, entries.begin() + cur_offset_,
-            newSibling->entries.begin());
+  std::copy(entries.begin() + splitIndex, entries.begin() + cur_offset_, newSibling->entries.begin());
 
   newSibling->cur_offset_ = cur_offset_ - splitIndex;
 
@@ -503,10 +503,6 @@ tree_node_handle LeafNode<min_branch_factor, max_branch_factor>::splitNode() {
 
   // Return our newly minted sibling
   return sibling_handle;
-#endif
-
-  // Unsupported
-  abort();
 }
 
 template <class NT>
