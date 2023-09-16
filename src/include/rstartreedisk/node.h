@@ -155,7 +155,11 @@ public:
   unsigned chooseSplitNonLeafAxis();
   unsigned chooseSplitAxis();
   unsigned chooseSplitIndex(unsigned axis);
-  tree_node_handle splitNode();
+  tree_node_handle splitNode(
+    RStarTreeDisk<min_branch_factor, max_branch_factor> *treeRef,
+    tree_node_handle current_handle,
+    tree_node_handle parent_handle
+  );
   tree_node_handle adjustTree(
           RStarTreeDisk<min_branch_factor, max_branch_factor> *treeRef,
           tree_node_handle self_handle,
@@ -482,7 +486,7 @@ tree_node_handle LeafNode<min_branch_factor, max_branch_factor>::splitNode(
 #if !defined(NDEBUG)
   if (parent_handle) {
     auto parent_level = parent_handle.get_level();
-    assert(current_level + 1 == parent_level);
+    assert(current_level == parent_level + 1);
   }
 #endif
 
@@ -1660,8 +1664,12 @@ unsigned BranchNode<min_branch_factor, max_branch_factor>::chooseSplitIndex(unsi
 }
 
 template <int min_branch_factor, int max_branch_factor>
-tree_node_handle BranchNode<min_branch_factor, max_branch_factor>::splitNode() {
-#if 0
+tree_node_handle BranchNode<min_branch_factor, max_branch_factor>::splitNode(
+    RStarTreeDisk<min_branch_factor, max_branch_factor> *treeRef,
+    tree_node_handle current_handle,
+    tree_node_handle parent_handle
+) {
+  using NodeType = BranchNode<min_branch_factor, max_branch_factor>;
   // S1: Call chooseSplitAxis to determine the axis perpendicular to which the split is performed
   // S2: Invoke chooseSplitIndex given the axis to determine the best distribution along this axis
   // S3: Distribute the entries among these two groups
@@ -1682,47 +1690,36 @@ tree_node_handle BranchNode<min_branch_factor, max_branch_factor>::splitNode() {
     */
 
   tree_node_allocator *allocator = get_node_allocator(treeRef);
-  auto alloc_data =
-          allocator->create_new_tree_node<BranchNode<min_branch_factor, max_branch_factor>>(
-                  NodeHandleType(BRANCH_NODE));
+  auto alloc_data = allocator->create_new_tree_node<NodeType>(NodeHandleType(BRANCH_NODE));
+  uint16_t current_level = current_handle.get_level();
 
   auto newSibling = alloc_data.first;
   tree_node_handle sibling_handle = alloc_data.second;
 
-  new (&(*(newSibling))) BranchNode<min_branch_factor, max_branch_factor>(treeRef, sibling_handle, parent,
-                                                 level);
-
-  newSibling->parent = parent;
-  newSibling->level = level;
-  newSibling->treeRef = treeRef;
-  newSibling->self_handle_ = sibling_handle;
+  new (&(*(newSibling))) NodeType();
+  sibling_handle.set_level(current_level);
 
 #if !defined(NDEBUG)
-  if (parent) {
-    auto parent_ptr = treeRef->get_branch_node(parent);
-    assert(level + 1 == parent_ptr->level);
+  if (parent_handle) {
+    auto parent_level = parent_handle.get_level();
+    assert(current_level == parent_level + 1);
   }
 #endif
 
   // Copy everything to the right of the splitPoint (inclusive) to the new sibling
-  std::copy(entries.begin() + splitIndex, entries.begin() + cur_offset_,
-            newSibling->entries.begin());
+  std::copy(entries.begin() + splitIndex, entries.begin() + cur_offset_, newSibling->entries.begin());
 
   newSibling->cur_offset_ = cur_offset_ - splitIndex;
 
   for (unsigned i = 0; i < newSibling->cur_offset_; i++) {
-    // Update parents
     Branch &b = newSibling->entries.at(i);
+
     if (b.child.get_type() == LEAF_NODE) {
-      auto child = treeRef->get_leaf_node(b.child);
-      child->parent = sibling_handle;
-      assert(level == child->level + 1);
-      assert(newSibling->level == child->level + 1);
+      assert(current_level == b.child.get_level() - 1);
+      assert(sibling_handle.get_level() == b.child.get_level() - 1);
     } else {
-      auto child = treeRef->get_branch_node(b.child);
-      child->parent = sibling_handle;
-      assert(level == child->level + 1);
-      assert(newSibling->level == child->level + 1);
+      assert(current_level == b.child.get_level() - 1);
+      assert(sibling_handle.get_level() == b.child.get_level() - 1);
     }
   }
 
@@ -1748,10 +1745,6 @@ tree_node_handle BranchNode<min_branch_factor, max_branch_factor>::splitNode() {
 
   // Return our newly minted sibling
   return sibling_handle;
-#endif
-
-  // Unsupported
-  abort();
 }
 
 template <int min_branch_factor, int max_branch_factor>
