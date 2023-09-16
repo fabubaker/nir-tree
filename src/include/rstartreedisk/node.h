@@ -96,7 +96,12 @@ public:
     tree_node_handle sibling_handle,
     std::vector<bool> &hasReinsertedOnLevel
   );
-  tree_node_handle reInsert(std::vector<bool> &hasReinsertedOnLevel);
+  tree_node_handle reInsert(
+        RStarTreeDisk<min_branch_factor, max_branch_factor> *treeRef,
+        tree_node_handle current_handle,
+        tree_node_handle root_handle,
+        std::vector<bool> &hasReinsertedOnLevel
+  );
   tree_node_handle overflowTreatment(std::vector<bool> &hasReinsertedOnLevel);
   tree_node_handle condenseTree(std::vector<bool> &hasReinsertedOnLevel);
 
@@ -166,7 +171,12 @@ public:
           tree_node_handle sibling_handle,
           std::vector<bool> &hasReinsertedOnLevel
   );
-  tree_node_handle reInsert(std::vector<bool> &hasReinsertedOnLevel);
+  tree_node_handle reInsert(
+          RStarTreeDisk<min_branch_factor, max_branch_factor> *treeRef,
+          tree_node_handle current_handle,
+          tree_node_handle root_handle,
+          std::vector<bool> &hasReinsertedOnLevel
+  );
   tree_node_handle overflowTreatment(std::vector<bool> &hasReinsertedOnLevel);
   tree_node_handle condenseTree(std::vector<bool> &hasReinsertedOnLevel);
 
@@ -667,15 +677,20 @@ tree_node_handle BranchNode<min_branch_factor, max_branch_factor>::adjustTree(
 }
 
 template <int min_branch_factor, int max_branch_factor>
-tree_node_handle LeafNode<min_branch_factor, max_branch_factor>::reInsert(std::vector<bool> &hasReinsertedOnLevel) {
-#if 0
+tree_node_handle LeafNode<min_branch_factor, max_branch_factor>::reInsert(
+        RStarTreeDisk<min_branch_factor, max_branch_factor> *treeRef,
+        tree_node_handle current_handle,
+        tree_node_handle root_handle,
+        std::vector<bool> &hasReinsertedOnLevel
+) {
   // 1. RI1 Compute distance between each of the points and the bounding box containing them.
   // 2. RI2 Sort the entries by DECREASING index -> ok let's define an
   // 		extra helper function that gets to do this and pass it into sort
 
   Point globalCenterPoint = boundingBox().centrePoint();
 
-  assert(hasReinsertedOnLevel.at(level));
+  auto current_level = current_handle.get_level();
+  assert(hasReinsertedOnLevel.at(current_level));
 
   std::sort(entries.begin(), entries.begin() + cur_offset_,
             [&globalCenterPoint](Point &a, Point &b) {
@@ -690,7 +705,6 @@ tree_node_handle LeafNode<min_branch_factor, max_branch_factor>::reInsert(std::v
 
   // 4. Insert the removed entries -> OK we can also specify a flag that is
   //		if you want to reinsert starting with largest values (i.e. start at index 0) or closest values (Start at index p)
-
   unsigned remainder = cur_offset_ - numNodesToReinsert;
 
   // We need to reinsert these entries
@@ -700,10 +714,7 @@ tree_node_handle LeafNode<min_branch_factor, max_branch_factor>::reInsert(std::v
   entriesToReinsert.reserve(numNodesToReinsert);
 
   // copy these out
-  std::copy(
-          entries.begin() + remainder,
-          entries.begin() + cur_offset_,
-          std::back_inserter(entriesToReinsert));
+  std::copy(entries.begin() + remainder, entries.begin() + cur_offset_, std::back_inserter(entriesToReinsert));
 
   //adjust ending of array
   cur_offset_ = remainder;
@@ -712,32 +723,7 @@ tree_node_handle LeafNode<min_branch_factor, max_branch_factor>::reInsert(std::v
   // may end up here again. If we do, we should still be using the same hasReinsertedOnLevel
   // vector because it corresponds to the activities we have performed during a single
   // point/rectangle insertion (the top level one)
-
-  // Find the root node
-  tree_node_handle root_handle = self_handle_;
-  for (;;) {
-
-    // Get the node and check if it has a parent
-    if (root_handle.get_type() == LEAF_NODE) {
-      auto root_node = treeRef->get_leaf_node(root_handle);
-
-      // If it does not, then we've found the root
-      if (!root_node->parent) {
-        break;
-      }
-
-      root_handle = root_node->parent;
-    } else {
-      auto root_node = treeRef->get_branch_node(root_handle);
-
-      // If it does not, then we've found the root
-      if (!root_node->parent) {
-        break;
-      }
-
-      root_handle = root_node->parent;
-    }
-  }
+  auto root_node = treeRef->get_branch_node(root_handle);
 
   /*
     std::cout << "Overflow treatment, need to reinsert nodes: {" <<
@@ -750,19 +736,15 @@ tree_node_handle LeafNode<min_branch_factor, max_branch_factor>::reInsert(std::v
 
   for (const Point &entry : entriesToReinsert) {
     if (root_handle.get_type() == LEAF_NODE) {
-      auto root_node = treeRef->get_leaf_node(root_handle);
       root_handle = root_node->insert(entry, hasReinsertedOnLevel);
+      root_node = treeRef->get_leaf_node(root_handle);
     } else {
-      auto root_node = treeRef->get_branch_node(root_handle);
       root_handle = root_node->insert(entry, hasReinsertedOnLevel);
+      root_node = treeRef->get_branch_node(root_handle);
     }
   }
 
   return tree_node_handle(nullptr);
-#endif
-
-  // Unsupported
-  abort();
 }
 
 // Overflow treatement for dealing with a node that is too big (overflow)
@@ -1748,15 +1730,20 @@ tree_node_handle BranchNode<min_branch_factor, max_branch_factor>::splitNode(
 }
 
 template <int min_branch_factor, int max_branch_factor>
-tree_node_handle BranchNode<min_branch_factor, max_branch_factor>::reInsert(std::vector<bool> &hasReinsertedOnLevel) {
-#if 0
+tree_node_handle BranchNode<min_branch_factor, max_branch_factor>::reInsert(
+        RStarTreeDisk<min_branch_factor, max_branch_factor> *treeRef,
+        tree_node_handle current_handle,
+        tree_node_handle root_handle,
+        std::vector<bool> &hasReinsertedOnLevel
+) {
   // 1. RI1 Compute distance between each of the points and the bounding box containing them.
   // 2. RI2 Sort the entries by DECREASING index -> ok let's define an
   // 		extra helper function that gets to do this and pass it into sort
 
   Point globalCenterPoint = boundingBox().centrePoint();
 
-  assert(hasReinsertedOnLevel.at(level));
+  auto current_level = current_handle.get_level();
+  assert(hasReinsertedOnLevel.at(current_level));
 
   std::sort(entries.begin(), entries.begin() + cur_offset_,
             [&globalCenterPoint](Branch &a, Branch &b) {
@@ -1771,7 +1758,6 @@ tree_node_handle BranchNode<min_branch_factor, max_branch_factor>::reInsert(std:
 
   // 4. Insert the removed entries -> OK we can also specify a flag that is
   //		if you want to reinsert starting with largest values (i.e. start at index 0) or closest values (Start at index p)
-
   unsigned remainder = cur_offset_ - numNodesToReinsert;
 
   // We need to reinsert these entries
@@ -1790,24 +1776,6 @@ tree_node_handle BranchNode<min_branch_factor, max_branch_factor>::reInsert(std:
   // may end up here again. If we do, we should still be using the same hasReinsertedOnLevel
   // vector because it corresponds to the activities we have performed during a single
   // point/rectangle insertion (the top level one)
-
-  // Find the root node
-  tree_node_handle root_handle = self_handle_;
-  for (;;) {
-
-    // Get the node and check if it has a parent
-    // Since I am branch, whatever root_handle is must also be a
-    // branch
-    auto root_node = treeRef->get_branch_node(root_handle);
-
-    // If it does not, then we've found the root
-    if (!root_node->parent) {
-      break;
-    }
-
-    root_handle = root_node->parent;
-  }
-
   auto root_node = treeRef->get_branch_node(root_handle);
 
   /*
@@ -1820,8 +1788,6 @@ tree_node_handle BranchNode<min_branch_factor, max_branch_factor>::reInsert(std:
     */
 
   for (const Branch &entry : entriesToReinsert) {
-    assert(!root_node->parent);
-
     root_handle = root_node->insert(entry, hasReinsertedOnLevel);
     root_node = treeRef->get_branch_node(root_handle);
   }
@@ -1832,6 +1798,7 @@ tree_node_handle BranchNode<min_branch_factor, max_branch_factor>::reInsert(std:
 // Overflow treatement for dealing with a node that is too big (overflow)
 template <int min_branch_factor, int max_branch_factor>
 tree_node_handle BranchNode<min_branch_factor, max_branch_factor>::overflowTreatment(std::vector<bool> &hasReinsertedOnLevel) {
+#if 0
   assert(hasReinsertedOnLevel.size() > level);
 
   if (hasReinsertedOnLevel.at(level)) {
