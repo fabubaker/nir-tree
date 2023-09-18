@@ -111,7 +111,12 @@ public:
   void exhaustiveSearch(const Point &requestedPoint, std::vector<Point> &accumulator) const;
 
   // These return the root of the tree.
-  tree_node_handle insert(Point nodeEntry, std::vector<bool> &hasReinsertedOnLevel);
+  tree_node_handle insert(
+        RStarTreeDisk<min_branch_factor, max_branch_factor> *treeRef,
+        tree_node_handle current_handle,
+        Point nodeEntry,
+        std::vector<bool> &hasReinsertedOnLevel
+  );
   tree_node_handle remove(Point &givenPoint, std::vector<bool> hasReinsertedOnLevel);
 
   // Miscellaneous
@@ -188,7 +193,12 @@ public:
   void exhaustiveSearch(const Point &requestedPoint, std::vector<Point> &accumulator) const;
 
   // These return the root of the tree.
-  tree_node_handle insert(NodeEntry nodeEntry, std::vector<bool> &hasReinsertedOnLevel);
+  tree_node_handle insert(
+          RStarTreeDisk<min_branch_factor, max_branch_factor> *treeRef,
+          tree_node_handle current_handle,
+          NodeEntry nodeEntry,
+          std::vector<bool> &hasReinsertedOnLevel
+  );
   tree_node_handle remove(Point &givenPoint, std::vector<bool> hasReinsertedOnLevel);
 
   // Miscellaneous
@@ -765,8 +775,12 @@ tree_node_handle LeafNode<min_branch_factor, max_branch_factor>::overflowTreatme
 }
 
 template <int min_branch_factor, int max_branch_factor>
-tree_node_handle LeafNode<min_branch_factor, max_branch_factor>::insert(Point nodeEntry, std::vector<bool> &hasReinsertedOnLevel) {
-#if 0
+tree_node_handle LeafNode<min_branch_factor, max_branch_factor>::insert(
+        RStarTreeDisk<min_branch_factor, max_branch_factor> *treeRef,
+        tree_node_handle current_handle,
+        Point nodeEntry,
+        std::vector<bool> &hasReinsertedOnLevel
+) {
   tree_node_allocator *allocator = get_node_allocator(treeRef);
 
   // I1 [Find position for new record]
@@ -791,13 +805,17 @@ tree_node_handle LeafNode<min_branch_factor, max_branch_factor>::insert(Point no
     sibling_handle = overflowTreatment(
         treeRef,
         current_handle,
-        root_handle,
         hasReinsertedOnLevel
     );
   }
 
   // I3 [Propogate overflow treatment changes upward]
-  sibling_handle = adjustTree(sibling_handle, hasReinsertedOnLevel);
+  sibling_handle = adjustTree(
+          treeRef,
+          current_handle,
+          sibling_handle,
+          hasReinsertedOnLevel
+  );
 
   // I4 [Grow tree taller]
   if (sibling_handle) {
@@ -805,64 +823,37 @@ tree_node_handle LeafNode<min_branch_factor, max_branch_factor>::insert(Point no
             allocator->create_new_tree_node<BranchNode<min_branch_factor, max_branch_factor>>(
                     NodeHandleType(BRANCH_NODE));
     auto newRoot = alloc_data.first;
+    tree_node_handle new_root_handle = alloc_data.second;
+    new_root_handle.set_level(0);
 
-    tree_node_handle root_handle = alloc_data.second;
     auto sibling = treeRef->get_leaf_node(sibling_handle);
 
-    new (&(*(newRoot)))
-            BranchNode<min_branch_factor, max_branch_factor>(treeRef, root_handle,
-                                    tree_node_handle(nullptr), this->level + 1);
-
-    this->parent = root_handle;
+    new (&(*(newRoot))) BranchNode<min_branch_factor, max_branch_factor>();
 
     // Make the existing root a child of newRoot
-    Branch b1(boundingBox(), self_handle_);
-
+    Branch b1(boundingBox(), current_handle);
     newRoot->addBranchToNode(b1);
 
     // Make the new sibling node a child of newRoot
-    sibling->parent = root_handle;
-
     Branch b2(sibling->boundingBox(), sibling_handle);
     newRoot->addBranchToNode(b2);
 
     // Ensure newRoot has both children
     assert(newRoot->cur_offset_ == 2);
-    assert(sibling->level + 1 == newRoot->level);
+    assert(sibling_handle.get_level() == new_root_handle.get_level() + 1);
 
     // Fix the reinserted length
     hasReinsertedOnLevel.push_back(false);
 
-    return root_handle;
+    return new_root_handle;
   } else {
     // We might no longer be the parent.  If we hit overflowTreatment, we may have triggered
     // reInsert, which then triggered a split. That insert will have returned newRoot, but
     // because reInsert() returns nullptr, we don't know about it
-    tree_node_handle root_handle = self_handle_;
-
-    for (;;) {
-      if (root_handle.get_type() == LEAF_NODE) {
-        auto node_data = treeRef->get_leaf_node(root_handle);
-        if (!node_data->parent) {
-          return root_handle;
-        }
-
-        root_handle = node_data->parent;
-      } else {
-        auto node_data = treeRef->get_branch_node(root_handle);
-        if (!node_data->parent) {
-          return root_handle;
-        }
-
-        root_handle = node_data->parent;
-      }
-    }
-    return root_handle;
+    // P.S: Technically reInsert changes treeRef->root, which will always contain the most
+    // up-to-date root handle.
+    return treeRef->root;
   }
-#endif
-
-  // Unsupported
-  abort();
 }
 
 // To be called on a leaf
@@ -1804,14 +1795,17 @@ tree_node_handle BranchNode<min_branch_factor, max_branch_factor>::overflowTreat
 }
 
 template <int min_branch_factor, int max_branch_factor>
-tree_node_handle BranchNode<min_branch_factor, max_branch_factor>::insert(NodeEntry nodeEntry, std::vector<bool> &hasReinsertedOnLevel) {
-#if 0
+tree_node_handle BranchNode<min_branch_factor, max_branch_factor>::insert(
+        RStarTreeDisk<min_branch_factor, max_branch_factor> *treeRef,
+        tree_node_handle current_handle,
+        NodeEntry nodeEntry,
+        std::vector<bool> &hasReinsertedOnLevel
+) {
   tree_node_allocator *allocator = get_node_allocator(treeRef);
-  // Always called on root, this = root
-  assert(!parent);
 
   // I1 [Find position for new record]
   tree_node_handle insertion_point_handle = chooseSubtree(nodeEntry);
+  uint16_t insertion_point_level = insertion_point_handle.get_level();
 
   tree_node_handle sibling_handle = tree_node_handle(nullptr);
 
@@ -1836,13 +1830,16 @@ tree_node_handle BranchNode<min_branch_factor, max_branch_factor>::insert(NodeEn
     if (num_els > max_branch_factor) {
       // We call overflow treatment to determine how our sibling node is treated if we do a
       // reInsert, sibling is nullptr. This is properly dealt with in adjustTree
-      sibling_handle = insertion_point->overflowTreatment(hasReinsertedOnLevel);
+      sibling_handle = insertion_point->overflowTreatment(treeRef, current_handle, hasReinsertedOnLevel);
     }
 
     // I3 [Propogate overflow treatment changes upward]
     sibling_handle = insertion_point->adjustTree(
-            sibling_handle, hasReinsertedOnLevel);
-
+            treeRef,
+            current_handle,
+            sibling_handle,
+            hasReinsertedOnLevel
+    );
   } else {
     auto insertion_point = treeRef->get_branch_node(insertion_point_handle);
     Branch &b = std::get<Branch>(nodeEntry);
@@ -1860,11 +1857,11 @@ tree_node_handle BranchNode<min_branch_factor, max_branch_factor>::insert(NodeEn
         */
     if (b.child.get_type() == LEAF_NODE) {
       auto child = treeRef->get_leaf_node(b.child);
-      assert(insertion_point->level == child->level + 1);
+      assert(insertion_point_level == b.child.get_level() + 1);
       child->parent = insertion_point_handle;
     } else {
       auto child = treeRef->get_branch_node(b.child);
-      assert(insertion_point->level == child->level + 1);
+      assert(insertion_point_level == b.child.get_level() + 1);
       child->parent = insertion_point_handle;
     }
 
@@ -1874,69 +1871,55 @@ tree_node_handle BranchNode<min_branch_factor, max_branch_factor>::insert(NodeEn
     if (num_els > max_branch_factor) {
       // We call overflow treatment to determine how our sibling node is treated if we do a
       // reInsert, sibling is nullptr. This is properly dealt with in adjustTree
-      sibling_handle = insertion_point->overflowTreatment(hasReinsertedOnLevel);
+      sibling_handle = insertion_point->overflowTreatment(treeRef, current_handle, hasReinsertedOnLevel);
     }
 
     // I3 [Propogate overflow treatment changes upward]
     sibling_handle = insertion_point->adjustTree(
-            sibling_handle, hasReinsertedOnLevel);
+            treeRef,
+            current_handle,
+            sibling_handle,
+            hasReinsertedOnLevel
+    );
   }
 
   // I4 [Grow tree taller]
   if (sibling_handle) {
-
-    assert(!parent);
     auto alloc_data =
             allocator->create_new_tree_node<BranchNode<min_branch_factor, max_branch_factor>>(
                     NodeHandleType(BRANCH_NODE));
     auto newRoot = alloc_data.first;
-    tree_node_handle root_handle = alloc_data.second;
+    tree_node_handle new_root_handle = alloc_data.second;
+    new_root_handle.set_level(0);
 
     auto sibling = treeRef->get_branch_node(sibling_handle);
 
-    new (&(*(newRoot)))
-            BranchNode<min_branch_factor, max_branch_factor>(treeRef, root_handle, tree_node_handle(nullptr), this->level + 1);
-
-    this->parent = root_handle;
+    new (&(*(newRoot))) BranchNode<min_branch_factor, max_branch_factor>();
 
     // Make the existing root a child of newRoot
-    Branch b1(boundingBox(), self_handle_);
+    Branch b1(boundingBox(), current_handle);
     newRoot->addBranchToNode(b1);
 
     // Make the new sibling node a child of newRoot
-    sibling->parent = root_handle;
     Branch b2(sibling->boundingBox(), sibling_handle);
     newRoot->addBranchToNode(b2);
 
     // Ensure newRoot has both children
     assert(newRoot->cur_offset_ == 2);
-    assert(sibling->level + 1 == newRoot->level);
+    assert(sibling_handle.get_level() == new_root_handle.get_level() + 1);
 
     // Fix the reinserted length
     hasReinsertedOnLevel.push_back(false);
 
-    return root_handle;
+    return new_root_handle;
   } else {
-
     // We might no longer be the parent.  If we hit overflowTreatment, we may have triggered
     // reInsert, which then triggered a split. That insert will have returned newRoot, but
     // because reInsert() returns nullptr, we don't know about it
-    tree_node_handle root_handle = self_handle_;
-
-    for (;;) {
-      auto node_data = treeRef->get_branch_node(root_handle);
-      if (!node_data->parent) {
-        return root_handle;
-      }
-
-      root_handle = node_data->parent;
-    }
-    return root_handle;
+    // P.S: Technically reInsert changes treeRef->root, which will always contain the most
+    // up-to-date root handle.
+    return treeRef->root;
   }
-#endif
-
-  // Unsupported
-  abort();
 }
 
 // Always called on root, this = root
