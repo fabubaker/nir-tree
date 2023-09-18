@@ -1,6 +1,3 @@
-//// #ifndef NIRTREEDISK_NODE_H
-// #define NIRTREEDISK_NODE_H
-
 #pragma once
 
 // Copyright 2021 Kyle Langendoen
@@ -68,7 +65,7 @@ tree_node_allocator *get_node_allocator(NIRTreeDisk<min_branch_factor, max_branc
 
 // Branch object contains child and boundingBox where child is the 
 // tree_node_handler which points to the disk page, and boundingBox 
-// is the MBB of this branch's polygon. child is the key of this 
+// is the MBB of this branch's polygon. child is also the key of this 
 // branch's polygon within polygons map. 
 struct Branch {
   Branch(Rectangle boundingBox, tree_node_handle child_handle):
@@ -278,7 +275,6 @@ public:
 };
 
 
-// Shirley
 // BranchNode object contains array of Branches with name of entries   
 // cur_offset_ specifies the current count of Branches in array entries
   // to be fixed: 
@@ -291,7 +287,7 @@ class BranchNode {
 public:
   // members: 
   // have a space for possible overflow
-  std::array<Branch, max_branch_factor+1> entries;
+  std::array<Branch, max_branch_factor + 1> entries;
   unsigned cur_offset_;
 
   // Constructors and destructors
@@ -333,12 +329,11 @@ public:
     entries.at(this->cur_offset_++) = entry;
   };
   // removeBranch: remove branch from BranchNode and free the memory associated with Branch
-  //  as well as removing polygon associated with this node from map 
+  // as well as removing polygon associated with this node from map 
   void removeBranch(
           NIRTreeDisk<min_branch_factor, max_branch_factor, strategy> *treeRef,
           const tree_node_handle entry);
 
-  // I have the logic seperate for ease to debug 
   // choose a LeafNode for adding a point 
   // expansion and clipping of polygon are also done here 
   tree_node_handle chooseNodePoint(
@@ -346,7 +341,7 @@ public:
           tree_node_handle selfHandle,
           std::stack<tree_node_handle> &parentHandles,
           Point &point);
-  // this is untested and not used for now 
+  // this function is untested and not used for now 
   tree_node_handle chooseNodeBranch(
           NIRTreeDisk<min_branch_factor, max_branch_factor, strategy> *treeRef,
           tree_node_handle selfHandle,
@@ -491,16 +486,11 @@ template <class S = strategy>
     defaultPartition.location = best_candidate;
 
     return defaultPartition;
-// #endif
-
-//     // Unsupported
-//     abort();
   }
 
 template <class S = strategy>
   Partition partitionBranchNode(
             typename std::enable_if<std::is_same<S, LineMinimizeDistanceFromMean>::value,S>::type * = 0) {
-// #if 0
     Partition defaultPartition;
 
     tree_node_allocator *allocator = get_node_allocator(
@@ -635,10 +625,6 @@ template <class S = strategy>
               });
 
     return defaultPartition;
-// #endif
-
-//     // Unsupported
-//     abort();
   }
 #endif 
 
@@ -898,7 +884,7 @@ Rectangle LeafNode<min_branch_factor, max_branch_factor, strategy>::boundingBox(
   return bb;
 }
 
-
+// Removes the point from the node
 template <int min_branch_factor, int max_branch_factor, class strategy>
 void LeafNode<min_branch_factor, max_branch_factor, strategy>::removePoint( const Point &point) {
   // Locate the child
@@ -3793,4 +3779,4 @@ void testContainPoints(NIRTreeDisk<min_branch_factor, max_branch_factor, strateg
 
 
 } // namespace nirtreedisk
-// #endif
+

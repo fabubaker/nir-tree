@@ -2,7 +2,7 @@ import matplotlib.pyplot as plt
 import matplotlib.patches as patches
 import random
 
-# draws different polygons on a branch where each polygon can be assigned with a colour 
+# Draws plygons of children on a branch where each polygon can be assigned with a colour 
 
 
 # Function to draw rectangles

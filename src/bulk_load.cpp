@@ -1097,22 +1097,21 @@ void sequential_insert_tree(
     std::vector<Point>::iterator end,
     unsigned max_branch_factor
 ) {
-  auto tree_ptr = tree;
   // begin is inclusive, end is exclusive 
   uint64_t num_els = (end - begin);
   std::cout << "Num els: " << num_els << std::endl;
   uint64_t total_insert = 0; 
   uint64_t print_count = pow(10, int(log10(num_els)) - 1);
   std::chrono::high_resolution_clock::time_point begin_time = std::chrono::high_resolution_clock::now();
-  std::chrono::high_resolution_clock::time_point window_begin_time = begin_time;
+  std::chrono::high_resolution_clock::time_point section_begin_time = begin_time;
   for(auto iter = begin ; iter < end; iter++){
-      tree_ptr->insert(*iter); 
+      tree->insert(*iter); 
       total_insert ++; 
     if (total_insert % print_count == 0) {
-      std::chrono::high_resolution_clock::time_point window_end_time = std::chrono::high_resolution_clock::now();
-      auto delta =  std::chrono::duration_cast<std::chrono::duration<double>>(window_end_time - window_begin_time); 
+      std::chrono::high_resolution_clock::time_point section_end_time = std::chrono::high_resolution_clock::now();
+      auto delta =  std::chrono::duration_cast<std::chrono::duration<double>>(section_end_time - section_begin_time); 
       std::cout << "Finished insertion for " << total_insert << " points with " << delta.count() << "s..."<< std::endl;
-      window_begin_time = window_end_time; 
+      section_begin_time = section_end_time; 
     }
   }
   std::cout << "Out of line size: " << tree->node_allocator_.get()->out_of_line_nodes_size << std::endl;
@@ -1120,8 +1119,9 @@ void sequential_insert_tree(
   std::chrono::duration<double> delta = std::chrono::duration_cast<std::chrono::duration<double>>(end_time - begin_time);
   
   std::cout << "Sequential Inserting "<< num_els << " points to NIRTree took: " << delta.count() << std::endl;
-  // this count may not be entirely accurate if page on free_list is re-used
-  std::cout << "Total pages occupied now: " << tree->node_allocator_->cur_page_ << std::endl;
+  // this count may not be entirely accurate as some pages are on free_list
+  // [TODO] get exact occupied page number
+  std::cout << "Total pages occupied now is approximately: " << tree->node_allocator_->cur_page_ << std::endl;
   tree->write_metadata();
 }
 
@@ -1133,21 +1133,31 @@ void sequential_insert_tree(
     std::vector<Point>::iterator end,
     unsigned max_branch_factor
 ) {
-  auto tree_ptr = tree;
   // begin is inclusive, end is exclusive 
   uint64_t num_els = (end - begin);
   std::cout << "Num els: " << num_els << std::endl;
+  uint64_t total_insert = 0; 
+  uint64_t print_count = pow(10, int(log10(num_els)) - 1);
   std::chrono::high_resolution_clock::time_point begin_time = std::chrono::high_resolution_clock::now();
+  std::chrono::high_resolution_clock::time_point section_begin_time = begin_time;
   for(auto iter = begin ; iter < end; iter++){
-      tree_ptr->insert(*iter); 
+      tree->insert(*iter); 
+      total_insert ++; 
+    if (total_insert % print_count == 0) {
+      std::chrono::high_resolution_clock::time_point section_end_time = std::chrono::high_resolution_clock::now();
+      auto delta =  std::chrono::duration_cast<std::chrono::duration<double>>(section_end_time - section_begin_time); 
+      std::cout << "Finished insertion for " << total_insert << " points with " << delta.count() << "s..."<< std::endl;
+      section_begin_time = section_end_time; 
+    }
   }
   std::cout << "Out of line size: " << tree->node_allocator_.get()->out_of_line_nodes_size << std::endl;
   std::chrono::high_resolution_clock::time_point end_time = std::chrono::high_resolution_clock::now();
   std::chrono::duration<double> delta = std::chrono::duration_cast<std::chrono::duration<double>>(end_time - begin_time);
   
-  std::cout << "Sequential Inserting "<< num_els << " points to RStarTree took: " << delta.count() << std::endl; 
-  std::cout << "Total pages occupied now: " << tree->node_allocator_->cur_page_ << std::endl;
-  tree->node_allocator_->dump_free_list();
+  std::cout << "Sequential Inserting "<< num_els << " points to NIRTree took: " << delta.count() << std::endl;
+  // this count may not be entirely accurate as some pages are on free_list
+  // [TODO] get exact occupied page number
+  std::cout << "Total pages occupied now is approximately: " << tree->node_allocator_->cur_page_ << std::endl;
   tree->write_metadata();
 }
 
@@ -1159,13 +1169,12 @@ void sequential_remove_tree(
     std::vector<Point>::iterator end,
     unsigned max_branch_factor
 ) {
-  auto tree_ptr = tree;
   // begin is inclusive, end is exclusive 
   uint64_t num_els = (end - begin);
   std::cout << "Num els: " << num_els << std::endl;
   std::chrono::high_resolution_clock::time_point begin_time = std::chrono::high_resolution_clock::now();
   for(auto iter = begin ; iter < end; iter++){
-      tree_ptr->remove(*iter); 
+      tree->remove(*iter); 
   }
   std::cout << "Out of line size: " << tree->node_allocator_.get()->out_of_line_nodes_size << std::endl;
   std::chrono::high_resolution_clock::time_point end_time = std::chrono::high_resolution_clock::now();
@@ -1184,13 +1193,12 @@ void sequential_remove_tree(
     std::vector<Point>::iterator end,
     unsigned max_branch_factor
 ) {
-  auto tree_ptr = tree;
   // begin is inclusive, end is exclusive 
   uint64_t num_els = (end - begin);
   std::cout << "Num els: " << num_els << std::endl;
   std::chrono::high_resolution_clock::time_point begin_time = std::chrono::high_resolution_clock::now();
   for(auto iter = begin ; iter < end; iter++){
-      tree_ptr->remove(*iter); 
+      tree->remove(*iter); 
   }
   std::cout << "Out of line size: " << tree->node_allocator_.get()->out_of_line_nodes_size << std::endl;
   std::chrono::high_resolution_clock::time_point end_time = std::chrono::high_resolution_clock::now();

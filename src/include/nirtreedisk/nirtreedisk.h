@@ -59,7 +59,7 @@ public:
     // Update: We disable this for bulk-loading since the root node
     // will be created anyways.
     // Shirley: we will assume that insertion only happens after
-    // bulk load, otherwise a root node may be required here 
+    // bulk load, otherwise a root node is required here 
     if (existing_page_count == 0) {
 
 //      auto alloc = node_allocator_->create_new_tree_node<LeafNode<min_branch_factor, max_branch_factor, strategy>>(NodeHandleType(LEAF_NODE));
@@ -91,11 +91,9 @@ public:
   }
 
   // Datastructure interface
-  // shirley: is exhaustiveSearch the same as search(point) ???
   std::vector<Point> exhaustiveSearch(Point requestedPoint);
   std::vector<Point> search(Point requestedPoint);
   std::vector<Point> search(Rectangle requestedRectangle);
-
   void insert(Point givenPoint);
   void remove(Point givenPoint);
 
@@ -106,8 +104,6 @@ public:
   void print();
   void visualize();
 
-  // where is this function called and how is it used ? 
-  // get one (any Point) in a subtree starting from the given node_handle 
   inline Point get_a_contained_point(tree_node_handle node_handle) {
     tree_node_allocator *allocator = node_allocator_.get();
 

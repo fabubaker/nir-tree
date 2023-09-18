@@ -79,28 +79,30 @@ void generate_tree(std::map<std::string, size_t> &configU, std::map<std::string,
     }
   }
 
-  // default = 1.0
   double bulk_load_pct = configD["bulk_load_pct"];
 
   uint64_t cut_off_bulk_load = std::floor(bulk_load_pct * all_points.size());
   std::cout << "Bulk loading " << cut_off_bulk_load << " points." << std::endl;
-  std::cout << "Sequential Inserting " << all_points.size() - cut_off_bulk_load << " points." << std::endl;
+  std::cout << "Sequentially inserting " << all_points.size() - cut_off_bulk_load << " points." << std::endl;
 
   Index *spatialIndex;
   if (configU["tree"] == NIR_TREE) {
     nirtreedisk::NIRTreeDisk<5, NIR_FANOUT, nirtreedisk::ExperimentalStrategy> *tree = new nirtreedisk::NIRTreeDisk<5, NIR_FANOUT, nirtreedisk::ExperimentalStrategy>(
-            configU["buffer_pool_memory"], backing_file); //
+            configU["buffer_pool_memory"], backing_file); 
+    
+    // start with bulk load:
     std::cout << "Bulk Loading..." << std::endl;
     std::cout << "Creating tree with " << configU["buffer_pool_memory"] << "bytes" << std::endl;
     bulk_load_tree(tree, configU, all_points.begin(), all_points.begin() + cut_off_bulk_load, NIR_FANOUT);
   
-    std::cout << "Sequential Inserting..." << std::endl;
     // insert the rest of points:
+    std::cout << "Sequential Inserting..." << std::endl;
     sequential_insert_tree(tree, configU, all_points.begin() + cut_off_bulk_load, all_points.end(), NIR_FANOUT);
+    
     std::cout << "Created NIRTree." << std::endl;
     spatialIndex = tree;
     tree->stat();
-    // shirley: why we exit here ? 
+   
     //exit(0);
   } else if (configU["tree"] == R_STAR_TREE) {
     rstartreedisk::RStarTreeDisk<5, R_STAR_FANOUT> *tree = new rstartreedisk::RStarTreeDisk<5, R_STAR_FANOUT>(configU["buffer_pool_memory"], backing_file);
@@ -118,19 +120,39 @@ void generate_tree(std::map<std::string, size_t> &configU, std::map<std::string,
     abort();
   }
 
+  // Quick Test: Searching first 5000 points which are bulk loaded 
   unsigned totalSearches = 0;
   double totalTimeSearches = 0.0;
-  for (auto iter = all_points.begin() /*+ cut_off_bulk_load*/; iter < all_points.end(); iter++ ) {
+  for (auto iter = all_points.begin(); iter < all_points.begin() + cut_off_bulk_load; iter++ ) {
     Point p = *iter; 
     std::chrono::high_resolution_clock::time_point begin = std::chrono::high_resolution_clock::now();
-    //std::cout << "Searching: for " << p << std::endl;
     std::vector<Point> out = spatialIndex->search(p);
     if (out.size() != 1) {
       int index = std::distance(all_points.begin(), iter);
-      std::cout << "Could not find " << p << " at index "<< index << std::endl;
-      std::cout << out.size() << std::endl;
+      std::cout << "Could not find bulk loaded point " << p << " at index "<< index << std::endl;
+      std::cout << "Output size is " << out.size() << std::endl;
       std::cout << "Total successful searches: " << totalSearches << std::endl;
-      //spatialIndex->print();
+      abort();
+    }
+    std::chrono::high_resolution_clock::time_point end = std::chrono::high_resolution_clock::now();
+    std::chrono::duration<double> delta = std::chrono::duration_cast<std::chrono::duration<double>>(end - begin);
+    totalTimeSearches += delta.count();
+    totalSearches += 1;
+    if (totalSearches >= 5000) {
+      break;
+    }
+  }
+
+  // Quick Test: Searching first 5000 points which are inserted
+  for (auto iter = all_points.begin()+ cut_off_bulk_load; iter < all_points.end(); iter++ ) {
+    Point p = *iter; 
+    std::chrono::high_resolution_clock::time_point begin = std::chrono::high_resolution_clock::now();
+    std::vector<Point> out = spatialIndex->search(p);
+    if (out.size() != 1) {
+      int index = std::distance(all_points.begin(), iter);
+      std::cout << "Could not find inserted point" << p << " at index "<< index << std::endl;
+      std::cout << "Output size is " << out.size() << std::endl;
+      std::cout << "Total successful searches: " << totalSearches << std::endl;
       abort();
     }
     std::chrono::high_resolution_clock::time_point end = std::chrono::high_resolution_clock::now();
