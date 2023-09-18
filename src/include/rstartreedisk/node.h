@@ -168,7 +168,7 @@ public:
   );
   tree_node_handle adjustTree(
           RStarTreeDisk<min_branch_factor, max_branch_factor> *treeRef,
-          tree_node_handle self_handle,
+          tree_node_handle current_handle,
           tree_node_handle sibling_handle,
           std::vector<bool> &hasReinsertedOnLevel
   );
@@ -655,21 +655,21 @@ tree_node_handle adjustTreeSub(
 template <int min_branch_factor, int max_branch_factor>
 tree_node_handle LeafNode<min_branch_factor, max_branch_factor>::adjustTree(
         RStarTreeDisk<min_branch_factor, max_branch_factor> *treeRef,
-        tree_node_handle self_handle,
+        tree_node_handle current_handle,
         tree_node_handle sibling_handle,
         std::vector<bool> &hasReinsertedOnLevel
 ) {
-  return adjustTreeSub(self_handle, sibling_handle, hasReinsertedOnLevel, treeRef);
+  return adjustTreeSub(current_handle, sibling_handle, hasReinsertedOnLevel, treeRef);
 }
 
 template <int min_branch_factor, int max_branch_factor>
 tree_node_handle BranchNode<min_branch_factor, max_branch_factor>::adjustTree(
         RStarTreeDisk<min_branch_factor, max_branch_factor> *treeRef,
-        tree_node_handle self_handle,
+        tree_node_handle current_handle,
         tree_node_handle sibling_handle,
         std::vector<bool> &hasReinsertedOnLevel
 ) {
-  return adjustTreeSub(self_handle, sibling_handle, hasReinsertedOnLevel, treeRef);
+  return adjustTreeSub(current_handle, sibling_handle, hasReinsertedOnLevel, treeRef);
 }
 
 template <int min_branch_factor, int max_branch_factor>
