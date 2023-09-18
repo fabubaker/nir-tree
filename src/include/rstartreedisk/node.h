@@ -102,7 +102,9 @@ public:
         std::vector<bool> &hasReinsertedOnLevel
   );
   tree_node_handle overflowTreatment(
+          RStarTreeDisk<min_branch_factor, max_branch_factor> *treeRef,
           tree_node_handle current_handle,
+          tree_node_handle root_handle,
           std::vector<bool> &hasReinsertedOnLevel
   );
   tree_node_handle condenseTree(std::vector<bool> &hasReinsertedOnLevel);
@@ -179,7 +181,9 @@ public:
           std::vector<bool> &hasReinsertedOnLevel
   );
   tree_node_handle overflowTreatment(
+          RStarTreeDisk<min_branch_factor, max_branch_factor> *treeRef,
           tree_node_handle current_handle,
+          tree_node_handle root_handle,
           std::vector<bool> &hasReinsertedOnLevel
   );
   tree_node_handle condenseTree(std::vector<bool> &hasReinsertedOnLevel);
@@ -746,7 +750,9 @@ tree_node_handle LeafNode<min_branch_factor, max_branch_factor>::reInsert(
 // Overflow treatement for dealing with a node that is too big (overflow)
 template <int min_branch_factor, int max_branch_factor>
 tree_node_handle LeafNode<min_branch_factor, max_branch_factor>::overflowTreatment(
+        RStarTreeDisk<min_branch_factor, max_branch_factor> *treeRef,
         tree_node_handle current_handle,
+        tree_node_handle root_handle,
         std::vector<bool> &hasReinsertedOnLevel
 ) {
   uint16_t current_level = current_handle.get_level();
@@ -788,7 +794,12 @@ tree_node_handle LeafNode<min_branch_factor, max_branch_factor>::insert(Point no
   if (cur_offset_ > max_branch_factor) {
     // We call overflow treatment to determine how our sibling node is treated if we do a
     // reInsert, sibling is nullptr. This is properly dealt with in adjustTree
-    sibling_handle = overflowTreatment(hasReinsertedOnLevel);
+    sibling_handle = overflowTreatment(
+        treeRef,
+        current_handle,
+        root_handle,
+        hasReinsertedOnLevel
+    );
   }
 
   // I3 [Propogate overflow treatment changes upward]
@@ -796,8 +807,6 @@ tree_node_handle LeafNode<min_branch_factor, max_branch_factor>::insert(Point no
 
   // I4 [Grow tree taller]
   if (sibling_handle) {
-
-    assert(!parent);
     auto alloc_data =
             allocator->create_new_tree_node<BranchNode<min_branch_factor, max_branch_factor>>(
                     NodeHandleType(BRANCH_NODE));
@@ -1782,7 +1791,9 @@ tree_node_handle BranchNode<min_branch_factor, max_branch_factor>::reInsert(
 // Overflow treatement for dealing with a node that is too big (overflow)
 template <int min_branch_factor, int max_branch_factor>
 tree_node_handle BranchNode<min_branch_factor, max_branch_factor>::overflowTreatment(
+        RStarTreeDisk<min_branch_factor, max_branch_factor> *treeRef,
         tree_node_handle current_handle,
+        tree_node_handle root_handle,
         std::vector<bool> &hasReinsertedOnLevel
 ) {
   uint16_t current_level = current_handle.get_level();
