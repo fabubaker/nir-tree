@@ -347,6 +347,9 @@ public:
     buffer_pool buffer_pool_;
     uint32_t cur_page_;
 
+    uint32_t get_used_page_number() {
+        return cur_page_ - free_list_.size();
+    }
 protected:
     page *get_page_to_alloc_on( uint16_t object_size );
 

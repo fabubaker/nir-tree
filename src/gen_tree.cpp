@@ -19,7 +19,8 @@ void parameters(std::map<std::string, uint64_t> &configU, std::map<std::string, 
   std::cout << "  size = " << configU["size"] << std::endl;
   std::cout << "  seed = " << configU["seed"] << std::endl;
   std::cout << "  buffer pool memory = " << configU["buffer_pool_memory"] << std::endl;
-  std::cout << "  bulk load percent = " << configD["bulk_load_pct"] << std::endl;
+  std::cout << "  bulk load percentage = " << configD["bulk_load_pct"] << std::endl;
+  std::cout << "  remove percentage = " << configD["remove_pct"] << std::endl;
   std::cout << "### ### ### ### ### ###" << std::endl << std::endl;
 }
 
@@ -100,10 +101,31 @@ void generate_tree(std::map<std::string, size_t> &configU, std::map<std::string,
     sequential_insert_tree(tree, configU, all_points.begin() + cut_off_bulk_load, all_points.end(), NIR_FANOUT);
     
     std::cout << "Created NIRTree." << std::endl;
+    double remove_pct = configD["remove_pct"];
+    if(remove_pct > 0){
+      uint64_t remove_points_num = std::floor(remove_pct * all_points.size() * 0.5);
+      
+      // Remove Test: remove half points required by removal_pct consecutively with step = 1
+      auto remove_test1_begin = all_points.begin();
+      auto remove_test1_end = all_points.begin() + remove_points_num;
+      uint64_t remove_test1_step = 1;
+      std::cout << "Remove "<< remove_points_num << "points from NIRTree consecutively" << std::endl;
+      sequential_remove_tree(tree, configU, remove_test1_begin, remove_test1_end, remove_test1_step, NIR_FANOUT);
+    
+      // Remove Test: remove half points required by removal_pct even-distributedly
+      auto remove_test2_begin = all_points.begin() + remove_points_num;
+      auto remove_test2_end = all_points.end();
+      uint64_t remove_test2_step = std::floor((remove_test2_end - remove_test2_begin) / remove_points_num);
+      std::cout << "Remove "<< remove_points_num << "points from NIRTree evenly distributedly" << std::endl;
+      sequential_remove_tree(tree, configU, remove_test2_begin, remove_test2_end, remove_test2_step, NIR_FANOUT);
+      spatialIndex = tree;
+      tree->stat();
+      delete tree;
+      exit(0);
+    }
     spatialIndex = tree;
     tree->stat();
-   
-    //exit(0);
+
   } else if (configU["tree"] == R_STAR_TREE) {
     rstartreedisk::RStarTreeDisk<5, R_STAR_FANOUT> *tree = new rstartreedisk::RStarTreeDisk<5, R_STAR_FANOUT>(configU["buffer_pool_memory"], backing_file);
     std::cout << "Bulk Loading..." << std::endl;
@@ -163,12 +185,13 @@ void generate_tree(std::map<std::string, size_t> &configU, std::map<std::string,
       break;
     }
   }
-
+  
   spatialIndex->stat();
 
   std::cout << "Total time to search: " << totalTimeSearches << "s" << std::endl;
   std::cout << "Avg time to search: " << totalTimeSearches / totalSearches << "s" << std::endl;
-
+  
+  delete spatialIndex;
   return;
 }
 
@@ -181,8 +204,9 @@ int main(int argc, char **argv) {
   configU.emplace("distribution", CALIFORNIA);
   configU.emplace("seed", 0);
   configD.emplace("bulk_load_pct", 1.0);
+  configD.emplace("remove_pct", 0.0);
 
-  while ((option = getopt(argc, argv, "t:m:n:s:p:g:z:B:A:b:")) != -1) {
+  while ((option = getopt(argc, argv, "t:m:n:s:p:g:z:B:A:b:r:")) != -1) {
     switch (option) {
     case 't': {
       configU["tree"] = (TreeType)std::stoull(optarg);
@@ -224,6 +248,10 @@ int main(int argc, char **argv) {
     }
     case 'b': {
       configD["bulk_load_pct"] = std::stod(optarg);
+      break;
+    }
+    case 'r': {
+      configD["remove_pct"] = std::stod(optarg);
       break;
     }
     }

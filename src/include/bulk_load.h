@@ -178,6 +178,7 @@ void sequential_insert_tree(
     std::map<std::string, size_t> &configU,
     std::vector<Point>::iterator begin,
     std::vector<Point>::iterator end,
+    uint64_t step,
     unsigned max_branch_factor);
 
 template <>
@@ -195,6 +196,7 @@ void sequential_remove_tree(
     std::map<std::string, size_t> &configU,
     std::vector<Point>::iterator begin,
     std::vector<Point>::iterator end,
+    uint64_t step,
     unsigned max_branch_factor);
 
 template <>
@@ -203,8 +205,8 @@ void sequential_remove_tree(
     std::map<std::string, size_t> &configU,
     std::vector<Point>::iterator begin,
     std::vector<Point>::iterator end,
+    uint64_t step,
     unsigned max_branch_factor);
-
 template <>
 void sequential_remove_tree(
     rstartreedisk::RStarTreeDisk<5, R_STAR_FANOUT> *tree,

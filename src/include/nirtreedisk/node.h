@@ -351,6 +351,7 @@ public:
   tree_node_handle findLeaf(
           NIRTreeDisk<min_branch_factor, max_branch_factor, strategy> *treeRef,
           tree_node_handle selfHandle,
+          std::stack<tree_node_handle> &parentHandles,
           Point givenPoint);
   // entry function for partitionPartitionNode()
   Partition partitionNode(NIRTreeDisk<min_branch_factor, max_branch_factor, strategy> *treeRef);
@@ -884,7 +885,6 @@ Rectangle LeafNode<min_branch_factor, max_branch_factor, strategy>::boundingBox(
   return bb;
 }
 
-// Removes the point from the node
 template <int min_branch_factor, int max_branch_factor, class strategy>
 void LeafNode<min_branch_factor, max_branch_factor, strategy>::removePoint( const Point &point) {
   // Locate the child
@@ -892,7 +892,7 @@ void LeafNode<min_branch_factor, max_branch_factor, strategy>::removePoint( cons
   while( entries.at(childIndex) != point and childIndex < this->cur_offset_ ){
     childIndex++; 
   }
-  // point is expected to exist on LeafNode 
+  // Point is expected to exist on LeafNode
   assert(entries.at(childIndex) == point);
 
   // Replace this index with whatever is in the last position
@@ -1039,6 +1039,8 @@ SplitResult LeafNode<min_branch_factor, max_branch_factor, strategy>::splitNode(
     Point &dataPoint = entries.at(i);
     containedLeft = dataPoint[p.dimension] < p.location; // Not inclusive
     containedRight = dataPoint[p.dimension] >= p.location;
+    assert(containedLeft or containedRight);
+
     if (containedLeft and not containedRight) {
       left_node->addPoint(dataPoint);
     } else if (not containedLeft and containedRight) {
@@ -1612,14 +1614,14 @@ void LeafNode<min_branch_factor, max_branch_factor, strategy>::condenseTree(
         std::stack<tree_node_handle> &parentHandles) {
   // Quick return as the current Leaf Node is not empty 
   if (this->cur_offset_ != 0) return; 
-  // Working on root node which is Leaf Node 
+  // No work on root node
   if (parentHandles.empty()) return; 
 
   tree_node_handle current_node_handle = selfHandle; 
   tree_node_handle parent_node_handle = parentHandles.top();
   parentHandles.pop();
 
-  // remove current LeafNode Branch from parent 
+  // remove current LeafNode Branch from parent
   auto parent_node = treeRef->get_branch_node(parent_node_handle);
   assert(this->cur_offset_ == 0); 
   parent_node->removeBranch(treeRef, current_node_handle);
@@ -1629,11 +1631,13 @@ void LeafNode<min_branch_factor, max_branch_factor, strategy>::condenseTree(
   while (not parentHandles.empty()) {
     current_node = parent_node; 
     current_node_handle = parent_node_handle; 
+
     // no further condense work needed
     if (current_node->cur_offset_ != 0) break; 
     parent_node_handle = parentHandles.top();
     parentHandles.pop();
-    // remove current LeafNode Branch from parent 
+
+    // remove current branch from parent
     parent_node = treeRef->get_branch_node(parent_node_handle);
     assert(current_node->cur_offset_ == 0); 
     parent_node->removeBranch(treeRef, current_node_handle);
@@ -2370,15 +2374,17 @@ template <int min_branch_factor, int max_branch_factor, class strategy>
 tree_node_handle BranchNode<min_branch_factor, max_branch_factor, strategy>::findLeaf(
      NIRTreeDisk<min_branch_factor, max_branch_factor, strategy> *treeRef,
      tree_node_handle selfHandle,
+     std::stack<tree_node_handle> &parentHandles,
      Point givenPoint) {
 
   // Initialize our context stack
   std::stack<tree_node_handle> context;
   context.push(selfHandle);
+  parentHandles.push(selfHandle);
   tree_node_handle current_node_handle;
   tree_node_allocator *allocator = get_node_allocator(treeRef);
 
-  // Traverse through the tree with DFS
+  // Traverse through the tree with depth first search
   while (!context.empty()) {
     current_node_handle = context.top();
     context.pop();
@@ -2389,17 +2395,23 @@ tree_node_handle BranchNode<min_branch_factor, max_branch_factor, strategy>::fin
       for (unsigned i = 0; i < current_node->cur_offset_; i++) {
         Point &p = current_node->entries.at(i);
         if (p == givenPoint) {
+          // Toppest must be LeafNode, pop it
+          assert(parentHandles.top() == current_node_handle);
+          parentHandles.pop();
           return current_node_handle;
         }
       }
+      // We can break here as all siblings are disjoint
+      break;
     } else {
+      assert(current_node_handle.get_type() == BRANCH_NODE);
       auto current_node = treeRef->get_branch_node(current_node_handle);
       // Determine which branches we need to follow
       for (unsigned i = 0; i < current_node->cur_offset_; i++) {
         Branch &b = current_node->entries.at(i);
         // Quick Check 
         if (!b.boundingBox.containsPoint(givenPoint)) {
-          // if point is not contained in MBB, skip
+          // If point is not contained in MBB, skip
           continue; 
         }
         IsotheticPolygon poly  = find_polygon(treeRef, b); 
@@ -2407,6 +2419,9 @@ tree_node_handle BranchNode<min_branch_factor, max_branch_factor, strategy>::fin
         if (poly.containsPoint(givenPoint)) {
           // Add the child to the nodes we will consider
           context.push(b.child);
+          parentHandles.push(b.child);
+          // We can break here as all siblings are disjoint
+          break;
         }
       }
     }
@@ -2849,30 +2864,29 @@ tree_node_handle BranchNode<min_branch_factor, max_branch_factor, strategy>::rem
         Point givenPoint) {
 
   // D1 [Locate record] 
-  tree_node_handle leaf_handle = findLeaf(treeRef, selfHandle, givenPoint);
+  // parentHandles are collected in findLeaf
+  std::stack<tree_node_handle> parentHandles;
+  tree_node_handle leaf_handle = findLeaf(treeRef, selfHandle, parentHandles, givenPoint);
   // Record not in the tree ; done
-  // ??? is this expected ??? 
   if (leaf_handle == nullptr) {
-    return selfHandle;
+    // return nullptr
+    return leaf_handle;
   }
 
   // D2 [Delete record]
+  assert(leaf_handle.get_type() == LEAF_NODE);
   auto leaf_node = treeRef->get_leaf_node(leaf_handle);
   leaf_node->removePoint(givenPoint);
 
   // D3 [Propagate changes]
-  std::stack<tree_node_handle> path_handles = find_path_to_leaf(treeRef, selfHandle, leaf_handle); 
-  assert(path_handles.top() == leaf_handle);
-  // Pop the Leaf Node to make it just parent handles 
-  path_handles.pop();
-  leaf_node->condenseTree(treeRef, leaf_handle, path_handles);
+  leaf_node->condenseTree(treeRef, leaf_handle, parentHandles);
 
   // D4 [Shorten tree]
-  assert(selfHandle.get_type() == BRANCH_NODE);
-  // There is an entry left in root, let the only entry be the new root
   if (this->cur_offset_ == 1) {
+    // There is an entry left in root, let the only entry be the new root
     tree_node_handle new_root_handle = entries.at(0).child;
     tree_node_allocator *allocator = get_node_allocator(treeRef);
+    assert(selfHandle.get_type() == BRANCH_NODE);
     allocator->free(selfHandle, sizeof(BranchNode<min_branch_factor, max_branch_factor, strategy>));
     
     // remove the polygon associated with old root from map 
@@ -2880,7 +2894,7 @@ tree_node_handle BranchNode<min_branch_factor, max_branch_factor, strategy>::rem
     return new_root_handle;
   }
 
-  // no work to do
+  // no need for a new root
   return selfHandle;
 }
 

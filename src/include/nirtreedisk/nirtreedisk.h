@@ -58,8 +58,8 @@ public:
     // If this is a fresh tree, we need a root
     // Update: We disable this for bulk-loading since the root node
     // will be created anyways.
-    // Shirley: we will assume that insertion only happens after
-    // bulk load, otherwise a root node is required here 
+    // We assume that insertion only happens after bulk load, 
+    // otherwise a root node is required here 
     if (existing_page_count == 0) {
 
 //      auto alloc = node_allocator_->create_new_tree_node<LeafNode<min_branch_factor, max_branch_factor, strategy>>(NodeHandleType(LEAF_NODE));
@@ -85,9 +85,15 @@ public:
   }
 
   ~NIRTreeDisk() {
-    //auto root_node = node_allocator_.get_tree_node<NodeType>( root );
-    //root_node->deleteSubtrees();
-    // FIXME: Free root_node
+    if (root.get_type() == LEAF_NODE){
+      auto root_node = get_leaf_node(root);
+      root_node->deleteSubtrees();
+      node_allocator_->free(root, sizeof(LeafNode<min_branch_factor, max_branch_factor, strategy>));
+    } else if (root.get_type() == BRANCH_NODE){
+      auto root_node = get_branch_node(root);
+      root_node->deleteSubtrees(this);
+      node_allocator_->free(root, sizeof(BranchNode<min_branch_factor, max_branch_factor, strategy>));
+    }
   }
 
   // Datastructure interface
@@ -200,10 +206,15 @@ template <int min_branch_factor, int max_branch_factor, class strategy>
 void NIRTreeDisk<min_branch_factor, max_branch_factor, strategy>::remove(Point givenPoint) {
   if (root.get_type() == LEAF_NODE) {
     auto root_node = get_leaf_node(root);
-    root = root_node->remove(this, root, givenPoint);
+    auto result = root_node->remove(this, root, givenPoint);
+    // we expect remove() is only called on points which exist
+    assert(result != nullptr);
+    root = result;
   } else {
     auto root_node = get_branch_node(root);
-    root = root_node->remove(this, root, givenPoint);
+    auto result = root_node->remove(this, root, givenPoint);
+    assert(result != nullptr);
+    root = result;
   }
 }
 
