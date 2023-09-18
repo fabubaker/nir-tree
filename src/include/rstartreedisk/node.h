@@ -676,7 +676,6 @@ template <int min_branch_factor, int max_branch_factor>
 tree_node_handle LeafNode<min_branch_factor, max_branch_factor>::reInsert(
         RStarTreeDisk<min_branch_factor, max_branch_factor> *treeRef,
         tree_node_handle current_handle,
-        tree_node_handle root_handle,
         std::vector<bool> &hasReinsertedOnLevel
 ) {
   // 1. RI1 Compute distance between each of the points and the bounding box containing them.
@@ -719,7 +718,7 @@ tree_node_handle LeafNode<min_branch_factor, max_branch_factor>::reInsert(
   // may end up here again. If we do, we should still be using the same hasReinsertedOnLevel
   // vector because it corresponds to the activities we have performed during a single
   // point/rectangle insertion (the top level one)
-  auto root_node = treeRef->get_branch_node(root_handle);
+  auto root_node = treeRef->get_branch_node(treeRef->root);
 
   /*
     std::cout << "Overflow treatment, need to reinsert nodes: {" <<
@@ -731,12 +730,12 @@ tree_node_handle LeafNode<min_branch_factor, max_branch_factor>::reInsert(
     */
 
   for (const Point &entry : entriesToReinsert) {
-    if (root_handle.get_type() == LEAF_NODE) {
-      root_handle = root_node->insert(entry, hasReinsertedOnLevel);
-      root_node = treeRef->get_leaf_node(root_handle);
+    if (treeRef->root.get_type() == LEAF_NODE) {
+      treeRef->root = root_node->insert(entry, hasReinsertedOnLevel);
+      root_node = treeRef->get_leaf_node(treeRef->root);
     } else {
-      root_handle = root_node->insert(entry, hasReinsertedOnLevel);
-      root_node = treeRef->get_branch_node(root_handle);
+      treeRef->root = root_node->insert(entry, hasReinsertedOnLevel);
+      root_node = treeRef->get_branch_node(treeRef->root);
     }
   }
 
@@ -761,7 +760,7 @@ tree_node_handle LeafNode<min_branch_factor, max_branch_factor>::overflowTreatme
     hasReinsertedOnLevel.at(current_level) = true;
     //std::cout << "Overflow treatment on leaf node, reinserting." <<
     //    std::endl;
-    return reInsert(treeRef, current_handle, root_handle, hasReinsertedOnLevel);
+    return reInsert(treeRef, current_handle, hasReinsertedOnLevel);
   }
 }
 
@@ -1721,7 +1720,6 @@ template <int min_branch_factor, int max_branch_factor>
 tree_node_handle BranchNode<min_branch_factor, max_branch_factor>::reInsert(
         RStarTreeDisk<min_branch_factor, max_branch_factor> *treeRef,
         tree_node_handle current_handle,
-        tree_node_handle root_handle,
         std::vector<bool> &hasReinsertedOnLevel
 ) {
   // 1. RI1 Compute distance between each of the points and the bounding box containing them.
@@ -1764,7 +1762,7 @@ tree_node_handle BranchNode<min_branch_factor, max_branch_factor>::reInsert(
   // may end up here again. If we do, we should still be using the same hasReinsertedOnLevel
   // vector because it corresponds to the activities we have performed during a single
   // point/rectangle insertion (the top level one)
-  auto root_node = treeRef->get_branch_node(root_handle);
+  auto root_node = treeRef->get_branch_node(treeRef->root);
 
   /*
     std::cout << "Overflow treatment, need to reinsert nodes: {" <<
@@ -1776,8 +1774,8 @@ tree_node_handle BranchNode<min_branch_factor, max_branch_factor>::reInsert(
     */
 
   for (const Branch &entry : entriesToReinsert) {
-    root_handle = root_node->insert(entry, hasReinsertedOnLevel);
-    root_node = treeRef->get_branch_node(root_handle);
+    treeRef->root = root_node->insert(entry, hasReinsertedOnLevel);
+    root_node = treeRef->get_branch_node(treeRef->root);
   }
 
   return tree_node_handle(nullptr);
@@ -1801,7 +1799,7 @@ tree_node_handle BranchNode<min_branch_factor, max_branch_factor>::overflowTreat
     hasReinsertedOnLevel.at(current_level) = true;
     //std::cout << "Overflow treatment on branch node, reinserting." <<
     //    std::endl;
-    return reInsert(hasReinsertedOnLevel);
+    return reInsert(treeRef, current_handle, hasReinsertedOnLevel);
   }
 }
 
