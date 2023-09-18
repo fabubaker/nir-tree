@@ -102,7 +102,10 @@ public:
         tree_node_handle root_handle,
         std::vector<bool> &hasReinsertedOnLevel
   );
-  tree_node_handle overflowTreatment(std::vector<bool> &hasReinsertedOnLevel);
+  tree_node_handle overflowTreatment(
+          tree_node_handle current_handle,
+          std::vector<bool> &hasReinsertedOnLevel
+  );
   tree_node_handle condenseTree(std::vector<bool> &hasReinsertedOnLevel);
 
   // Datastructure interface functions
@@ -177,7 +180,10 @@ public:
           tree_node_handle root_handle,
           std::vector<bool> &hasReinsertedOnLevel
   );
-  tree_node_handle overflowTreatment(std::vector<bool> &hasReinsertedOnLevel);
+  tree_node_handle overflowTreatment(
+          tree_node_handle current_handle,
+          std::vector<bool> &hasReinsertedOnLevel
+  );
   tree_node_handle condenseTree(std::vector<bool> &hasReinsertedOnLevel);
 
   // Datastructure interface functions
@@ -749,24 +755,23 @@ tree_node_handle LeafNode<min_branch_factor, max_branch_factor>::reInsert(
 
 // Overflow treatement for dealing with a node that is too big (overflow)
 template <int min_branch_factor, int max_branch_factor>
-tree_node_handle LeafNode<min_branch_factor, max_branch_factor>::overflowTreatment(std::vector<bool> &hasReinsertedOnLevel) {
-#if 0
-  assert(hasReinsertedOnLevel.size() > level);
+tree_node_handle LeafNode<min_branch_factor, max_branch_factor>::overflowTreatment(
+        tree_node_handle current_handle,
+        std::vector<bool> &hasReinsertedOnLevel
+) {
+  uint16_t current_level = current_handle.get_level();
+  assert(hasReinsertedOnLevel.size() > current_level);
 
-  if (hasReinsertedOnLevel.at(level)) {
+  if (hasReinsertedOnLevel.at(current_level)) {
     //std::cout << "Overflow treatment on leaf node, splitting." <<
     //    std::endl;
     return splitNode();
   } else {
-    hasReinsertedOnLevel.at(level) = true;
+    hasReinsertedOnLevel.at(current_level) = true;
     //std::cout << "Overflow treatment on leaf node, reinserting." <<
     //    std::endl;
     return reInsert(hasReinsertedOnLevel);
   }
-#endif
-
-  // Unsupported
-  abort();
 }
 
 template <int min_branch_factor, int max_branch_factor>
@@ -1797,24 +1802,23 @@ tree_node_handle BranchNode<min_branch_factor, max_branch_factor>::reInsert(
 
 // Overflow treatement for dealing with a node that is too big (overflow)
 template <int min_branch_factor, int max_branch_factor>
-tree_node_handle BranchNode<min_branch_factor, max_branch_factor>::overflowTreatment(std::vector<bool> &hasReinsertedOnLevel) {
-#if 0
-  assert(hasReinsertedOnLevel.size() > level);
+tree_node_handle BranchNode<min_branch_factor, max_branch_factor>::overflowTreatment(
+        tree_node_handle current_handle,
+        std::vector<bool> &hasReinsertedOnLevel
+) {
+  uint16_t current_level = current_handle.get_level();
+  assert(hasReinsertedOnLevel.size() > current_level);
 
-  if (hasReinsertedOnLevel.at(level)) {
+  if (hasReinsertedOnLevel.at(current_level)) {
     //std::cout << "Overflow treatment on branch node, splitting." <<
     //    std::endl;
     return splitNode();
   } else {
-    hasReinsertedOnLevel.at(level) = true;
+    hasReinsertedOnLevel.at(current_level) = true;
     //std::cout << "Overflow treatment on branch node, reinserting." <<
     //    std::endl;
     return reInsert(hasReinsertedOnLevel);
   }
-#endif
-
-  // Unsupported
-  abort();
 }
 
 template <int min_branch_factor, int max_branch_factor>
