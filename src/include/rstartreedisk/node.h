@@ -87,8 +87,7 @@ public:
   unsigned chooseSplitIndex(unsigned axis);
   tree_node_handle splitNode(
     RStarTreeDisk<min_branch_factor, max_branch_factor> *treeRef,
-    tree_node_handle current_handle,
-    tree_node_handle parent_handle
+    tree_node_handle current_handle
   );
   tree_node_handle adjustTree(
     RStarTreeDisk<min_branch_factor, max_branch_factor> *treeRef,
@@ -165,8 +164,7 @@ public:
   unsigned chooseSplitIndex(unsigned axis);
   tree_node_handle splitNode(
     RStarTreeDisk<min_branch_factor, max_branch_factor> *treeRef,
-    tree_node_handle current_handle,
-    tree_node_handle parent_handle
+    tree_node_handle current_handle
   );
   tree_node_handle adjustTree(
           RStarTreeDisk<min_branch_factor, max_branch_factor> *treeRef,
@@ -465,8 +463,7 @@ unsigned LeafNode<min_branch_factor, max_branch_factor>::chooseSplitIndex(unsign
 template <int min_branch_factor, int max_branch_factor>
 tree_node_handle LeafNode<min_branch_factor, max_branch_factor>::splitNode(
       RStarTreeDisk<min_branch_factor, max_branch_factor> *treeRef,
-      tree_node_handle current_handle,
-      tree_node_handle parent_handle
+      tree_node_handle current_handle
 ) {
   using NodeType = LeafNode<min_branch_factor, max_branch_factor>;
   // S1: Call chooseSplitAxis to determine the axis perpendicular to which the split is performed
@@ -498,13 +495,6 @@ tree_node_handle LeafNode<min_branch_factor, max_branch_factor>::splitNode(
 
   new (&(*(newSibling))) NodeType();
   sibling_handle.set_level(current_level);
-
-#if !defined(NDEBUG)
-  if (parent_handle) {
-    auto parent_level = parent_handle.get_level();
-    assert(current_level == parent_level + 1);
-  }
-#endif
 
   // Copy everything to the right of the splitPoint (inclusive) to the new sibling
   std::copy(entries.begin() + splitIndex, entries.begin() + cur_offset_, newSibling->entries.begin());
@@ -765,12 +755,12 @@ tree_node_handle LeafNode<min_branch_factor, max_branch_factor>::overflowTreatme
   if (hasReinsertedOnLevel.at(current_level)) {
     //std::cout << "Overflow treatment on leaf node, splitting." <<
     //    std::endl;
-    return splitNode();
+    return splitNode(treeRef, current_handle);
   } else {
     hasReinsertedOnLevel.at(current_level) = true;
     //std::cout << "Overflow treatment on leaf node, reinserting." <<
     //    std::endl;
-    return reInsert(hasReinsertedOnLevel);
+    return reInsert(treeRef, current_handle, root_handle, hasReinsertedOnLevel);
   }
 }
 
@@ -778,9 +768,6 @@ template <int min_branch_factor, int max_branch_factor>
 tree_node_handle LeafNode<min_branch_factor, max_branch_factor>::insert(Point nodeEntry, std::vector<bool> &hasReinsertedOnLevel) {
 #if 0
   tree_node_allocator *allocator = get_node_allocator(treeRef);
-
-  // Always called on root, this = root
-  assert(!parent);
 
   // I1 [Find position for new record]
   tree_node_handle sibling_handle = tree_node_handle(nullptr);
@@ -1653,8 +1640,7 @@ unsigned BranchNode<min_branch_factor, max_branch_factor>::chooseSplitIndex(unsi
 template <int min_branch_factor, int max_branch_factor>
 tree_node_handle BranchNode<min_branch_factor, max_branch_factor>::splitNode(
     RStarTreeDisk<min_branch_factor, max_branch_factor> *treeRef,
-    tree_node_handle current_handle,
-    tree_node_handle parent_handle
+    tree_node_handle current_handle
 ) {
   using NodeType = BranchNode<min_branch_factor, max_branch_factor>;
   // S1: Call chooseSplitAxis to determine the axis perpendicular to which the split is performed
@@ -1685,13 +1671,6 @@ tree_node_handle BranchNode<min_branch_factor, max_branch_factor>::splitNode(
 
   new (&(*(newSibling))) NodeType();
   sibling_handle.set_level(current_level);
-
-#if !defined(NDEBUG)
-  if (parent_handle) {
-    auto parent_level = parent_handle.get_level();
-    assert(current_level == parent_level + 1);
-  }
-#endif
 
   // Copy everything to the right of the splitPoint (inclusive) to the new sibling
   std::copy(entries.begin() + splitIndex, entries.begin() + cur_offset_, newSibling->entries.begin());
@@ -1812,7 +1791,7 @@ tree_node_handle BranchNode<min_branch_factor, max_branch_factor>::overflowTreat
   if (hasReinsertedOnLevel.at(current_level)) {
     //std::cout << "Overflow treatment on branch node, splitting." <<
     //    std::endl;
-    return splitNode();
+    return splitNode(treeRef, current_handle);
   } else {
     hasReinsertedOnLevel.at(current_level) = true;
     //std::cout << "Overflow treatment on branch node, reinserting." <<
