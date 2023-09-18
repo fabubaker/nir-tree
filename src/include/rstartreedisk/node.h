@@ -98,13 +98,11 @@ public:
   tree_node_handle reInsert(
         RStarTreeDisk<min_branch_factor, max_branch_factor> *treeRef,
         tree_node_handle current_handle,
-        tree_node_handle root_handle,
         std::vector<bool> &hasReinsertedOnLevel
   );
   tree_node_handle overflowTreatment(
           RStarTreeDisk<min_branch_factor, max_branch_factor> *treeRef,
           tree_node_handle current_handle,
-          tree_node_handle root_handle,
           std::vector<bool> &hasReinsertedOnLevel
   );
   tree_node_handle condenseTree(std::vector<bool> &hasReinsertedOnLevel);
@@ -177,13 +175,11 @@ public:
   tree_node_handle reInsert(
           RStarTreeDisk<min_branch_factor, max_branch_factor> *treeRef,
           tree_node_handle current_handle,
-          tree_node_handle root_handle,
           std::vector<bool> &hasReinsertedOnLevel
   );
   tree_node_handle overflowTreatment(
           RStarTreeDisk<min_branch_factor, max_branch_factor> *treeRef,
           tree_node_handle current_handle,
-          tree_node_handle root_handle,
           std::vector<bool> &hasReinsertedOnLevel
   );
   tree_node_handle condenseTree(std::vector<bool> &hasReinsertedOnLevel);
@@ -752,7 +748,6 @@ template <int min_branch_factor, int max_branch_factor>
 tree_node_handle LeafNode<min_branch_factor, max_branch_factor>::overflowTreatment(
         RStarTreeDisk<min_branch_factor, max_branch_factor> *treeRef,
         tree_node_handle current_handle,
-        tree_node_handle root_handle,
         std::vector<bool> &hasReinsertedOnLevel
 ) {
   uint16_t current_level = current_handle.get_level();
@@ -1793,7 +1788,6 @@ template <int min_branch_factor, int max_branch_factor>
 tree_node_handle BranchNode<min_branch_factor, max_branch_factor>::overflowTreatment(
         RStarTreeDisk<min_branch_factor, max_branch_factor> *treeRef,
         tree_node_handle current_handle,
-        tree_node_handle root_handle,
         std::vector<bool> &hasReinsertedOnLevel
 ) {
   uint16_t current_level = current_handle.get_level();
