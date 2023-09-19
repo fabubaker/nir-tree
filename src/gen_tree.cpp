@@ -99,8 +99,8 @@ void generate_tree(std::map<std::string, size_t> &configU, std::map<std::string,
     // insert the rest of points:
     std::cout << "Sequential Inserting..." << std::endl;
     sequential_insert_tree(tree, configU, all_points.begin() + cut_off_bulk_load, all_points.end(), NIR_FANOUT);
-    
     std::cout << "Created NIRTree." << std::endl;
+    
     double remove_pct = configD["remove_pct"];
     if(remove_pct > 0){
       uint64_t remove_points_num = std::floor(remove_pct * all_points.size() * 0.5);
@@ -118,6 +118,31 @@ void generate_tree(std::map<std::string, size_t> &configU, std::map<std::string,
       uint64_t remove_test2_step = std::floor((remove_test2_end - remove_test2_begin) / remove_points_num);
       std::cout << "Remove "<< remove_points_num << "points from NIRTree evenly distributedly" << std::endl;
       sequential_remove_tree(tree, configU, remove_test2_begin, remove_test2_end, remove_test2_step, NIR_FANOUT);
+      
+      // Search removed points
+      std::cout << "Searching removed points..." << std::endl;
+      for (auto iter = remove_test1_begin; iter < remove_test1_end; iter = iter + remove_test1_step ) {
+        Point p = *iter;
+        std::vector<Point> out = tree->search(p);
+        if (out.size() > 0) {
+          int index = std::distance(all_points.begin(), iter);
+          std::cout << "Removed point" << p << " at index "<< index << " is found"<< std::endl;
+          std::cout << "Output size is " << out.size() << std::endl;
+          abort();
+        }
+      }
+      for (auto iter = remove_test2_begin; iter < remove_test2_end; iter = iter + remove_test2_step ) {
+        Point p = *iter;
+        std::vector<Point> out = tree->search(p);
+        if (out.size() > 0) {
+          int index = std::distance(all_points.begin(), iter);
+          std::cout << "Removed point" << p << " at index "<< index << " is found"<< std::endl;
+          std::cout << "Output size is " << out.size() << std::endl;
+          abort();
+        }
+      }
+      std::cout << "All removed points are not found" << std::endl;
+      
       spatialIndex = tree;
       tree->stat();
       delete tree;
@@ -125,7 +150,6 @@ void generate_tree(std::map<std::string, size_t> &configU, std::map<std::string,
     }
     spatialIndex = tree;
     tree->stat();
-
   } else if (configU["tree"] == R_STAR_TREE) {
     rstartreedisk::RStarTreeDisk<5, R_STAR_FANOUT> *tree = new rstartreedisk::RStarTreeDisk<5, R_STAR_FANOUT>(configU["buffer_pool_memory"], backing_file);
     std::cout << "Bulk Loading..." << std::endl;
@@ -134,6 +158,7 @@ void generate_tree(std::map<std::string, size_t> &configU, std::map<std::string,
     // insert the rest of points:
     sequential_insert_tree(tree, configU, all_points.begin() + cut_off_bulk_load, all_points.end(), NIR_FANOUT);
     std::cout << "Created R*Tree" << std::endl;
+    
     spatialIndex = tree;
     tree->stat();
     exit(0);
@@ -190,7 +215,7 @@ void generate_tree(std::map<std::string, size_t> &configU, std::map<std::string,
 
   std::cout << "Total time to search: " << totalTimeSearches << "s" << std::endl;
   std::cout << "Avg time to search: " << totalTimeSearches / totalSearches << "s" << std::endl;
-  
+
   delete spatialIndex;
   return;
 }

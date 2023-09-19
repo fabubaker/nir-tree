@@ -207,14 +207,22 @@ void NIRTreeDisk<min_branch_factor, max_branch_factor, strategy>::remove(Point g
   if (root.get_type() == LEAF_NODE) {
     auto root_node = get_leaf_node(root);
     auto result = root_node->remove(this, root, givenPoint);
-    // we expect remove() is only called on points which exist
-    assert(result != nullptr);
-    root = result;
+    if (result == nullptr) {
+      std::cout << "Point " << givenPoint << " is not found in tree" << std::endl;
+      // we expect remove() is only called on points which exist
+      assert(result != nullptr);
+    } else {
+      root = result;
+    }
   } else {
     auto root_node = get_branch_node(root);
     auto result = root_node->remove(this, root, givenPoint);
-    assert(result != nullptr);
-    root = result;
+    if (result == nullptr) {
+      std::cout << "Point " << givenPoint << " is not found in tree" << std::endl;
+      assert(result != nullptr);
+    } else {
+      root = result;
+    }
   }
 }
 
