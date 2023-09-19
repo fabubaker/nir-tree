@@ -600,10 +600,10 @@ std::pair<tree_node_handle, tree_node_handle> adjustTreeBottomHalf(
 
 template <int min_branch_factor, int max_branch_factor>
 tree_node_handle adjustTreeSub(
+        RStarTreeDisk<min_branch_factor, max_branch_factor> *treeRef,
         tree_node_handle current_handle,
         tree_node_handle sibling_handle,
-        std::vector<bool> &hasReinsertedOnLevel,
-        RStarTreeDisk<min_branch_factor, max_branch_factor> *treeRef) {
+        std::vector<bool> &hasReinsertedOnLevel) {
   // AT1 [Initialize]
   for (;;) {
     assert(current_handle);
@@ -790,6 +790,9 @@ tree_node_handle LeafNode<min_branch_factor, max_branch_factor>::insert(
 
   // I2 [Add record to leaf node]
   addPoint(nodeEntry);
+
+  // Empty parentHandles since we are the only node in the tree.
+  std::stack<tree_node_handle> parentHandles;
 
   /*std::cout << "Inserted Point: " << nodeEntry <<
         std::endl;
