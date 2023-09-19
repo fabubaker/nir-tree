@@ -752,7 +752,7 @@ tree_node_handle LeafNode<min_branch_factor, max_branch_factor>::reInsert(
   return tree_node_handle(nullptr);
 }
 
-// Overflow treatement for dealing with a node that is too big (overflow)
+// Overflow treatment for dealing with a node that is too big (overflow)
 template <int min_branch_factor, int max_branch_factor>
 tree_node_handle LeafNode<min_branch_factor, max_branch_factor>::overflowTreatment(
         RStarTreeDisk<min_branch_factor, max_branch_factor> *treeRef,
@@ -774,6 +774,8 @@ tree_node_handle LeafNode<min_branch_factor, max_branch_factor>::overflowTreatme
   }
 }
 
+// insert() is always called on the root node. If this gets called,
+// that means the tree only has one leaf node.
 template <int min_branch_factor, int max_branch_factor>
 tree_node_handle LeafNode<min_branch_factor, max_branch_factor>::insert(
         RStarTreeDisk<min_branch_factor, max_branch_factor> *treeRef,
@@ -800,8 +802,8 @@ tree_node_handle LeafNode<min_branch_factor, max_branch_factor>::insert(
 
   // If we exceed treeRef->maxBranchFactor we need to do something about it
   if (cur_offset_ > max_branch_factor) {
-    // We call overflow treatment to determine how our sibling node is treated if we do a
-    // reInsert, sibling is nullptr. This is properly dealt with in adjustTree
+    // We call overflow treatment to determine how our sibling node is treated. If we do a
+    // reInsert, sibling is nullptr. This is properly dealt with in adjustTree.
     sibling_handle = overflowTreatment(
         treeRef,
         current_handle,
@@ -1794,6 +1796,7 @@ tree_node_handle BranchNode<min_branch_factor, max_branch_factor>::overflowTreat
   }
 }
 
+// insert() is always called on the root node.
 template <int min_branch_factor, int max_branch_factor>
 tree_node_handle BranchNode<min_branch_factor, max_branch_factor>::insert(
         RStarTreeDisk<min_branch_factor, max_branch_factor> *treeRef,
