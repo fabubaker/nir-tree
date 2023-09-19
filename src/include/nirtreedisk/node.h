@@ -1014,10 +1014,15 @@ SplitResult LeafNode<min_branch_factor, max_branch_factor, strategy>::splitNode(
   assert(current_handle.get_type() == LEAF_NODE);
   tree_node_allocator *allocator = get_node_allocator(treeRef);
 
+  // Current level of Leaf Node should be 0
+  uint16_t current_level = current_handle.get_level();
+ // assert(current_level == 0);
+
   // Allocate a leaf node for left node
   auto alloc_data = allocator->create_new_tree_node<LeafNode<min_branch_factor, max_branch_factor, strategy>>(
                     NodeHandleType(LEAF_NODE));
   tree_node_handle left_handle = alloc_data.second;
+  left_handle.set_level(current_level);
   auto left_node = alloc_data.first; // take pin
   new (&(*left_node)) LeafNode<min_branch_factor, max_branch_factor, strategy>();
   assert(left_handle.get_type() == LEAF_NODE);
@@ -1026,6 +1031,7 @@ SplitResult LeafNode<min_branch_factor, max_branch_factor, strategy>::splitNode(
   alloc_data = allocator->create_new_tree_node<LeafNode<min_branch_factor, max_branch_factor, strategy>>(
                 NodeHandleType(LEAF_NODE));
   tree_node_handle right_handle = alloc_data.second;
+  right_handle.set_level(current_level);
   auto right_node = alloc_data.first; // take pin
   new (&(*right_node)) LeafNode<min_branch_factor, max_branch_factor, strategy>();
   assert(right_handle.get_type() == LEAF_NODE);
@@ -1571,11 +1577,14 @@ tree_node_handle LeafNode<min_branch_factor, max_branch_factor, strategy>::inser
 
   // Grow the tree taller if there are two branches at root level 
   if (finalSplit.leftBranch.child != nullptr and finalSplit.rightBranch.child != nullptr) {
+    uint16_t current_root_level = selfHandle.get_level();
     tree_node_allocator *allocator = get_node_allocator(treeRef);
     auto alloc_data = allocator->create_new_tree_node<BranchNode<min_branch_factor, max_branch_factor, strategy>>(
                       NodeHandleType(BRANCH_NODE));
     new (&(*alloc_data.first)) BranchNode<min_branch_factor, max_branch_factor, strategy>();
     auto new_root_handle = alloc_data.second;
+    // grow the level for new root
+    new_root_handle.set_level(current_root_level + 1);
     auto new_root_node = alloc_data.first;
     assert(new_root_handle.get_type() == BRANCH_NODE);
 
@@ -1583,7 +1592,9 @@ tree_node_handle LeafNode<min_branch_factor, max_branch_factor, strategy>::inser
     // as we are starting as one leaf node
     assert(finalSplit.leftBranch.child.get_type() == LEAF_NODE);
     assert(finalSplit.rightBranch.child.get_type() == LEAF_NODE);
-
+    assert(finalSplit.leftBranch.child.get_level() == 0);
+    assert(finalSplit.rightBranch.child.get_level() == 0);
+    
     // Add to new root
     new_root_node->addBranchToNode(finalSplit.leftBranch);
     new_root_node->addBranchToNode(finalSplit.rightBranch);
@@ -2508,12 +2519,15 @@ SplitResult BranchNode<min_branch_factor, max_branch_factor, strategy>::splitNod
           bool is_downsplit) {
 
   assert(current_handle.get_type() == BRANCH_NODE);
+  uint16_t current_level = current_handle.get_level();
+  //assert(current_level > 0);
   tree_node_allocator *allocator = get_node_allocator(treeRef);
   
   // Allocate a branch node for left node
   auto alloc_data = allocator->create_new_tree_node<BranchNode<min_branch_factor, max_branch_factor, strategy>>(
                   NodeHandleType(BRANCH_NODE));
   tree_node_handle left_handle = alloc_data.second;
+  left_handle.set_level(current_level);
   auto left_node = alloc_data.first; // take pin
   new (&(*left_node)) BranchNode<min_branch_factor, max_branch_factor, strategy>();
   
@@ -2521,6 +2535,7 @@ SplitResult BranchNode<min_branch_factor, max_branch_factor, strategy>::splitNod
   alloc_data = allocator->create_new_tree_node<BranchNode<min_branch_factor, max_branch_factor, strategy>>(
                   NodeHandleType(BRANCH_NODE));
   tree_node_handle right_handle = alloc_data.second;
+  right_handle.set_level(current_level);
   auto right_node = alloc_data.first; // take pin
   new (&(*right_node)) BranchNode<min_branch_factor, max_branch_factor, strategy>();
 
@@ -2815,11 +2830,16 @@ tree_node_handle BranchNode<min_branch_factor, max_branch_factor, strategy>::ins
   testDisjoint(treeRef,finalSplit.rightBranch.child, "Right Subtree");
   testDisjoint(treeRef, finalSplit.leftBranch.child, "Left Subtree");
 #endif
+
+    uint16_t current_root_level = selfHandle.get_level();
+
     // Allocate new root
     auto alloc_data = allocator->create_new_tree_node<BranchNode<min_branch_factor, max_branch_factor, strategy>>(
                     NodeHandleType(BRANCH_NODE));
     new (&(*alloc_data.first)) BranchNode<min_branch_factor, max_branch_factor, strategy>();
     auto new_root_handle = alloc_data.second;
+    // grow the level for new root
+    new_root_handle.set_level(current_root_level + 1);
     auto new_root_node = alloc_data.first;
 
     // Add to new root
@@ -2852,7 +2872,7 @@ tree_node_handle BranchNode<min_branch_factor, max_branch_factor, strategy>::ins
   testCount(treeRef, ret_handle);
   testContainPoints(treeRef, ret_handle);
 #endif 
-
+  testLevels(treeRef, ret_handle);
   return ret_handle;
 }
 
@@ -3789,6 +3809,37 @@ void testContainPoints(NIRTreeDisk<min_branch_factor, max_branch_factor, strateg
     }
   }
 #endif 
+}
+
+template <int min_branch_factor, int max_branch_factor, class strategy>
+void testLevels(NIRTreeDisk<min_branch_factor, max_branch_factor, strategy> *treeRef, 
+                       tree_node_handle root){
+  auto root_node = treeRef->get_branch_node(root);
+  uint8_t root_level = root_node->height(treeRef, root) - 1;
+  std::stack<std::pair<tree_node_handle, uint8_t>> context; 
+  context.push(std::make_pair(root, root_level));
+  while(not context.empty()){
+    auto handle_level = context.top();
+    context.pop();
+    tree_node_handle current_handle = handle_level.first;
+    uint8_t current_level = handle_level.second;
+    if(current_handle.get_level() != current_level){
+      std::cout << "current_handle.get_level() is " << current_handle.get_level() << std::endl;
+      std::cout << "current_level is expected to be " << current_level << std::endl;
+    }
+    if(current_handle.get_type() == LEAF_NODE) {
+      if(current_handle.get_level() != 0){
+        std::cout << "current_handle.get_level() is " << current_handle.get_level() << std::endl;
+        std::cout << "Leaf Node is expected to be 0" << std::endl;
+      }
+    } else {
+      auto current_node = treeRef->get_branch_node(current_handle);
+      for (int i = 0; i < current_node->cur_offset_; ++i){
+        Branch bi = current_node->entries[i];
+        context.push(std::make_pair(bi.child, current_level - 1));
+      }
+    }
+  }
 }
 
 
