@@ -1,0 +1,55 @@
+### GEN TREE PARAMETERS ###
+  tree = NIR_TREE
+  benchmark = POIS
+  size = 0
+  seed = 0
+  buffer pool memory = 10000000000
+  bulk load percent = 0.99
+### ### ### ### ### ###
+
+Bulk loading 145210679 points.
+Sequential Inserting 1466775 points.
+Bulk Loading...
+Creating tree with 10000000000bytes
+Num els: 145210679
+Max depth required: 4
+Size of NIR branch node: 4040
+Out of line size: 0
+Bulk loading NIRTree took: 1021.46
+Completed with 18443 intersections
+Total pages occupied: 1770864
+Sequential Inserting...
+Num els: 1466775
+Finished insertion for 100000 points with 123.988s...
+Finished insertion for 200000 points with 203.846s...
+Finished insertion for 300000 points with 229.661s...
+Finished insertion for 400000 points with 154.818s...
+Finished insertion for 500000 points with 186.743s...
+Finished insertion for 600000 points with 184.541s...
+Finished insertion for 700000 points with 337.395s...
+Finished insertion for 800000 points with 436.909s...
+Finished insertion for 900000 points with 508.392s...
+Finished insertion for 1000000 points with 350.182s...
+Finished insertion for 1100000 points with 380.086s...
+Finished insertion for 1200000 points with 331.254s...
+Finished insertion for 1300000 points with 289.306s...
+Finished insertion for 1400000 points with 282.536s...
+Out of line size: 0
+Sequential Inserting 1466775 points to NIRTree took: 4200.51
+Total pages occupied now: 1827243
+Created NIRTree.
+Histogram of Searched Nodes Follows:
+Histogram of Searched Leaves Follows:
+Histogram of Range Searched Nodes Follows:
+Histogram of Range Searched Leaves Follows:
+Histogram of Scatter Follows:
+Histogram of Out of Line Follows:
+Histogram of Searched Nodes Follows:
+Histogram of Searched Leaves Follows:
+Histogram of Range Searched Nodes Follows:
+Histogram of Range Searched Leaves Follows:
+Histogram of Scatter Follows:
+  1 : 40000
+Histogram of Out of Line Follows:
+Total time to search: 0.0693309s
+Avg time to search: 6.93309e-06s
