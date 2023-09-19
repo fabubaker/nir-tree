@@ -93,6 +93,7 @@ public:
     RStarTreeDisk<min_branch_factor, max_branch_factor> *treeRef,
     tree_node_handle self_handle,
     tree_node_handle sibling_handle,
+    std::stack<tree_node_handle> parentHandles,
     std::vector<bool> &hasReinsertedOnLevel
   );
   tree_node_handle reInsert(
@@ -175,6 +176,7 @@ public:
           RStarTreeDisk<min_branch_factor, max_branch_factor> *treeRef,
           tree_node_handle current_handle,
           tree_node_handle sibling_handle,
+          std::stack<tree_node_handle> parentHandles,
           std::vector<bool> &hasReinsertedOnLevel
   );
   tree_node_handle reInsert(
@@ -539,6 +541,8 @@ template <class NT>
 std::pair<tree_node_handle, tree_node_handle> adjustTreeBottomHalf(
         NT node,
         NT sibling,
+        tree_node_handle current_handle,
+        std::stack<tree_node_handle> parentHandles,
         std::vector<bool> &hasReinsertedOnLevel,
         int max_branch_factor)
 {
@@ -603,6 +607,7 @@ tree_node_handle adjustTreeSub(
         RStarTreeDisk<min_branch_factor, max_branch_factor> *treeRef,
         tree_node_handle current_handle,
         tree_node_handle sibling_handle,
+        std::stack<tree_node_handle> parentHandles,
         std::vector<bool> &hasReinsertedOnLevel) {
   // AT1 [Initialize]
   for (;;) {
@@ -614,9 +619,7 @@ tree_node_handle adjustTreeSub(
         break;
       }
 
-      pinned_node_ptr<LeafNode<min_branch_factor, max_branch_factor>>
-              sibling_node(treeRef->node_allocator_->buffer_pool_, nullptr,
-                           nullptr);
+      pinned_node_ptr<LeafNode<min_branch_factor, max_branch_factor>> sibling_node;
       assert(sibling_node == nullptr);
 
       if (sibling_handle) {
@@ -627,18 +630,21 @@ tree_node_handle adjustTreeSub(
       auto ret_data = adjustTreeBottomHalf(
               node,
               sibling_node,
+              current_handle,
+              parentHandles,
               hasReinsertedOnLevel,
               max_branch_factor);
+
       current_handle = ret_data.first;
       sibling_handle = ret_data.second;
     } else {
       auto node = treeRef->get_branch_node(current_handle);
+
       if (!node->parent) {
         break;
       }
-      pinned_node_ptr<BranchNode<min_branch_factor, max_branch_factor>>
-              sibling_node(treeRef->node_allocator_->buffer_pool_, nullptr,
-                           nullptr);
+
+      pinned_node_ptr<BranchNode<min_branch_factor, max_branch_factor>> sibling_node;
       assert(sibling_node == nullptr);
 
       if (sibling_handle) {
@@ -649,11 +655,15 @@ tree_node_handle adjustTreeSub(
       auto ret_data = adjustTreeBottomHalf(
               node,
               sibling_node,
+              current_handle,
+              parentHandles,
               hasReinsertedOnLevel,
               max_branch_factor);
+
       current_handle = ret_data.first;
       sibling_handle = ret_data.second;
     }
+
     if (!current_handle) {
       break;
     }
@@ -667,9 +677,10 @@ tree_node_handle LeafNode<min_branch_factor, max_branch_factor>::adjustTree(
         RStarTreeDisk<min_branch_factor, max_branch_factor> *treeRef,
         tree_node_handle current_handle,
         tree_node_handle sibling_handle,
+        std::stack<tree_node_handle> parentHandles,
         std::vector<bool> &hasReinsertedOnLevel
 ) {
-  return adjustTreeSub(treeRef, current_handle, sibling_handle, hasReinsertedOnLevel);
+  return adjustTreeSub(treeRef, current_handle, sibling_handle, parentHandles, hasReinsertedOnLevel);
 }
 
 template <int min_branch_factor, int max_branch_factor>
@@ -677,9 +688,10 @@ tree_node_handle BranchNode<min_branch_factor, max_branch_factor>::adjustTree(
         RStarTreeDisk<min_branch_factor, max_branch_factor> *treeRef,
         tree_node_handle current_handle,
         tree_node_handle sibling_handle,
+        std::stack<tree_node_handle> parentHandles,
         std::vector<bool> &hasReinsertedOnLevel
 ) {
-  return adjustTreeSub(treeRef, current_handle, sibling_handle, hasReinsertedOnLevel);
+  return adjustTreeSub(treeRef, current_handle, sibling_handle, parentHandles, hasReinsertedOnLevel);
 }
 
 template <int min_branch_factor, int max_branch_factor>
@@ -819,6 +831,7 @@ tree_node_handle LeafNode<min_branch_factor, max_branch_factor>::insert(
           treeRef,
           current_handle,
           sibling_handle,
+          parentHandles,
           hasReinsertedOnLevel
   );
 
