@@ -91,9 +91,9 @@ public:
   );
   tree_node_handle adjustTree(
     RStarTreeDisk<min_branch_factor, max_branch_factor> *treeRef,
-    tree_node_handle self_handle,
+    tree_node_handle current_handle,
     tree_node_handle sibling_handle,
-    std::stack<tree_node_handle> parentHandles,
+    std::stack<tree_node_handle> &parentHandles,
     std::vector<bool> &hasReinsertedOnLevel
   );
   tree_node_handle reInsert(
@@ -176,7 +176,7 @@ public:
           RStarTreeDisk<min_branch_factor, max_branch_factor> *treeRef,
           tree_node_handle current_handle,
           tree_node_handle sibling_handle,
-          std::stack<tree_node_handle> parentHandles,
+          std::stack<tree_node_handle> &parentHandles,
           std::vector<bool> &hasReinsertedOnLevel
   );
   tree_node_handle reInsert(
@@ -537,45 +537,46 @@ tree_node_handle LeafNode<min_branch_factor, max_branch_factor>::splitNode(
   return sibling_handle;
 }
 
-template <class NT>
+template <class NT, class TR>
 std::pair<tree_node_handle, tree_node_handle> adjustTreeBottomHalf(
+        TR *treeRef,
         NT node,
         NT sibling,
         tree_node_handle current_handle,
-        std::stack<tree_node_handle> parentHandles,
+        tree_node_handle sibling_handle,
+        std::stack<tree_node_handle> &parentHandles,
         std::vector<bool> &hasReinsertedOnLevel,
         int max_branch_factor)
 {
-  auto *tree_ref_backup = node->treeRef;
+  // The caller should ensure that parentHandles is not empty.
+  assert(!parentHandles.empty());
 
-  tree_node_handle parent_handle = node->parent;
-  tree_node_handle node_handle = node->self_handle_;
-  auto parent_ptr = tree_ref_backup->get_branch_node(parent_handle);
+  tree_node_handle node_handle = current_handle;
+  tree_node_handle parent_handle = parentHandles.top();
+  parentHandles.pop();
 
+  auto parent_ptr = treeRef->get_branch_node(parent_handle);
   bool didUpdateBoundingBox = parent_ptr->updateBoundingBox(node_handle, node->boundingBox());
 
   // If we have a split then deal with it otherwise move up the tree
   if (sibling != nullptr) {
-    tree_node_handle sibling_handle = sibling->self_handle_;
     Rectangle bb = sibling->boundingBox();
     // AT4 [Propogate the node split upwards]
     Branch b(bb, sibling_handle);
     parent_ptr->addBranchToNode(b);
 
     unsigned sz = parent_ptr->cur_offset_;
+
     if (sz >= (unsigned) max_branch_factor) {
-      tree_node_handle parent_before_handle = node->parent;
-      tree_node_handle sibling_parent_handle = parent_ptr->overflowTreatment(hasReinsertedOnLevel);
+      tree_node_handle parent_before_handle = parent_handle;
+      tree_node_handle sibling_parent_handle = parent_ptr->overflowTreatment(
+              treeRef,
+              node_handle,
+              hasReinsertedOnLevel
+      );
 
       if (sibling_parent_handle) {
         // We split our parent, so now we have two (possible) parents
-        assert(node->parent == sibling_parent_handle ||
-               node->parent == parent_before_handle);
-        assert(sibling->parent ==
-               sibling_parent_handle ||
-               sibling->parent ==
-               parent_before_handle);
-
         // Need to keep traversing up
         node_handle = parent_before_handle;
         sibling_handle = sibling_parent_handle;
@@ -585,20 +586,22 @@ std::pair<tree_node_handle, tree_node_handle> adjustTreeBottomHalf(
       }
     }
 
-    node_handle = parent_ptr->self_handle_;
+    node_handle = parent_handle;
     sibling_handle = tree_node_handle(nullptr);
 
     return std::make_pair(node_handle, sibling_handle);
   }
+
   // AT5 [Move up to next level]
   if (didUpdateBoundingBox) {
-    node_handle = parent_ptr->self_handle_;
+    node_handle = parent_handle;
   } else {
     // If we didn't update our bounding box and there was no split, no reason to keep
     // going.
     return std::make_pair(tree_node_handle(nullptr),
                           tree_node_handle(nullptr));
   }
+
   return std::make_pair(node_handle, tree_node_handle(nullptr));
 }
 
@@ -607,19 +610,22 @@ tree_node_handle adjustTreeSub(
         RStarTreeDisk<min_branch_factor, max_branch_factor> *treeRef,
         tree_node_handle current_handle,
         tree_node_handle sibling_handle,
-        std::stack<tree_node_handle> parentHandles,
+        std::stack<tree_node_handle> &parentHandles,
         std::vector<bool> &hasReinsertedOnLevel) {
   // AT1 [Initialize]
   for (;;) {
     assert(current_handle);
 
+    if (parentHandles.empty()) { // No more parents to traverse up
+      break;
+    }
+
     if (current_handle.get_type() == LEAF_NODE) {
       auto node = treeRef->get_leaf_node(current_handle);
-      if (!node->parent) {
-        break;
-      }
 
-      pinned_node_ptr<LeafNode<min_branch_factor, max_branch_factor>> sibling_node;
+      pinned_node_ptr<LeafNode<min_branch_factor, max_branch_factor>> sibling_node(
+        treeRef->node_allocator_->buffer_pool_, nullptr, nullptr
+      );
       assert(sibling_node == nullptr);
 
       if (sibling_handle) {
@@ -628,9 +634,11 @@ tree_node_handle adjustTreeSub(
       }
 
       auto ret_data = adjustTreeBottomHalf(
+              treeRef,
               node,
               sibling_node,
               current_handle,
+              sibling_handle,
               parentHandles,
               hasReinsertedOnLevel,
               max_branch_factor);
@@ -640,11 +648,9 @@ tree_node_handle adjustTreeSub(
     } else {
       auto node = treeRef->get_branch_node(current_handle);
 
-      if (!node->parent) {
-        break;
-      }
-
-      pinned_node_ptr<BranchNode<min_branch_factor, max_branch_factor>> sibling_node;
+      pinned_node_ptr<BranchNode<min_branch_factor, max_branch_factor>> sibling_node(
+              treeRef->node_allocator_->buffer_pool_, nullptr, nullptr
+      );
       assert(sibling_node == nullptr);
 
       if (sibling_handle) {
@@ -653,9 +659,11 @@ tree_node_handle adjustTreeSub(
       }
 
       auto ret_data = adjustTreeBottomHalf(
+              treeRef,
               node,
               sibling_node,
               current_handle,
+              sibling_handle,
               parentHandles,
               hasReinsertedOnLevel,
               max_branch_factor);
@@ -677,7 +685,7 @@ tree_node_handle LeafNode<min_branch_factor, max_branch_factor>::adjustTree(
         RStarTreeDisk<min_branch_factor, max_branch_factor> *treeRef,
         tree_node_handle current_handle,
         tree_node_handle sibling_handle,
-        std::stack<tree_node_handle> parentHandles,
+        std::stack<tree_node_handle> &parentHandles,
         std::vector<bool> &hasReinsertedOnLevel
 ) {
   return adjustTreeSub(treeRef, current_handle, sibling_handle, parentHandles, hasReinsertedOnLevel);
@@ -688,7 +696,7 @@ tree_node_handle BranchNode<min_branch_factor, max_branch_factor>::adjustTree(
         RStarTreeDisk<min_branch_factor, max_branch_factor> *treeRef,
         tree_node_handle current_handle,
         tree_node_handle sibling_handle,
-        std::stack<tree_node_handle> parentHandles,
+        std::stack<tree_node_handle> &parentHandles,
         std::vector<bool> &hasReinsertedOnLevel
 ) {
   return adjustTreeSub(treeRef, current_handle, sibling_handle, parentHandles, hasReinsertedOnLevel);
@@ -753,11 +761,11 @@ tree_node_handle LeafNode<min_branch_factor, max_branch_factor>::reInsert(
 
   for (const Point &entry : entriesToReinsert) {
     if (treeRef->root.get_type() == LEAF_NODE) {
-      treeRef->root = root_node->insert(entry, hasReinsertedOnLevel);
-      root_node = treeRef->get_leaf_node(treeRef->root);
+      treeRef->root = root_node->insert(treeRef, treeRef->root, entry, hasReinsertedOnLevel);
+      auto root_node = treeRef->get_leaf_node(treeRef->root);
     } else {
-      treeRef->root = root_node->insert(entry, hasReinsertedOnLevel);
-      root_node = treeRef->get_branch_node(treeRef->root);
+      treeRef->root = root_node->insert(treeRef, treeRef->root, entry, hasReinsertedOnLevel);
+      auto root_node = treeRef->get_branch_node(treeRef->root);
     }
   }
 
@@ -806,6 +814,9 @@ tree_node_handle LeafNode<min_branch_factor, max_branch_factor>::insert(
   // Empty parentHandles since we are the only node in the tree.
   std::stack<tree_node_handle> parentHandles;
 
+  uint16_t current_level = current_handle.get_level();
+  assert(current_level == 0); // Leaf nodes have level = 0
+
   /*std::cout << "Inserted Point: " << nodeEntry <<
         std::endl;
     std::cout << "Insertion point now has points: { " << std::endl;
@@ -826,7 +837,7 @@ tree_node_handle LeafNode<min_branch_factor, max_branch_factor>::insert(
     );
   }
 
-  // I3 [Propogate overflow treatment changes upward]
+  // I3 [Propagate overflow treatment changes upward]
   sibling_handle = adjustTree(
           treeRef,
           current_handle,
@@ -842,7 +853,7 @@ tree_node_handle LeafNode<min_branch_factor, max_branch_factor>::insert(
                     NodeHandleType(BRANCH_NODE));
     auto newRoot = alloc_data.first;
     tree_node_handle new_root_handle = alloc_data.second;
-    new_root_handle.set_level(0);
+    new_root_handle.set_level(current_level + 1);
 
     auto sibling = treeRef->get_leaf_node(sibling_handle);
 
@@ -858,7 +869,7 @@ tree_node_handle LeafNode<min_branch_factor, max_branch_factor>::insert(
 
     // Ensure newRoot has both children
     assert(newRoot->cur_offset_ == 2);
-    assert(sibling_handle.get_level() == new_root_handle.get_level() + 1);
+    assert(sibling_handle.get_level() + 1 == new_root_handle.get_level());
 
     // Fix the reinserted length
     hasReinsertedOnLevel.push_back(false);
@@ -1783,7 +1794,7 @@ tree_node_handle BranchNode<min_branch_factor, max_branch_factor>::reInsert(
     */
 
   for (const Branch &entry : entriesToReinsert) {
-    treeRef->root = root_node->insert(entry, hasReinsertedOnLevel);
+    treeRef->root = root_node->insert(treeRef, treeRef->root, entry, hasReinsertedOnLevel);
     root_node = treeRef->get_branch_node(treeRef->root);
   }
 
@@ -1820,6 +1831,7 @@ tree_node_handle BranchNode<min_branch_factor, max_branch_factor>::insert(
         NodeEntry nodeEntry,
         std::vector<bool> &hasReinsertedOnLevel
 ) {
+#if 0
   tree_node_allocator *allocator = get_node_allocator(treeRef);
 
   // I1 [Find position for new record]
@@ -1939,6 +1951,7 @@ tree_node_handle BranchNode<min_branch_factor, max_branch_factor>::insert(
     // up-to-date root handle.
     return treeRef->root;
   }
+#endif
 }
 
 // Always called on root, this = root
