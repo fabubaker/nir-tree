@@ -821,6 +821,9 @@ void basic_split_branch(
       new (&(*(alloc_data.first))) LN();
       auto leaf_node = alloc_data.first;
       tree_node_handle leaf_handle = alloc_data.second;
+      unsigned next_level = height - 1;
+      // set level for leaf node handle
+      leaf_handle.set_level(next_level);
 
       // Recurse onto next level with M = branch factor
       uint64_t new_M = branch_factor;
@@ -830,6 +833,7 @@ void basic_split_branch(
       rstartreedisk::Branch b;
       b.child = leaf_handle;
       b.boundingBox = leaf_node->boundingBox();
+      assert(b.child.get_level() == 0);
       branch_node->addBranchToNode(b);
     } else {
       // The next level is a branch node, so we allocate a branch node
@@ -837,6 +841,9 @@ void basic_split_branch(
       new (&(*(alloc_data.first))) BN();
       auto child_node = alloc_data.first;
       tree_node_handle child_handle = alloc_data.second;
+      unsigned next_level = height - 1;
+      // set level for branch node handle
+      child_handle.set_level(next_level);
 
       // Recurse onto next level
       uint64_t new_M = pow(branch_factor, (std::ceil(log(count) / log(branch_factor)) - 1));
@@ -846,6 +853,7 @@ void basic_split_branch(
       rstartreedisk::Branch b;
       b.child = child_handle;
       b.boundingBox = child_node->boundingBox();
+      assert(b.child.get_level() == (height - 1));
       branch_node->addBranchToNode(b);
     }
 
@@ -1000,11 +1008,42 @@ tree_node_handle tgs_load(
 
   // Height of the R-tree root node (leaf has height 0)
   unsigned height = std::ceil(log(end - begin) / log(branch_factor)) - 1;
+  unsigned root_level = height; 
   uint64_t M = pow(branch_factor, height);
 
   basic_split_branch(tree, begins, ends, branch_factor, height, M, root_node); 
-
+  // Set level for root node
+  root_handle.set_level(root_level);
   return root_handle;
+}
+
+template <class TR>
+void testLevels(TR *tree, tree_node_handle root, unsigned root_level){
+  std::stack<std::pair<tree_node_handle, unsigned>> context; 
+  context.push(std::make_pair(root, root_level));
+  while(not context.empty()){
+    auto handle_level = context.top();
+    context.pop();
+    tree_node_handle current_handle = handle_level.first;
+    uint8_t current_level = handle_level.second;
+    if(current_handle.get_level() != current_level){
+      std::cout << "current_handle.get_level() is " << current_handle.get_level() << std::endl;
+      std::cout << "current_level is expected to be " << current_level << std::endl;
+    }
+    if(current_handle.get_type() == LEAF_NODE) {
+      if(current_handle.get_level() != 0){
+        std::cout << "current_handle.get_level() is " << current_handle.get_level() << std::endl;
+        std::cout << "Leaf Node is expected to be 0" << std::endl;
+      }
+    } else {
+      auto current_node = tree->get_branch_node(current_handle);
+      for (int i = 0; i < current_node->cur_offset_; ++i){
+        auto bi = current_node->entries[i];
+        context.push(std::make_pair(bi.child, current_level - 1));
+      }
+    }
+  }
+  std::cout << "Pass Level Test" << std::endl;
 }
 
 template <>
@@ -1082,6 +1121,11 @@ void bulk_load_tree(
   std::chrono::high_resolution_clock::time_point end_time = std::chrono::high_resolution_clock::now();
   std::chrono::duration<double> delta = std::chrono::duration_cast<std::chrono::duration<double>>(end_time - begin_time);
   /* End measuring bulk load time */
+
+  // run level test
+  // Height of the R-tree root node (leaf has height 0)
+  unsigned root_level = std::ceil(log(end - begin) / log(max_branch_factor)) - 1;
+  testLevels(tree, tree->root, root_level);
 
   std::cout << "Bulk loading tree took: " << delta.count() << std::endl;
   std::cout << "Total pages occupied: " << tree->node_allocator_->cur_page_ << std::endl;
