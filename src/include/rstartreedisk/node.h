@@ -1300,15 +1300,14 @@ std::vector<Point> rectangle_search(
 
 template <int min_branch_factor, int max_branch_factor>
 tree_node_handle BranchNode<min_branch_factor, max_branch_factor>::chooseSubtree(const NodeEntry &givenNodeEntry) {
-#if 0
-  // CS1: This is CAlled on the root! Just like above
+  // CS1: This is called on the root! Just like insert/reinsert
   // CS2: If N is a leaf return N (same)
-  // CS3: If the child pointers (bounding boxes) -> choose reactangle that needs least
-  // 		overlap enlargment to fit the new Point/bounding rectangle if tie return smallest area
+  // CS3: If the child pointers (bounding boxes) -> choose rectangle that needs least
+  // 		overlap enlargement to fit the new Point/bounding rectangle. If tie return smallest area.
   // 		i.e. the rectangle that has the least overlap -> tbh I'm not sure we can just leave this
   // 	Else:
-  // 		If not child pointers (bounding boxes) -> choose reactangle that needs least
-  // 		overlap enlargment to fit the new Point (same as before) if tie return smallest area (same)
+  // 		If not child pointers (bounding boxes) -> choose rectangle that needs least
+  // 		overlap enlargement to fit the new Point (same as before) if tie return smallest area (same)
 
   // CL1 [Initialize]
   tree_node_handle node_handle = self_handle_;
@@ -1433,7 +1432,6 @@ tree_node_handle BranchNode<min_branch_factor, max_branch_factor>::chooseSubtree
     // Descend
     node_handle = node->entries[descentIndex].child;
   }
-#endif
 
   // Unsupported
   abort();
