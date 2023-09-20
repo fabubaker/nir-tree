@@ -29,6 +29,7 @@ void parameters(std::map<std::string, uint64_t> &configU, std::map<std::string, 
   std::cout << "  buffer pool memory = " << configU["buffer_pool_memory"] << std::endl;
   std::cout << "  points per rectangle = " << configU["points_per_rectangle"] << std::endl;
   std::cout << "  points to search = " << configU["num_points_to_search"] << std::endl;
+  std::cout << "  points to delete = " << configU["num_points_to_delete"] << std::endl;
   std::cout << "  db file name = " << configS["db_file_name"] << std::endl;
   std::cout << "### ### ### ### ### ###" << std::endl << std::endl;
 }
@@ -124,11 +125,12 @@ int main(int argc, char *argv[]) {
   configU.emplace("seed", 3141);
   configU.emplace("rectanglescount", 5000);
   configU.emplace("visualization", false);
+  configU.emplace("num_points_to_delete", 0);
 
   std::map<std::string, double> configD;
   std::map<std::string, std::string> configS;
 
-  while ((option = getopt(argc, argv, "t:m:a:b:n:s:r:v:z:g:p:B:P:S:f:L:A:")) != -1) {
+  while ((option = getopt(argc, argv, "t:m:a:b:n:s:r:v:z:g:p:B:P:S:f:L:A:D:")) != -1) {
     switch (option) {
       case 't': // Tree
       {
@@ -198,6 +200,11 @@ int main(int argc, char *argv[]) {
       case 'S': // Number of search points
       {
         configU["num_points_to_search"] = std::stoull(optarg);
+        break;
+      }
+      case 'D':
+      {
+        configU["num_points_to_delete"] = std::stoull(optarg);
         break;
       }
       case 'f': // db file name

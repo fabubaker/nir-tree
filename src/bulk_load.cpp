@@ -1118,7 +1118,7 @@ void sequential_insert_tree(
   std::chrono::duration<double> delta = std::chrono::duration_cast<std::chrono::duration<double>>(end_time - begin_time);
   
   std::cout << "Sequentially Inserting "<< total_insert << " points to NIRTree took: " << delta.count() << std::endl;
-  std::cout << "Total pages occupied now: " << tree->node_allocator_->get_used_page_number() << std::endl;
+  std::cout << "Total pages occupied now: " << tree->node_allocator_->get_total_pages_occupied() << std::endl;
   tree->write_metadata();
 }
 
@@ -1151,74 +1151,6 @@ void sequential_insert_tree(
   std::chrono::duration<double> delta = std::chrono::duration_cast<std::chrono::duration<double>>(end_time - begin_time);
   
   std::cout << "Sequentially Inserting "<< total_insert << " points to NIRTree took: " << delta.count() << std::endl;
-  std::cout << "Total pages occupied now: " << tree->node_allocator_->get_used_page_number() << std::endl;
-  tree->write_metadata();
-}
-
-template <>
-void sequential_remove_tree(
-    nirtreedisk::NIRTreeDisk<5, NIR_FANOUT, nirtreedisk::ExperimentalStrategy> *tree,
-    std::map<std::string, size_t> &configU,
-    std::vector<Point>::iterator begin,
-    std::vector<Point>::iterator end,
-    uint64_t step,
-    unsigned max_branch_factor
-) {
-  // begin is inclusive, end is exclusive 
-  uint64_t num_els = std::floor((end - begin) / step);
-  std::cout << "Num els to remove: " << num_els << std::endl;
-  uint64_t total_remove = 0;
-  uint64_t print_count = pow(10, int(log10(num_els)) - 1);
-  std::chrono::high_resolution_clock::time_point begin_time = std::chrono::high_resolution_clock::now();
-  std::chrono::high_resolution_clock::time_point section_begin_time = begin_time;
-  for(auto iter = begin ; iter < end; iter = iter + step){
-      tree->remove(*iter); 
-      total_remove ++;
-    if (total_remove % print_count == 0) {
-      std::chrono::high_resolution_clock::time_point section_end_time = std::chrono::high_resolution_clock::now();
-      auto delta =  std::chrono::duration_cast<std::chrono::duration<double>>(section_end_time - section_begin_time); 
-      std::cout << "Finished removal for " << total_remove << " points with " << delta.count() << "s..."<< std::endl;
-      section_begin_time = section_end_time;
-    }
-  }
-  std::chrono::high_resolution_clock::time_point end_time = std::chrono::high_resolution_clock::now();
-  std::chrono::duration<double> delta = std::chrono::duration_cast<std::chrono::duration<double>>(end_time - begin_time);
-
-  std::cout << "Sequentially Removing "<< total_remove << " points from NIRTree took: " << delta.count() << std::endl;
-  std::cout << "Total pages occupied now: " << tree->node_allocator_->get_used_page_number() << std::endl;
-  tree->write_metadata();
-}
-
-template <>
-void sequential_remove_tree(
-    rstartreedisk::RStarTreeDisk<5, R_STAR_FANOUT> *tree,
-    std::map<std::string, size_t> &configU,
-    std::vector<Point>::iterator begin,
-    std::vector<Point>::iterator end,
-    uint64_t step,
-    unsigned max_branch_factor
-) {
-  // begin is inclusive, end is exclusive 
-  uint64_t num_els = std::floor((end - begin) / step);
-  std::cout << "Num els to remove: " << num_els << std::endl;
-  uint64_t total_remove = 0;
-  uint64_t print_count = pow(10, int(log10(num_els)) - 1);
-  std::chrono::high_resolution_clock::time_point begin_time = std::chrono::high_resolution_clock::now();
-  std::chrono::high_resolution_clock::time_point section_begin_time = begin_time;
-  for(auto iter = begin ; iter < end; iter = iter + step){
-      tree->remove(*iter); 
-      total_remove ++;
-    if (total_remove % print_count == 0) {
-      std::chrono::high_resolution_clock::time_point section_end_time = std::chrono::high_resolution_clock::now();
-      auto delta =  std::chrono::duration_cast<std::chrono::duration<double>>(section_end_time - section_begin_time); 
-      std::cout << "Finished removal for " << total_remove << " points with " << delta.count() << "s..."<< std::endl;
-      section_begin_time = section_end_time; 
-    }
-  }
-  std::chrono::high_resolution_clock::time_point end_time = std::chrono::high_resolution_clock::now();
-  std::chrono::duration<double> delta = std::chrono::duration_cast<std::chrono::duration<double>>(end_time - begin_time);
-
-  std::cout << "Sequentially Removing "<< total_remove << " points from NIRTree took: " << delta.count() << std::endl;
-  std::cout << "Total pages occupied now: " << tree->node_allocator_->get_used_page_number() << std::endl;
+  std::cout << "Total pages occupied now: " << tree->node_allocator_->get_total_pages_occupied() << std::endl;
   tree->write_metadata();
 }

@@ -189,28 +189,3 @@ void sequential_insert_tree(
     unsigned max_branch_factor);
 
 
-template <typename T>
-void sequential_remove_tree(
-    T *tree,
-    std::map<std::string, size_t> &configU,
-    std::vector<Point>::iterator begin,
-    std::vector<Point>::iterator end,
-    uint64_t step,
-    unsigned max_branch_factor);
-
-template <>
-void sequential_remove_tree(
-    nirtreedisk::NIRTreeDisk<5, NIR_FANOUT, nirtreedisk::ExperimentalStrategy> *tree,
-    std::map<std::string, size_t> &configU,
-    std::vector<Point>::iterator begin,
-    std::vector<Point>::iterator end,
-    uint64_t step,
-    unsigned max_branch_factor);
-template <>
-void sequential_remove_tree(
-    rstartreedisk::RStarTreeDisk<5, R_STAR_FANOUT> *tree,
-    std::map<std::string, size_t> &configU,
-    std::vector<Point>::iterator begin,
-    std::vector<Point>::iterator end,
-    uint64_t step,
-    unsigned max_branch_factor);

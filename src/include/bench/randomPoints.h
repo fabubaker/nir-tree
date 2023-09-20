@@ -925,6 +925,7 @@ static bool is_already_loaded(std::map<std::string, uint64_t> &configU, Index *s
   return false;
 }
 
+
 template <typename T>
 static void
 runBench(PointGenerator<T> &pointGen, std::map<std::string, uint64_t> &configU, std::map<std::string, double> &configD,
@@ -1033,78 +1034,122 @@ runBench(PointGenerator<T> &pointGen, std::map<std::string, uint64_t> &configU, 
   //std::cout << "Validation OK." << std::endl;
 
   // Search for points and time their retrieval
-  std::cout << "Beginning search." << std::endl;
-  pointGen.reset();
+  if (configU["num_points_to_search"] > 0){
+    std::cout << "Beginning search." << std::endl;
+    pointGen.reset();
 
-  std::mt19937 g;
-  g.seed(0);
+    std::mt19937 g;
+    g.seed(0);
 
-  std::shuffle(pointGen.pointBuffer.begin(), pointGen.pointBuffer.end(), g);
+    std::shuffle(pointGen.pointBuffer.begin(), pointGen.pointBuffer.end(), g);
 
-#if 1
-  while ((nextPoint = pointGen.nextPoint()) /* Intentional = not == */) {
-    // Search
-    Point p = nextPoint.value();
-    std::chrono::high_resolution_clock::time_point begin = std::chrono::high_resolution_clock::now();
-    std::vector<Point> vals = spatialIndex->search(p);
-    if (vals.empty() || vals[0] != p) {
-      std::cout << "could not find " << p << std::endl;
-      std::cout << "Total searches: " << totalSearches << std::endl;
-      exit(1);
+    while ((nextPoint = pointGen.nextPoint()) /* Intentional = not == */) {
+      // Search
+      Point p = nextPoint.value();
+      std::chrono::high_resolution_clock::time_point begin = std::chrono::high_resolution_clock::now();
+      std::vector<Point> vals = spatialIndex->search(p);
+      if (vals.empty() || vals[0] != p) {
+        std::cout << "could not find " << p << std::endl;
+        std::cout << "Total searches: " << totalSearches << std::endl;
+        exit(1);
+      }
+      std::chrono::high_resolution_clock::time_point end = std::chrono::high_resolution_clock::now();
+      std::chrono::duration<double> delta = std::chrono::duration_cast<std::chrono::duration<double>>(end - begin);
+      totalTimeSearches += delta.count();
+      totalSearches += 1;
+      totalPageHits += bufferPool->page_hits;
+      totalPageMisses += bufferPool->page_misses;
+
+      if (totalSearches % 10000 == 0) {
+        std::cout << "Point[" << totalSearches << "] queried. " << delta.count() << " s" << std::endl;
+        bufferPool->stat();
+      }
+
+      if (totalSearches >= configU["num_points_to_search"]) {
+        break;
+      }
+
+      bufferPool->resetStat();
     }
-    std::chrono::high_resolution_clock::time_point end = std::chrono::high_resolution_clock::now();
-    std::chrono::duration<double> delta = std::chrono::duration_cast<std::chrono::duration<double>>(end - begin);
-    totalTimeSearches += delta.count();
-    totalSearches += 1;
-    totalPageHits += bufferPool->page_hits;
-    totalPageMisses += bufferPool->page_misses;
+    std::cout << "Search OK." << std::endl;
 
-    if (totalSearches % 10000 == 0) {
-      std::cout << "Point[" << totalSearches << "] queried. " << delta.count() << " s" << std::endl;
-      bufferPool->stat();
-    }
-
-    if (totalSearches >= configU["num_points_to_search"]) {
-      break;
-    }
-
-    bufferPool->resetStat();
+  } else {
+    std::cout << "Test for point search is disabled" << std::endl; 
   }
 
-  std::cout << "Search OK." << std::endl;
-
-#endif
-
-#if 1
 	// Search for rectangles
-	unsigned rangeSearchChecksum = 0;
-	std::cout << "Beginning search for " << searchRectangles.size() << " rectangles..." << std::endl;
-	for (unsigned i = 0; i < searchRectangles.size(); ++i)
-	{
-		// Search
-    std::cout << "-------" << std::endl;
-    std::cout << "Range Search #" << totalRangeSearches << std::endl;
-    std::cout << "Searching for: " << searchRectangles.at(i) << std::endl;
-    std::chrono::high_resolution_clock::time_point begin = std::chrono::high_resolution_clock::now();
-		std::vector<Point> v = spatialIndex->search(searchRectangles[i]);
-		std::chrono::high_resolution_clock::time_point end = std::chrono::high_resolution_clock::now();
-    std::cout << "Points: " << v.size() << std::endl;
-		std::chrono::duration<double> delta = std::chrono::duration_cast<std::chrono::duration<double>>(end - begin);
-    std::cout << "Latency: " << delta.count() << "s" << std::endl;
-    totalPageHits += bufferPool->page_hits;
-    totalPageMisses += bufferPool->page_misses;
-    bufferPool->stat();
-    bufferPool->resetStat();
+  if (configU["rectanglescount"] > 0){
+    unsigned rangeSearchChecksum = 0;
+    std::cout << "Beginning search for " << searchRectangles.size() << " rectangles..." << std::endl;
+    for (unsigned i = 0; i < searchRectangles.size(); ++i)
+    {
+      // Search
+      std::cout << "-------" << std::endl;
+      std::cout << "Range Search #" << totalRangeSearches << std::endl;
+      std::cout << "Searching for: " << searchRectangles.at(i) << std::endl;
+      std::chrono::high_resolution_clock::time_point begin = std::chrono::high_resolution_clock::now();
+      std::vector<Point> v = spatialIndex->search(searchRectangles[i]);
+      std::chrono::high_resolution_clock::time_point end = std::chrono::high_resolution_clock::now();
+      std::cout << "Points: " << v.size() << std::endl;
+      std::chrono::duration<double> delta = std::chrono::duration_cast<std::chrono::duration<double>>(end - begin);
+      std::cout << "Latency: " << delta.count() << "s" << std::endl;
+      totalPageHits += bufferPool->page_hits;
+      totalPageMisses += bufferPool->page_misses;
+      bufferPool->stat();
+      bufferPool->resetStat();
 
-    std::cout << "-------" << std::endl;
+      std::cout << "-------" << std::endl;
 
-    totalTimeRangeSearches += delta.count();
-		totalRangeSearches += 1;
-		rangeSearchChecksum += v.size();
-	}
-	std::cout << "Range search OK. Checksum = " << rangeSearchChecksum << std::endl;
+      totalTimeRangeSearches += delta.count();
+      totalRangeSearches += 1;
+      rangeSearchChecksum += v.size();
+    }
+    std::cout << "Range search OK. Checksum = " << rangeSearchChecksum << std::endl;
+  } else {
+    std::cout << "Test for range search is disabled" << std::endl; 
+  }
 
-#endif
+  // Delete for points and search after deletion
+  if (configU["num_points_to_delete"] > 0){
+    std::cout << "Beginning delete." << std::endl;
+    pointGen.reset();
+
+    std::mt19937 g;
+    g.seed(0);
+
+    std::shuffle(pointGen.pointBuffer.begin(), pointGen.pointBuffer.end(), g);
+
+    while ((nextPoint = pointGen.nextPoint()) /* Intentional = not == */) {
+      // Remove point
+      Point p = nextPoint.value();
+      std::chrono::high_resolution_clock::time_point begin = std::chrono::high_resolution_clock::now();
+      spatialIndex->remove(p);
+      std::chrono::high_resolution_clock::time_point end = std::chrono::high_resolution_clock::now();
+      std::chrono::duration<double> delta = std::chrono::duration_cast<std::chrono::duration<double>>(end - begin);
+      totalTimeDeletes += delta.count();
+      totalDeletes += 1;
+      totalPageHits += bufferPool->page_hits;
+      totalPageMisses += bufferPool->page_misses;
+      
+      // Search removed point
+      std::vector<Point> vals = spatialIndex->search(p);
+      if (not vals.empty()) {
+        std::cout << "Removed Point " << p << " is found" << std::endl;
+        std::cout << "Output size is " << vals.size() << std::endl;
+        std::cout << "Total successful delete is: " << totalDeletes << std::endl;
+        exit(1);
+      }
+      if (totalDeletes >= configU["num_points_to_delete"]) {
+        break;
+      }
+
+      bufferPool->resetStat();
+    }
+    std::cout << "Delete OK." << std::endl;
+
+  } else {
+    std::cout << "Test for points deletion is disabled" << std::endl; 
+  }
   // Gather statistics
 
 #ifdef STAT

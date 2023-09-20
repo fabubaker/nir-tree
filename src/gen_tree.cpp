@@ -20,7 +20,6 @@ void parameters(std::map<std::string, uint64_t> &configU, std::map<std::string, 
   std::cout << "  seed = " << configU["seed"] << std::endl;
   std::cout << "  buffer pool memory = " << configU["buffer_pool_memory"] << std::endl;
   std::cout << "  bulk load percentage = " << configD["bulk_load_pct"] << std::endl;
-  std::cout << "  remove percentage = " << configD["remove_pct"] << std::endl;
   std::cout << "### ### ### ### ### ###" << std::endl << std::endl;
 }
 
@@ -101,53 +100,6 @@ void generate_tree(std::map<std::string, size_t> &configU, std::map<std::string,
     sequential_insert_tree(tree, configU, all_points.begin() + cut_off_bulk_load, all_points.end(), NIR_FANOUT);
     std::cout << "Created NIRTree." << std::endl;
     
-    double remove_pct = configD["remove_pct"];
-    if(remove_pct > 0){
-      uint64_t remove_points_num = std::floor(remove_pct * all_points.size() * 0.5);
-      
-      // Remove Test: remove half points required by removal_pct consecutively with step = 1
-      auto remove_test1_begin = all_points.begin();
-      auto remove_test1_end = all_points.begin() + remove_points_num;
-      uint64_t remove_test1_step = 1;
-      std::cout << "Remove "<< remove_points_num << "points from NIRTree consecutively" << std::endl;
-      sequential_remove_tree(tree, configU, remove_test1_begin, remove_test1_end, remove_test1_step, NIR_FANOUT);
-    
-      // Remove Test: remove half points required by removal_pct even-distributedly
-      auto remove_test2_begin = all_points.begin() + remove_points_num;
-      auto remove_test2_end = all_points.end();
-      uint64_t remove_test2_step = std::floor((remove_test2_end - remove_test2_begin) / remove_points_num);
-      std::cout << "Remove "<< remove_points_num << "points from NIRTree evenly distributedly" << std::endl;
-      sequential_remove_tree(tree, configU, remove_test2_begin, remove_test2_end, remove_test2_step, NIR_FANOUT);
-      
-      // Search removed points
-      std::cout << "Searching removed points..." << std::endl;
-      for (auto iter = remove_test1_begin; iter < remove_test1_end; iter = iter + remove_test1_step ) {
-        Point p = *iter;
-        std::vector<Point> out = tree->search(p);
-        if (out.size() > 0) {
-          int index = std::distance(all_points.begin(), iter);
-          std::cout << "Removed point" << p << " at index "<< index << " is found"<< std::endl;
-          std::cout << "Output size is " << out.size() << std::endl;
-          abort();
-        }
-      }
-      for (auto iter = remove_test2_begin; iter < remove_test2_end; iter = iter + remove_test2_step ) {
-        Point p = *iter;
-        std::vector<Point> out = tree->search(p);
-        if (out.size() > 0) {
-          int index = std::distance(all_points.begin(), iter);
-          std::cout << "Removed point" << p << " at index "<< index << " is found"<< std::endl;
-          std::cout << "Output size is " << out.size() << std::endl;
-          abort();
-        }
-      }
-      std::cout << "All removed points are not found" << std::endl;
-      
-      spatialIndex = tree;
-      tree->stat();
-      delete tree;
-      exit(0);
-    }
     spatialIndex = tree;
     tree->stat();
   } else if (configU["tree"] == R_STAR_TREE) {
@@ -168,7 +120,7 @@ void generate_tree(std::map<std::string, size_t> &configU, std::map<std::string,
   }
 
   // Quick Test: Searching first 5000 points which are bulk loaded 
-  unsigned totalSearches = 0;
+  unsigned totalSearchesLoaded = 0;
   double totalTimeSearches = 0.0;
   for (auto iter = all_points.begin(); iter < all_points.begin() + cut_off_bulk_load; iter++ ) {
     Point p = *iter; 
@@ -178,19 +130,20 @@ void generate_tree(std::map<std::string, size_t> &configU, std::map<std::string,
       int index = std::distance(all_points.begin(), iter);
       std::cout << "Could not find bulk loaded point " << p << " at index "<< index << std::endl;
       std::cout << "Output size is " << out.size() << std::endl;
-      std::cout << "Total successful searches: " << totalSearches << std::endl;
+      std::cout << "Total successful searches: " << totalSearchesLoaded << std::endl;
       abort();
     }
     std::chrono::high_resolution_clock::time_point end = std::chrono::high_resolution_clock::now();
     std::chrono::duration<double> delta = std::chrono::duration_cast<std::chrono::duration<double>>(end - begin);
     totalTimeSearches += delta.count();
-    totalSearches += 1;
-    if (totalSearches >= 5000) {
+    totalSearchesLoaded += 1;
+    if (totalSearchesLoaded >= 5000) {
       break;
     }
   }
 
   // Quick Test: Searching first 5000 points which are inserted
+  unsigned totalSearchesInserted = 0;
   for (auto iter = all_points.begin()+ cut_off_bulk_load; iter < all_points.end(); iter++ ) {
     Point p = *iter; 
     std::chrono::high_resolution_clock::time_point begin = std::chrono::high_resolution_clock::now();
@@ -199,14 +152,14 @@ void generate_tree(std::map<std::string, size_t> &configU, std::map<std::string,
       int index = std::distance(all_points.begin(), iter);
       std::cout << "Could not find inserted point" << p << " at index "<< index << std::endl;
       std::cout << "Output size is " << out.size() << std::endl;
-      std::cout << "Total successful searches: " << totalSearches << std::endl;
+      std::cout << "Total successful searches: " << totalSearchesInserted << std::endl;
       abort();
     }
     std::chrono::high_resolution_clock::time_point end = std::chrono::high_resolution_clock::now();
     std::chrono::duration<double> delta = std::chrono::duration_cast<std::chrono::duration<double>>(end - begin);
     totalTimeSearches += delta.count();
-    totalSearches += 1;
-    if (totalSearches >= 10000) {
+    totalSearchesInserted += 1;
+    if (totalSearchesInserted >= 5000) {
       break;
     }
   }
@@ -214,9 +167,8 @@ void generate_tree(std::map<std::string, size_t> &configU, std::map<std::string,
   spatialIndex->stat();
 
   std::cout << "Total time to search: " << totalTimeSearches << "s" << std::endl;
-  std::cout << "Avg time to search: " << totalTimeSearches / totalSearches << "s" << std::endl;
+  std::cout << "Avg time to search: " << totalTimeSearches / (totalSearchesInserted + totalSearchesLoaded) << "s" << std::endl;
 
-  delete spatialIndex;
   return;
 }
 
@@ -229,9 +181,8 @@ int main(int argc, char **argv) {
   configU.emplace("distribution", CALIFORNIA);
   configU.emplace("seed", 0);
   configD.emplace("bulk_load_pct", 1.0);
-  configD.emplace("remove_pct", 0.0);
 
-  while ((option = getopt(argc, argv, "t:m:n:s:p:g:z:B:A:b:r:")) != -1) {
+  while ((option = getopt(argc, argv, "t:m:n:s:p:g:z:B:A:b:")) != -1) {
     switch (option) {
     case 't': {
       configU["tree"] = (TreeType)std::stoull(optarg);
@@ -273,10 +224,6 @@ int main(int argc, char **argv) {
     }
     case 'b': {
       configD["bulk_load_pct"] = std::stod(optarg);
-      break;
-    }
-    case 'r': {
-      configD["remove_pct"] = std::stod(optarg);
       break;
     }
     }
