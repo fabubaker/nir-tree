@@ -1056,14 +1056,9 @@ void bulk_load_tree(
   intersection_count = 0;
   auto tree_ptr = tree;
   uint64_t num_els = (end - begin);
-  // Keep in mind there is a 0th level, so floor is correct
-  // uint64_t max_depth = std::floor(log(num_els) / log(max_branch_factor));
-  // I think the above max_depth variable is defined incorrectly. Assume that 
-  // we have a branch_factor = 3, then a tree with 9 nodes will have max_depth = 2
-  // and a tree with 8 nodes will have max_depth = 1 based on the above definition. 
-  // However, I think they should be the same no matter if we consider leaf node 
-  // as 0th or 1th level. Please correct me if I'm wrong
+  // Leaf is at 0th level
   uint64_t max_depth = std::ceil(log(num_els) / log(max_branch_factor)) - 1;
+  // QTS is top down
   uint64_t root_level = max_depth;
 
   std::cout << "Num els: " << num_els << std::endl;
@@ -1101,13 +1096,8 @@ void bulk_load_tree(
     unsigned max_branch_factor
 ) {
   uint64_t num_els = (end - begin);
-  // Keep in mind there is a 0th level, so floor is correct
-  // same question as above
-  // uint64_t max_depth = std::floor(log(num_els) / log(max_branch_factor));
-  // uint64_t cur_depth = max_depth;
+  // Leaf is at 0th level
   uint64_t max_depth = std::ceil(log(num_els) / log(max_branch_factor)) - 1;
-  // bottom up
-  uint64_t cur_level = 0;
 
   std::cout << "Num els: " << num_els << std::endl;
   std::cout << "Max depth required: " << max_depth << std::endl;
@@ -1117,6 +1107,8 @@ void bulk_load_tree(
   std::chrono::high_resolution_clock::time_point begin_time = std::chrono::high_resolution_clock::now();
 
   if (configU["bulk_load_alg"] == STR) {
+    // STR is bottom up
+    uint64_t cur_level = 0;
     std::cout << "Bulk-loading R* using Sort-Tile-Recursive..." << std::endl;
     std::vector<tree_node_handle> leaves = str_packing_leaf(tree, begin, end, max_branch_factor, cur_level);
     cur_level++;
