@@ -1711,11 +1711,11 @@ tree_node_handle BranchNode<min_branch_factor, max_branch_factor>::splitNode(
     Branch &b = newSibling->entries.at(i);
 
     if (b.child.get_type() == LEAF_NODE) {
-      assert(current_level == b.child.get_level() - 1);
-      assert(sibling_handle.get_level() == b.child.get_level() - 1);
+      assert(current_level == b.child.get_level() + 1);
+      assert(sibling_handle.get_level() == b.child.get_level() + 1);
     } else {
-      assert(current_level == b.child.get_level() - 1);
-      assert(sibling_handle.get_level() == b.child.get_level() - 1);
+      assert(current_level == b.child.get_level() + 1);
+      assert(sibling_handle.get_level() == b.child.get_level() + 1);
     }
   }
 
@@ -1876,13 +1876,13 @@ tree_node_handle BranchNode<min_branch_factor, max_branch_factor>::insert(
     if (num_els > max_branch_factor) {
       // We call overflow treatment to determine how our sibling node is treated if we do a
       // reInsert, sibling is nullptr. This is properly dealt with in adjustTree
-      sibling_handle = insertion_point->overflowTreatment(treeRef, current_handle, hasReinsertedOnLevel);
+      sibling_handle = insertion_point->overflowTreatment(treeRef, insertion_point_handle, hasReinsertedOnLevel);
     }
 
     // I3 [Propogate overflow treatment changes upward]
     sibling_handle = insertion_point->adjustTree(
             treeRef,
-            current_handle,
+            insertion_point_handle,
             sibling_handle,
             parentHandles,
             hasReinsertedOnLevel
@@ -1916,13 +1916,13 @@ tree_node_handle BranchNode<min_branch_factor, max_branch_factor>::insert(
     if (num_els > max_branch_factor) {
       // We call overflow treatment to determine how our sibling node is treated if we do a
       // reInsert, sibling is nullptr. This is properly dealt with in adjustTree
-      sibling_handle = insertion_point->overflowTreatment(treeRef, current_handle, hasReinsertedOnLevel);
+      sibling_handle = insertion_point->overflowTreatment(treeRef, insertion_point_handle, hasReinsertedOnLevel);
     }
 
     // I3 [Propogate overflow treatment changes upward]
     sibling_handle = insertion_point->adjustTree(
             treeRef,
-            current_handle,
+            insertion_point_handle,
             sibling_handle,
             parentHandles,
             hasReinsertedOnLevel
