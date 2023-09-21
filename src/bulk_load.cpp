@@ -468,13 +468,12 @@ std::pair<tree_node_handle, Rectangle> quad_tree_style_load(
   std::vector<Point>::iterator start,
   std::vector<Point>::iterator stop,
   unsigned branch_factor,
-  unsigned cur_depth,
-  unsigned max_depth,
+  unsigned cur_level,
   tree_node_handle parent_handle
 ) {
   uint64_t num_els = (stop - start);
   tree_node_allocator *allocator = tree->node_allocator_.get();
-  if (cur_depth == max_depth) {
+  if (cur_level == 0) {
     if (num_els > branch_factor) {
       std::cout << "NUM ELS: " << num_els << std::endl;
     }
@@ -489,7 +488,8 @@ std::pair<tree_node_handle, Rectangle> quad_tree_style_load(
 
     auto leaf_node = alloc_data.first;
     auto leaf_handle = alloc_data.second;
-    leaf_handle.set_level(cur_depth);
+    leaf_handle.set_level(cur_level);
+    assert(leaf_handle.get_level() == 0);
 
     for (auto iter = start; iter != stop; iter++) {
       leaf_node->addPoint(*iter);
@@ -508,12 +508,12 @@ std::pair<tree_node_handle, Rectangle> quad_tree_style_load(
 
   auto branch_node = alloc_data.first;
   tree_node_handle branch_handle = alloc_data.second;
-  branch_handle.set_level(cur_depth);
+  branch_handle.set_level(cur_level);
 
   uint64_t partitions = std::ceil(sqrt(branch_factor));
   uint64_t sub_partitions = std::ceil(branch_factor / (float) partitions);
 
-  std::vector<uint64_t> x_lines = find_bounding_lines(start, stop, 0, branch_factor, partitions, sub_partitions, max_depth - cur_depth);
+  std::vector<uint64_t> x_lines = find_bounding_lines(start, stop, 0, branch_factor, partitions, sub_partitions, cur_level);
 
   std::vector<std::pair<IsotheticPolygon, tree_node_handle>> branch_handles;
   branch_handles.reserve(NIR_FANOUT);
@@ -523,7 +523,7 @@ std::pair<tree_node_handle, Rectangle> quad_tree_style_load(
     uint64_t x_end = x_lines.at(i + 1); /* not inclusive */
 
     std::vector<uint64_t> y_lines = find_bounding_lines(
-        start + x_start, start + x_end, 1, branch_factor, sub_partitions, 1, max_depth - cur_depth);
+        start + x_start, start + x_end, 1, branch_factor, sub_partitions, 1, cur_level);
     for (uint64_t j = 0; j < y_lines.size() - 1; j++) {
       uint64_t y_start = y_lines.at(j);
       uint64_t y_end = y_lines.at(j + 1); /* not inclusive */
@@ -543,8 +543,7 @@ std::pair<tree_node_handle, Rectangle> quad_tree_style_load(
           sub_start,
           sub_stop,
           branch_factor,
-          cur_depth + 1,
-          max_depth,
+          cur_level - 1,
           branch_handle
       );
 
@@ -821,6 +820,9 @@ void basic_split_branch(
       new (&(*(alloc_data.first))) LN();
       auto leaf_node = alloc_data.first;
       tree_node_handle leaf_handle = alloc_data.second;
+      unsigned next_level = height - 1;
+      // set level for leaf node handle
+      leaf_handle.set_level(next_level);
 
       // Recurse onto next level with M = branch factor
       uint64_t new_M = branch_factor;
@@ -830,6 +832,7 @@ void basic_split_branch(
       rstartreedisk::Branch b;
       b.child = leaf_handle;
       b.boundingBox = leaf_node->boundingBox();
+      assert(b.child.get_level() == 0);
       branch_node->addBranchToNode(b);
     } else {
       // The next level is a branch node, so we allocate a branch node
@@ -837,6 +840,9 @@ void basic_split_branch(
       new (&(*(alloc_data.first))) BN();
       auto child_node = alloc_data.first;
       tree_node_handle child_handle = alloc_data.second;
+      unsigned next_level = height - 1;
+      // set level for branch node handle
+      child_handle.set_level(next_level);
 
       // Recurse onto next level
       uint64_t new_M = pow(branch_factor, (std::ceil(log(count) / log(branch_factor)) - 1));
@@ -846,6 +852,7 @@ void basic_split_branch(
       rstartreedisk::Branch b;
       b.child = child_handle;
       b.boundingBox = child_node->boundingBox();
+      assert(b.child.get_level() == (height - 1));
       branch_node->addBranchToNode(b);
     }
 
@@ -1000,11 +1007,42 @@ tree_node_handle tgs_load(
 
   // Height of the R-tree root node (leaf has height 0)
   unsigned height = std::ceil(log(end - begin) / log(branch_factor)) - 1;
+  unsigned root_level = height; 
   uint64_t M = pow(branch_factor, height);
 
   basic_split_branch(tree, begins, ends, branch_factor, height, M, root_node); 
-
+  // Set level for root node
+  root_handle.set_level(root_level);
   return root_handle;
+}
+
+template <class TR>
+void testLevels(TR *tree, tree_node_handle root, unsigned root_level){
+  std::stack<std::pair<tree_node_handle, unsigned>> context; 
+  context.push(std::make_pair(root, root_level));
+  while(not context.empty()){
+    auto handle_level = context.top();
+    context.pop();
+    tree_node_handle current_handle = handle_level.first;
+    uint8_t current_level = handle_level.second;
+    if(current_handle.get_level() != current_level){
+      std::cout << "current_handle.get_level() is " << current_handle.get_level() << std::endl;
+      std::cout << "current_level is expected to be " << current_level << std::endl;
+    }
+    if(current_handle.get_type() == LEAF_NODE) {
+      if(current_handle.get_level() != 0){
+        std::cout << "current_handle.get_level() is " << current_handle.get_level() << std::endl;
+        std::cout << "Leaf Node is expected to be 0" << std::endl;
+      }
+    } else {
+      auto current_node = tree->get_branch_node(current_handle);
+      for (int i = 0; i < current_node->cur_offset_; ++i){
+        auto bi = current_node->entries[i];
+        context.push(std::make_pair(bi.child, current_level - 1));
+      }
+    }
+  }
+  std::cout << "Pass Level Test" << std::endl;
 }
 
 template <>
@@ -1018,23 +1056,31 @@ void bulk_load_tree(
   intersection_count = 0;
   auto tree_ptr = tree;
   uint64_t num_els = (end - begin);
-  // Keep in mind there is a 0th level, so floor is correct
-  uint64_t max_depth = std::floor(log(num_els) / log(max_branch_factor));
+  // Leaf is at 0th level
+  uint64_t max_depth = std::ceil(log(num_els) / log(max_branch_factor)) - 1;
+  // QTS is top down
+  uint64_t root_level = max_depth;
 
   std::cout << "Num els: " << num_els << std::endl;
   std::cout << "Max depth required: " << max_depth << std::endl;
   std::cout << "Size of NIR branch node: " <<
     sizeof(nirtreedisk::BranchNode<5, NIR_FANOUT, nirtreedisk::ExperimentalStrategy>) << std::endl;
-
+  
+  std::cout << "Bulk-loading NIRTree using Quad Tree Style Load..." << std::endl;
   std::chrono::high_resolution_clock::time_point begin_time = std::chrono::high_resolution_clock::now();
   auto ret = quad_tree_style_load(
   tree_ptr, begin, end,
-      max_branch_factor, 0, max_depth, nullptr
+      max_branch_factor, root_level, nullptr
   );
   tree->root = ret.first;
 
   std::chrono::high_resolution_clock::time_point end_time = std::chrono::high_resolution_clock::now();
   std::chrono::duration<double> delta = std::chrono::duration_cast<std::chrono::duration<double>>(end_time - begin_time);
+
+#ifndef NDEBUG
+  // run level test
+  testLevels(tree, tree->root, root_level);
+#endif
 
   std::cout << "Bulk loading NIRTree took: " << delta.count() << std::endl;
   std::cout << "Completed with " << intersection_count << " intersections" << std::endl;
@@ -1052,25 +1098,29 @@ void bulk_load_tree(
     unsigned max_branch_factor
 ) {
   uint64_t num_els = (end - begin);
-  // Keep in mind there is a 0th level, so floor is correct
-  uint64_t max_depth = std::floor(log(num_els) / log(max_branch_factor));
-  uint64_t cur_depth = max_depth;
+  // Leaf is at 0th level
+  uint64_t max_depth = std::ceil(log(num_els) / log(max_branch_factor)) - 1;
 
+  std::cout << "Num els: " << num_els << std::endl;
+  std::cout << "Max depth required: " << max_depth << std::endl;
   std::cout << "Size of R* branch node: " << sizeof(rstartreedisk::BranchNode<5, R_STAR_FANOUT>) << std::endl;
 
   /* Start measuring bulk load time */
   std::chrono::high_resolution_clock::time_point begin_time = std::chrono::high_resolution_clock::now();
 
   if (configU["bulk_load_alg"] == STR) {
+    // STR is bottom up
+    uint64_t cur_level = 0;
     std::cout << "Bulk-loading R* using Sort-Tile-Recursive..." << std::endl;
-    std::vector<tree_node_handle> leaves = str_packing_leaf(tree, begin, end,max_branch_factor, cur_depth);
-    cur_depth--;
-    std::vector<tree_node_handle> branches = str_packing_branch(tree, leaves, max_branch_factor, cur_depth);
-    cur_depth--;
+    std::vector<tree_node_handle> leaves = str_packing_leaf(tree, begin, end, max_branch_factor, cur_level);
+    cur_level++;
+    std::vector<tree_node_handle> branches = str_packing_branch(tree, leaves, max_branch_factor, cur_level);
+    cur_level++;
 
     while (branches.size() > 1) {
-      branches = str_packing_branch(tree, branches, max_branch_factor, cur_depth);
-      cur_depth--;
+      assert(cur_level <= max_depth);
+      branches = str_packing_branch(tree, branches, max_branch_factor, cur_level);
+      cur_level++;
     }
 
     tree->root = branches.at(0);
@@ -1082,6 +1132,13 @@ void bulk_load_tree(
   std::chrono::high_resolution_clock::time_point end_time = std::chrono::high_resolution_clock::now();
   std::chrono::duration<double> delta = std::chrono::duration_cast<std::chrono::duration<double>>(end_time - begin_time);
   /* End measuring bulk load time */
+
+#ifndef NDEBUG
+  // run level test
+  // Level of the R-tree root node (leaf has height 0)
+  unsigned root_level = std::ceil(log(end - begin) / log(max_branch_factor)) - 1;
+  testLevels(tree, tree->root, root_level);
+#endif
 
   std::cout << "Bulk loading tree took: " << delta.count() << std::endl;
   std::cout << "Total pages occupied: " << tree->node_allocator_->cur_page_ << std::endl;
