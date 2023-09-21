@@ -87,8 +87,10 @@ void generate_tree(std::map<std::string, size_t> &configU, std::map<std::string,
 
   Index *spatialIndex;
   if (configU["tree"] == NIR_TREE) {
-    nirtreedisk::NIRTreeDisk<5, NIR_FANOUT, nirtreedisk::ExperimentalStrategy> *tree = new nirtreedisk::NIRTreeDisk<5, NIR_FANOUT, nirtreedisk::ExperimentalStrategy>(
-            configU["buffer_pool_memory"], backing_file); 
+    nirtreedisk::NIRTreeDisk<5, NIR_FANOUT, nirtreedisk::ExperimentalStrategy> *tree =
+            new nirtreedisk::NIRTreeDisk<5, NIR_FANOUT, nirtreedisk::ExperimentalStrategy>(
+            configU["buffer_pool_memory"], backing_file
+    );
     
     // start with bulk load:
     std::cout << "Bulk Loading..." << std::endl;
@@ -103,10 +105,13 @@ void generate_tree(std::map<std::string, size_t> &configU, std::map<std::string,
     spatialIndex = tree;
     tree->stat();
   } else if (configU["tree"] == R_STAR_TREE) {
-    rstartreedisk::RStarTreeDisk<5, R_STAR_FANOUT> *tree = new rstartreedisk::RStarTreeDisk<5, R_STAR_FANOUT>(configU["buffer_pool_memory"], backing_file);
+    rstartreedisk::RStarTreeDisk<5, R_STAR_FANOUT> *tree = new rstartreedisk::RStarTreeDisk<5, R_STAR_FANOUT>(
+            configU["buffer_pool_memory"], backing_file
+    );
     std::cout << "Bulk Loading..." << std::endl;
     std::cout << "Creating tree with " << configU["buffer_pool_memory"] << "bytes" << std::endl;
     bulk_load_tree(tree, configU, all_points.begin(), all_points.begin() + cut_off_bulk_load, R_STAR_FANOUT);
+
     // insert the rest of points:
     sequential_insert_tree(tree, configU, all_points.begin() + cut_off_bulk_load, all_points.end(), NIR_FANOUT);
     std::cout << "Created R*Tree" << std::endl;

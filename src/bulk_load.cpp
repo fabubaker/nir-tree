@@ -1297,7 +1297,7 @@ void sequential_insert_tree(
   std::chrono::high_resolution_clock::time_point end_time = std::chrono::high_resolution_clock::now();
   std::chrono::duration<double> delta = std::chrono::duration_cast<std::chrono::duration<double>>(end_time - begin_time);
   
-  std::cout << "Sequentially Inserting "<< total_insert << " points to NIRTree took: " << delta.count() << std::endl;
+  std::cout << "Sequentially Inserting "<< total_insert << " points to R*-Tree took: " << delta.count() << std::endl;
   std::cout << "Total pages occupied now: " << tree->node_allocator_->get_total_pages_occupied() << std::endl;
   tree->write_metadata();
 }
