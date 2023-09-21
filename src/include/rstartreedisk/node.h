@@ -158,7 +158,11 @@ public:
   Rectangle boundingBox() const;
   bool updateBoundingBox(tree_node_handle child, Rectangle updatedBoundingBox);
   void removeChild(tree_node_handle child);
-  tree_node_handle chooseSubtree(const NodeEntry &nodeEntry);
+  tree_node_handle chooseSubtree(
+      RStarTreeDisk<min_branch_factor, max_branch_factor> *treeRef,
+      tree_node_handle current_handle,
+      const NodeEntry &givenNodeEntry
+  );
   tree_node_handle findLeaf(
           RStarTreeDisk<min_branch_factor, max_branch_factor> *treeRef,
           tree_node_handle selfHandle,
@@ -1299,7 +1303,11 @@ std::vector<Point> rectangle_search(
 }
 
 template <int min_branch_factor, int max_branch_factor>
-tree_node_handle BranchNode<min_branch_factor, max_branch_factor>::chooseSubtree(const NodeEntry &givenNodeEntry) {
+tree_node_handle BranchNode<min_branch_factor, max_branch_factor>::chooseSubtree(
+        RStarTreeDisk<min_branch_factor, max_branch_factor> *treeRef,
+        tree_node_handle current_handle,
+        const NodeEntry &givenNodeEntry
+) {
   // CS1: This is called on the root! Just like insert/reinsert
   // CS2: If N is a leaf return N (same)
   // CS3: If the child pointers (bounding boxes) -> choose rectangle that needs least
@@ -1310,32 +1318,25 @@ tree_node_handle BranchNode<min_branch_factor, max_branch_factor>::chooseSubtree
   // 		overlap enlargement to fit the new Point (same as before) if tie return smallest area (same)
 
   // CL1 [Initialize]
-  tree_node_handle node_handle = self_handle_;
+  tree_node_handle node_handle = current_handle;
 
-  // Always called on root, this = root
-  assert(!parent);
-
-  unsigned stoppingLevel = 0;
+  unsigned stoppingLevel = 0; // stoppingLevel = 0 represents the leaf level
   bool entryIsBranch = std::holds_alternative<Branch>(givenNodeEntry);
   Rectangle givenEntryBoundingBox;
+
   if (entryIsBranch) {
     const Branch &b = std::get<Branch>(givenNodeEntry);
     //std::cout << "ChooseSubTree for branch: " << b.boundingBox <<
     //    std::endl;
     givenEntryBoundingBox = b.boundingBox;
     tree_node_handle child_handle = b.child;
-    if (child_handle.get_type() == LEAF_NODE) {
-      auto child = treeRef->get_leaf_node(child_handle);
-      stoppingLevel = child->level + 1;
-    } else {
-      auto child = treeRef->get_branch_node(child_handle);
-      stoppingLevel = child->level + 1;
-    }
+    stoppingLevel = child_handle.get_level() + 1;
   } else {
     const Point &p = std::get<Point>(givenNodeEntry);
     //std::cout << "ChooseSubTree for point: " << p << std::endl;
     givenEntryBoundingBox = Rectangle(p, Point::closest_larger_point(p));
   }
+
   for (;;) {
     if (node_handle.get_type() == LEAF_NODE) {
       // This is a deviation from before, but i presume if this a
@@ -1346,14 +1347,14 @@ tree_node_handle BranchNode<min_branch_factor, max_branch_factor>::chooseSubtree
     }
 
     auto node = treeRef->get_branch_node(node_handle);
-    if (node->level == stoppingLevel) {
+    if (node_handle.get_level() == stoppingLevel) {
       return node_handle;
     }
 
     unsigned descentIndex = 0;
-
     auto child_handle = node->entries.at(0).child;
     bool childrenAreLeaves = (child_handle.get_type() == LEAF_NODE);
+
     if (childrenAreLeaves) {
       //std::cout << "ChildrenAreLeaves: " << childrenAreLeaves <<
       //    std::endl;
@@ -1368,8 +1369,10 @@ tree_node_handle BranchNode<min_branch_factor, max_branch_factor>::chooseSubtree
 
         // Compute overlap
         double testOverlapExpansionArea =
-                computeOverlapGrowth<NodeEntry, Branch, max_branch_factor>(i, node->entries,
-                                                                           node->cur_offset_, givenEntryBoundingBox);
+                computeOverlapGrowth<NodeEntry, Branch, max_branch_factor>(
+                  i, node->entries,
+           node->cur_offset_, givenEntryBoundingBox
+                );
 
         //std::cout << "overlapGrowth " << i << ": " <<
         //    testOverlapExpansionArea << std::endl;
@@ -1404,13 +1407,14 @@ tree_node_handle BranchNode<min_branch_factor, max_branch_factor>::chooseSubtree
     } else {
       double smallestExpansionArea = std::numeric_limits<double>::infinity();
       double smallestArea = std::numeric_limits<double>::infinity();
+      unsigned num_entries_els = node->cur_offset_;
 
       // CL2 [Choose subtree]
       // Find the bounding box with least required expansion/overlap
-      unsigned num_entries_els = node->cur_offset_;
       for (unsigned i = 0; i < num_entries_els; i++) {
         const Branch &b = node->entries.at(i);
         double testExpansionArea = b.boundingBox.computeExpansionArea(givenEntryBoundingBox);
+
         if (smallestExpansionArea > testExpansionArea) {
           descentIndex = i;
           smallestExpansionArea = testExpansionArea;
@@ -1418,6 +1422,7 @@ tree_node_handle BranchNode<min_branch_factor, max_branch_factor>::chooseSubtree
         } else if (smallestExpansionArea == testExpansionArea) {
           // Use area to break tie
           double testArea = b.boundingBox.area();
+
           if (smallestArea > testArea) {
             descentIndex = i;
             // Don't need to update smallestExpansionArea
@@ -1829,8 +1834,11 @@ tree_node_handle BranchNode<min_branch_factor, max_branch_factor>::insert(
         NodeEntry nodeEntry,
         std::vector<bool> &hasReinsertedOnLevel
 ) {
-#if 0
   tree_node_allocator *allocator = get_node_allocator(treeRef);
+
+  std::stack<tree_node_handle> parentHandles; // Populated by chooseSubtree
+  uint16_t current_level = current_handle.get_level();
+  assert(current_level > 0); // Branch nodes have level > 0
 
   // I1 [Find position for new record]
   tree_node_handle insertion_point_handle = chooseSubtree(nodeEntry);
@@ -1867,6 +1875,7 @@ tree_node_handle BranchNode<min_branch_factor, max_branch_factor>::insert(
             treeRef,
             current_handle,
             sibling_handle,
+            parentHandles,
             hasReinsertedOnLevel
     );
   } else {
@@ -1887,11 +1896,9 @@ tree_node_handle BranchNode<min_branch_factor, max_branch_factor>::insert(
     if (b.child.get_type() == LEAF_NODE) {
       auto child = treeRef->get_leaf_node(b.child);
       assert(insertion_point_level == b.child.get_level() + 1);
-      child->parent = insertion_point_handle;
     } else {
       auto child = treeRef->get_branch_node(b.child);
       assert(insertion_point_level == b.child.get_level() + 1);
-      child->parent = insertion_point_handle;
     }
 
     unsigned num_els = insertion_point->cur_offset_;
@@ -1908,6 +1915,7 @@ tree_node_handle BranchNode<min_branch_factor, max_branch_factor>::insert(
             treeRef,
             current_handle,
             sibling_handle,
+            parentHandles,
             hasReinsertedOnLevel
     );
   }
@@ -1919,7 +1927,7 @@ tree_node_handle BranchNode<min_branch_factor, max_branch_factor>::insert(
                     NodeHandleType(BRANCH_NODE));
     auto newRoot = alloc_data.first;
     tree_node_handle new_root_handle = alloc_data.second;
-    new_root_handle.set_level(0);
+    new_root_handle.set_level(current_level + 1);
 
     auto sibling = treeRef->get_branch_node(sibling_handle);
 
@@ -1935,7 +1943,7 @@ tree_node_handle BranchNode<min_branch_factor, max_branch_factor>::insert(
 
     // Ensure newRoot has both children
     assert(newRoot->cur_offset_ == 2);
-    assert(sibling_handle.get_level() == new_root_handle.get_level() + 1);
+    assert(sibling_handle.get_level() + 1 == new_root_handle.get_level());
 
     // Fix the reinserted length
     hasReinsertedOnLevel.push_back(false);
@@ -1949,7 +1957,6 @@ tree_node_handle BranchNode<min_branch_factor, max_branch_factor>::insert(
     // up-to-date root handle.
     return treeRef->root;
   }
-#endif
 }
 
 // Always called on root, this = root
