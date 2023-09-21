@@ -576,7 +576,7 @@ std::pair<tree_node_handle, tree_node_handle> adjustTreeBottomHalf(
       tree_node_handle parent_before_handle = parent_handle;
       tree_node_handle sibling_parent_handle = parent_ptr->overflowTreatment(
               treeRef,
-              node_handle,
+              parent_handle,
               hasReinsertedOnLevel
       );
 
