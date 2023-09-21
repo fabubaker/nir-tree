@@ -1032,7 +1032,7 @@ void bulk_load_tree(
       max_branch_factor, 0, max_depth, nullptr
   );
   tree->root = ret.first;
-  std::cout << "Out of line size: " << tree->node_allocator_.get()->out_of_line_nodes_size << std::endl;
+
   std::chrono::high_resolution_clock::time_point end_time = std::chrono::high_resolution_clock::now();
   std::chrono::duration<double> delta = std::chrono::duration_cast<std::chrono::duration<double>>(end_time - begin_time);
 
@@ -1085,5 +1085,72 @@ void bulk_load_tree(
 
   std::cout << "Bulk loading tree took: " << delta.count() << std::endl;
   std::cout << "Total pages occupied: " << tree->node_allocator_->cur_page_ << std::endl;
+  tree->write_metadata();
+}
+
+
+template <>
+void sequential_insert_tree(
+    nirtreedisk::NIRTreeDisk<5, NIR_FANOUT, nirtreedisk::ExperimentalStrategy> *tree,
+    std::map<std::string, size_t> &configU,
+    std::vector<Point>::iterator begin,
+    std::vector<Point>::iterator end,
+    unsigned max_branch_factor
+) {
+  // begin is inclusive, end is exclusive 
+  uint64_t num_els = (end - begin);
+  std::cout << "Num els to insert: " << num_els << std::endl;
+  uint64_t total_insert = 0; 
+  uint64_t print_count = pow(10, int(log10(num_els)) - 1);
+  std::chrono::high_resolution_clock::time_point begin_time = std::chrono::high_resolution_clock::now();
+  std::chrono::high_resolution_clock::time_point section_begin_time = begin_time;
+  for(auto iter = begin ; iter < end; iter++){
+      tree->insert(*iter); 
+      total_insert ++; 
+    if (total_insert % print_count == 0) {
+      std::chrono::high_resolution_clock::time_point section_end_time = std::chrono::high_resolution_clock::now();
+      auto delta =  std::chrono::duration_cast<std::chrono::duration<double>>(section_end_time - section_begin_time); 
+      std::cout << "Finished insertion for " << total_insert << " points with " << delta.count() << "s..."<< std::endl;
+      section_begin_time = section_end_time; 
+    }
+  }
+  std::chrono::high_resolution_clock::time_point end_time = std::chrono::high_resolution_clock::now();
+  std::chrono::duration<double> delta = std::chrono::duration_cast<std::chrono::duration<double>>(end_time - begin_time);
+  
+  std::cout << "Sequentially Inserting "<< total_insert << " points to NIRTree took: " << delta.count() << std::endl;
+  std::cout << "Total pages occupied now: " << tree->node_allocator_->get_total_pages_occupied() << std::endl;
+  tree->write_metadata();
+}
+
+template <>
+void sequential_insert_tree(
+    rstartreedisk::RStarTreeDisk<5, R_STAR_FANOUT> *tree,
+    std::map<std::string, size_t> &configU,
+    std::vector<Point>::iterator begin,
+    std::vector<Point>::iterator end,
+    unsigned max_branch_factor
+) {
+  // begin is inclusive, end is exclusive 
+  uint64_t num_els = (end - begin);
+  std::cout << "Num els to insert: " << num_els << std::endl;
+  uint64_t total_insert = 0; 
+  uint64_t print_count = pow(10, int(log10(num_els)) - 1);
+  std::chrono::high_resolution_clock::time_point begin_time = std::chrono::high_resolution_clock::now();
+  std::chrono::high_resolution_clock::time_point section_begin_time = begin_time;
+  for(auto iter = begin ; iter < end; iter++){
+      tree->insert(*iter); 
+      total_insert ++; 
+    if (total_insert % print_count == 0) {
+      std::chrono::high_resolution_clock::time_point section_end_time = std::chrono::high_resolution_clock::now();
+      auto delta =  std::chrono::duration_cast<std::chrono::duration<double>>(section_end_time - section_begin_time); 
+      std::cout << "Finished insertion for " << total_insert << " points with " << delta.count() << "s..."<< std::endl;
+      section_begin_time = section_end_time; 
+    }
+  }
+  std::chrono::high_resolution_clock::time_point end_time = std::chrono::high_resolution_clock::now();
+  std::chrono::duration<double> delta = std::chrono::duration_cast<std::chrono::duration<double>>(end_time - begin_time);
+  
+  std::cout << "Sequentially Inserting "<< total_insert << " points to NIRTree took: " << delta.count() << std::endl;
+  std::cout << "Total pages occupied now: " << tree->node_allocator_->get_total_pages_occupied() << std::endl;
   tree->write_metadata();
 }

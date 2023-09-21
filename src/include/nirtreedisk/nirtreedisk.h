@@ -58,6 +58,8 @@ public:
     // If this is a fresh tree, we need a root
     // Update: We disable this for bulk-loading since the root node
     // will be created anyways.
+    // We assume that insertion only happens after bulk load, 
+    // otherwise a root node is required here 
     if (existing_page_count == 0) {
 
 //      auto alloc = node_allocator_->create_new_tree_node<LeafNode<min_branch_factor, max_branch_factor, strategy>>(NodeHandleType(LEAF_NODE));
@@ -83,9 +85,15 @@ public:
   }
 
   ~NIRTreeDisk() {
-    //auto root_node = node_allocator_.get_tree_node<NodeType>( root );
-    //root_node->deleteSubtrees();
-    // FIXME: Free root_node
+    if (root.get_type() == LEAF_NODE){
+      auto root_node = get_leaf_node(root);
+      root_node->deleteSubtrees();
+      node_allocator_->free(root, sizeof(LeafNode<min_branch_factor, max_branch_factor, strategy>));
+    } else if (root.get_type() == BRANCH_NODE){
+      auto root_node = get_branch_node(root);
+      root_node->deleteSubtrees(this);
+      node_allocator_->free(root, sizeof(BranchNode<min_branch_factor, max_branch_factor, strategy>));
+    }
   }
 
   // Datastructure interface
@@ -186,11 +194,11 @@ void NIRTreeDisk<min_branch_factor, max_branch_factor, strategy>::insert(Point g
   std::fill(hasReinsertedOnLevel.begin(), hasReinsertedOnLevel.end(), false);
   if (root.get_type() == LEAF_NODE) {
     auto root_node = get_leaf_node(root, true);
-    root = root_node->insert(givenPoint, hasReinsertedOnLevel);
+    root = root_node->insert(this, root, givenPoint, hasReinsertedOnLevel);
   } else {
     auto root_node = get_branch_node(root, true);
-    std::variant<Branch, Point> entry = givenPoint;
-    root = root_node->insert(entry, hasReinsertedOnLevel);
+    std::variant<BranchAtLevel, Point> entry = givenPoint;
+    root = root_node->insert(this, root, entry, hasReinsertedOnLevel);
   }
 }
 
@@ -198,10 +206,23 @@ template <int min_branch_factor, int max_branch_factor, class strategy>
 void NIRTreeDisk<min_branch_factor, max_branch_factor, strategy>::remove(Point givenPoint) {
   if (root.get_type() == LEAF_NODE) {
     auto root_node = get_leaf_node(root);
-    root = root_node->remove(givenPoint);
+    auto result = root_node->remove(this, root, givenPoint);
+    if (result == nullptr) {
+      std::cout << "Point " << givenPoint << " is not found in tree" << std::endl;
+      // we expect remove() is only called on points which exist
+      assert(result != nullptr);
+    } else {
+      root = result;
+    }
   } else {
     auto root_node = get_branch_node(root);
-    root = root_node->remove(givenPoint);
+    auto result = root_node->remove(this, root, givenPoint);
+    if (result == nullptr) {
+      std::cout << "Point " << givenPoint << " is not found in tree" << std::endl;
+      assert(result != nullptr);
+    } else {
+      root = result;
+    }
   }
 }
 
@@ -212,7 +233,7 @@ unsigned NIRTreeDisk<min_branch_factor, max_branch_factor, strategy>::checksum()
     return root_node->checksum();
   } else {
     auto root_node = get_branch_node(root);
-    return root_node->checksum();
+    return root_node->checksum(this);
   }
 }
 

@@ -19,6 +19,7 @@ void parameters(std::map<std::string, uint64_t> &configU, std::map<std::string, 
   std::cout << "  size = " << configU["size"] << std::endl;
   std::cout << "  seed = " << configU["seed"] << std::endl;
   std::cout << "  buffer pool memory = " << configU["buffer_pool_memory"] << std::endl;
+  std::cout << "  bulk load percentage = " << configD["bulk_load_pct"] << std::endl;
   std::cout << "### ### ### ### ### ###" << std::endl << std::endl;
 }
 
@@ -78,61 +79,95 @@ void generate_tree(std::map<std::string, size_t> &configU, std::map<std::string,
     }
   }
 
-  double bulk_load_pct = 1.0;
+  double bulk_load_pct = configD["bulk_load_pct"];
+
   uint64_t cut_off_bulk_load = std::floor(bulk_load_pct * all_points.size());
   std::cout << "Bulk loading " << cut_off_bulk_load << " points." << std::endl;
-  std::cout << "Sequential Inserting " << all_points.size() - cut_off_bulk_load << " points." << std::endl;
+  std::cout << "Sequentially inserting " << all_points.size() - cut_off_bulk_load << " points." << std::endl;
 
   Index *spatialIndex;
   if (configU["tree"] == NIR_TREE) {
     nirtreedisk::NIRTreeDisk<5, NIR_FANOUT, nirtreedisk::ExperimentalStrategy> *tree = new nirtreedisk::NIRTreeDisk<5, NIR_FANOUT, nirtreedisk::ExperimentalStrategy>(
-            configU["buffer_pool_memory"], backing_file); //
+            configU["buffer_pool_memory"], backing_file); 
+    
+    // start with bulk load:
     std::cout << "Bulk Loading..." << std::endl;
     std::cout << "Creating tree with " << configU["buffer_pool_memory"] << "bytes" << std::endl;
     bulk_load_tree(tree, configU, all_points.begin(), all_points.begin() + cut_off_bulk_load, NIR_FANOUT);
+  
+    // insert the rest of points:
+    std::cout << "Sequential Inserting..." << std::endl;
+    sequential_insert_tree(tree, configU, all_points.begin() + cut_off_bulk_load, all_points.end(), NIR_FANOUT);
     std::cout << "Created NIRTree." << std::endl;
-
+    
     spatialIndex = tree;
     tree->stat();
-    exit(0);
   } else if (configU["tree"] == R_STAR_TREE) {
     rstartreedisk::RStarTreeDisk<5, R_STAR_FANOUT> *tree = new rstartreedisk::RStarTreeDisk<5, R_STAR_FANOUT>(configU["buffer_pool_memory"], backing_file);
     std::cout << "Bulk Loading..." << std::endl;
+    std::cout << "Creating tree with " << configU["buffer_pool_memory"] << "bytes" << std::endl;
     bulk_load_tree(tree, configU, all_points.begin(), all_points.begin() + cut_off_bulk_load, R_STAR_FANOUT);
+    // insert the rest of points:
+    sequential_insert_tree(tree, configU, all_points.begin() + cut_off_bulk_load, all_points.end(), NIR_FANOUT);
     std::cout << "Created R*Tree" << std::endl;
-
+    
     spatialIndex = tree;
     tree->stat();
     exit(0);
   } else {
+    std::cout << "Only Supports NIR_Tree and R_STAR_TREE for gen_tree" << std::endl; 
     abort();
   }
 
-  unsigned totalSearches = 0;
+  // Quick Test: Searching first 5000 points which are bulk loaded 
+  unsigned totalSearchesLoaded = 0;
   double totalTimeSearches = 0.0;
-  for (Point p : all_points) {
+  for (auto iter = all_points.begin(); iter < all_points.begin() + cut_off_bulk_load; iter++ ) {
+    Point p = *iter; 
     std::chrono::high_resolution_clock::time_point begin = std::chrono::high_resolution_clock::now();
-    std::cout << "Searching: for " << p << std::endl;
     std::vector<Point> out = spatialIndex->search(p);
     if (out.size() != 1) {
-      std::cout << "Could not find " << p << std::endl;
-      std::cout << out.size() << std::endl;
-      std::cout << "Total successful searches: " << totalSearches << std::endl;
+      int index = std::distance(all_points.begin(), iter);
+      std::cout << "Could not find bulk loaded point " << p << " at index "<< index << std::endl;
+      std::cout << "Output size is " << out.size() << std::endl;
+      std::cout << "Total successful searches: " << totalSearchesLoaded << std::endl;
       abort();
     }
     std::chrono::high_resolution_clock::time_point end = std::chrono::high_resolution_clock::now();
     std::chrono::duration<double> delta = std::chrono::duration_cast<std::chrono::duration<double>>(end - begin);
     totalTimeSearches += delta.count();
-    totalSearches += 1;
-    if (totalSearches >= 10000) {
+    totalSearchesLoaded += 1;
+    if (totalSearchesLoaded >= 5000) {
       break;
     }
   }
 
+  // Quick Test: Searching first 5000 points which are inserted
+  unsigned totalSearchesInserted = 0;
+  for (auto iter = all_points.begin()+ cut_off_bulk_load; iter < all_points.end(); iter++ ) {
+    Point p = *iter; 
+    std::chrono::high_resolution_clock::time_point begin = std::chrono::high_resolution_clock::now();
+    std::vector<Point> out = spatialIndex->search(p);
+    if (out.size() != 1) {
+      int index = std::distance(all_points.begin(), iter);
+      std::cout << "Could not find inserted point" << p << " at index "<< index << std::endl;
+      std::cout << "Output size is " << out.size() << std::endl;
+      std::cout << "Total successful searches: " << totalSearchesInserted << std::endl;
+      abort();
+    }
+    std::chrono::high_resolution_clock::time_point end = std::chrono::high_resolution_clock::now();
+    std::chrono::duration<double> delta = std::chrono::duration_cast<std::chrono::duration<double>>(end - begin);
+    totalTimeSearches += delta.count();
+    totalSearchesInserted += 1;
+    if (totalSearchesInserted >= 5000) {
+      break;
+    }
+  }
+  
   spatialIndex->stat();
 
   std::cout << "Total time to search: " << totalTimeSearches << "s" << std::endl;
-  std::cout << "Avg time to search: " << totalTimeSearches / totalSearches << "s" << std::endl;
+  std::cout << "Avg time to search: " << totalTimeSearches / (totalSearchesInserted + totalSearchesLoaded) << "s" << std::endl;
 
   return;
 }
@@ -145,8 +180,9 @@ int main(int argc, char **argv) {
   configU.emplace("tree", NIR_TREE);
   configU.emplace("distribution", CALIFORNIA);
   configU.emplace("seed", 0);
+  configD.emplace("bulk_load_pct", 1.0);
 
-  while ((option = getopt(argc, argv, "t:m:n:s:p:g:z:B:A:")) != -1) {
+  while ((option = getopt(argc, argv, "t:m:n:s:p:g:z:B:A:b:")) != -1) {
     switch (option) {
     case 't': {
       configU["tree"] = (TreeType)std::stoull(optarg);
@@ -184,6 +220,10 @@ int main(int argc, char **argv) {
     case 'A':
     {
       configU["bulk_load_alg"] = std::stoull(optarg);
+      break;
+    }
+    case 'b': {
+      configD["bulk_load_pct"] = std::stod(optarg);
       break;
     }
     }
