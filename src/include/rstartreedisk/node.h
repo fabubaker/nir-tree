@@ -367,7 +367,7 @@ unsigned LeafNode<min_branch_factor, max_branch_factor>::chooseSplitLeafAxis() {
         boundingBoxA.expand(*groupA[i]);
       }
 
-      Rectangle boundingBoxB(*groupB[0],Point::closest_larger_point(*groupB[0]));
+      Rectangle boundingBoxB(*groupB[0], Point::closest_larger_point(*groupB[0]));
       for (unsigned i = 1; i < groupB.size(); i++) {
         boundingBoxB.expand(*groupB[i]);
       }
