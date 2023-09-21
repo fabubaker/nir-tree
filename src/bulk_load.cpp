@@ -624,6 +624,95 @@ std::pair<tree_node_handle, Rectangle> quad_tree_style_load(
   return std::make_pair(branch_handle, bbox);
 }
 
+
+std::pair<tree_node_handle, Rectangle> quad_tree_style_load(
+  rstartreedisk::RStarTreeDisk<5, R_STAR_FANOUT> *tree,
+  std::vector<Point>::iterator start,
+  std::vector<Point>::iterator stop,
+  unsigned branch_factor,
+  unsigned cur_level,
+  tree_node_handle parent_handle
+) {
+  using LN = rstartreedisk::LeafNode<5, R_STAR_FANOUT>;
+  using BN = rstartreedisk::BranchNode<5, R_STAR_FANOUT>;
+
+  uint64_t num_els = (stop - start);
+  tree_node_allocator *allocator = tree->node_allocator_.get();
+  if (cur_level == 0) {
+    // Leaf Node
+    if (num_els > branch_factor) {
+      std::cout << "NUM ELS: " << num_els << std::endl;
+    }
+
+    assert(num_els <= branch_factor);
+
+    num_els = (stop - start);
+    auto alloc_data = allocator->create_new_tree_node<LN>(NodeHandleType(LEAF_NODE));
+    new (&(*(alloc_data.first))) LN();
+
+    auto leaf_node = alloc_data.first;
+    auto leaf_handle = alloc_data.second;
+    leaf_handle.set_level(cur_level);
+    assert(leaf_handle.get_level() == 0);
+
+    for (auto iter = start; iter != stop; iter++) {
+      leaf_node->addPoint(*iter);
+    }
+
+    Rectangle bbox = leaf_node->boundingBox();
+    return std::make_pair(leaf_handle, bbox);
+  }
+  // branch Node case 
+  // Return a tree node handle with pointers to all of its necessary
+  // children.
+  auto alloc_data = allocator->create_new_tree_node<BN>(NodeHandleType(BRANCH_NODE));
+  new (&(*(alloc_data.first))) BN();
+
+  auto branch_node = alloc_data.first;
+  tree_node_handle branch_handle = alloc_data.second;
+  branch_handle.set_level(cur_level);
+
+  uint64_t partitions = std::ceil(sqrt(branch_factor));
+  uint64_t sub_partitions = std::ceil(branch_factor / (float) partitions);
+
+  std::vector<uint64_t> x_lines = find_bounding_lines(start, stop, 0, branch_factor, partitions, sub_partitions, cur_level);
+
+  for (uint64_t i = 0; i < x_lines.size() - 1; i++) {
+    uint64_t x_start = x_lines.at(i);
+    uint64_t x_end = x_lines.at(i + 1); /* not inclusive */
+
+    std::vector<uint64_t> y_lines = find_bounding_lines(
+        start + x_start, start + x_end, 1, branch_factor, sub_partitions, 1, cur_level);
+    for (uint64_t j = 0; j < y_lines.size() - 1; j++) {
+      uint64_t y_start = y_lines.at(j);
+      uint64_t y_end = y_lines.at(j + 1); /* not inclusive */
+
+      std::vector<Point>::iterator sub_start = start + x_start + y_start;
+      std::vector<Point>::iterator sub_stop = start + x_start + y_end;
+
+      if (sub_start == sub_stop) {
+        // I think this can happen when we run out of points in
+        // the lowest layer to split among children.
+        continue;
+      }
+
+      // This needs to return the box and handle.
+      auto ret = quad_tree_style_load(tree,
+                                      sub_start,
+                                      sub_stop,
+                                      branch_factor,
+                                      cur_level - 1,
+                                      branch_handle);
+      rstartreedisk::Branch b;
+      b.child = ret.first;
+      b.boundingBox = ret.second;
+      branch_node->addBranchToNode(b);
+    }
+  }
+  Rectangle bbox = branch_node->boundingBox();
+  return std::make_pair(branch_handle, bbox);
+}
+
 // cost_function calculates the weighted cost for a cut
 // for the TGS bulk-loading algorithm.
 double cost_function(Rectangle& B0, Rectangle& B1, double area_weight)
@@ -1068,10 +1157,7 @@ void bulk_load_tree(
   
   std::cout << "Bulk-loading NIRTree using Quad Tree Style Load..." << std::endl;
   std::chrono::high_resolution_clock::time_point begin_time = std::chrono::high_resolution_clock::now();
-  auto ret = quad_tree_style_load(
-  tree_ptr, begin, end,
-      max_branch_factor, root_level, nullptr
-  );
+  auto ret = quad_tree_style_load(tree_ptr, begin, end, max_branch_factor, root_level, nullptr);
   tree->root = ret.first;
 
   std::chrono::high_resolution_clock::time_point end_time = std::chrono::high_resolution_clock::now();
@@ -1127,6 +1213,15 @@ void bulk_load_tree(
   } else if (configU["bulk_load_alg"] == TGS) {
     std::cout << "Bulk-loading R* using Top-Down Greedy Splitting..." << std::endl;
     tree->root = tgs_load(tree, begin, end, max_branch_factor);
+  } else if(configU["bulk_load_alg"] == QTS) {
+    // QTS is top down
+    uint64_t root_level = max_depth;
+    std::cout << "Bulk-loading R* using Quad Tree Style Load..." << std::endl;
+    auto ret = quad_tree_style_load(tree, begin, end, max_branch_factor, root_level, nullptr);
+    tree->root = ret.first;
+  } else {
+    std::cout << "Bulk-loading algorithm is not recognized..." << std::endl;
+    exit(1);
   }
 
   std::chrono::high_resolution_clock::time_point end_time = std::chrono::high_resolution_clock::now();

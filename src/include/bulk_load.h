@@ -132,6 +132,15 @@ std::pair<tree_node_handle, Rectangle> quad_tree_style_load(
     unsigned max_depth,
     tree_node_handle parent_handle);
 
+std::pair<tree_node_handle, Rectangle> quad_tree_style_load(
+    rstartreedisk::RStarTreeDisk<5, R_STAR_FANOUT> *tree,
+    std::vector<Point>::iterator start,
+    std::vector<Point>::iterator stop,
+    unsigned branch_factor,
+    unsigned cur_depth,
+    unsigned max_depth,
+    tree_node_handle parent_handle);
+
 tree_node_handle tgs_load(
         rstartreedisk::RStarTreeDisk<5, R_STAR_FANOUT> *tree,
         std::vector<Point>::iterator begin,
