@@ -468,8 +468,7 @@ std::pair<tree_node_handle, Rectangle> quad_tree_style_load(
   std::vector<Point>::iterator start,
   std::vector<Point>::iterator stop,
   unsigned branch_factor,
-  unsigned cur_level,
-  tree_node_handle parent_handle
+  unsigned cur_level
 ) {
   uint64_t num_els = (stop - start);
   tree_node_allocator *allocator = tree->node_allocator_.get();
@@ -543,9 +542,7 @@ std::pair<tree_node_handle, Rectangle> quad_tree_style_load(
           sub_start,
           sub_stop,
           branch_factor,
-          cur_level - 1,
-          branch_handle
-      );
+          cur_level - 1);
 
       tree_node_handle child_handle = ret.first;
       Rectangle bbox = ret.second;
@@ -630,8 +627,7 @@ std::pair<tree_node_handle, Rectangle> quad_tree_style_load(
   std::vector<Point>::iterator start,
   std::vector<Point>::iterator stop,
   unsigned branch_factor,
-  unsigned cur_level,
-  tree_node_handle parent_handle
+  unsigned cur_level
 ) {
   using LN = rstartreedisk::LeafNode<5, R_STAR_FANOUT>;
   using BN = rstartreedisk::BranchNode<5, R_STAR_FANOUT>;
@@ -701,8 +697,7 @@ std::pair<tree_node_handle, Rectangle> quad_tree_style_load(
                                       sub_start,
                                       sub_stop,
                                       branch_factor,
-                                      cur_level - 1,
-                                      branch_handle);
+                                      cur_level - 1);
       rstartreedisk::Branch b;
       b.child = ret.first;
       b.boundingBox = ret.second;
@@ -1157,7 +1152,7 @@ void bulk_load_tree(
   
   std::cout << "Bulk-loading NIRTree using Quad Tree Style Load..." << std::endl;
   std::chrono::high_resolution_clock::time_point begin_time = std::chrono::high_resolution_clock::now();
-  auto ret = quad_tree_style_load(tree_ptr, begin, end, max_branch_factor, root_level, nullptr);
+  auto ret = quad_tree_style_load(tree_ptr, begin, end, max_branch_factor, root_level);
   tree->root = ret.first;
 
   std::chrono::high_resolution_clock::time_point end_time = std::chrono::high_resolution_clock::now();
@@ -1217,7 +1212,7 @@ void bulk_load_tree(
     // QTS is top down
     uint64_t root_level = max_depth;
     std::cout << "Bulk-loading R* using Quad Tree Style Load..." << std::endl;
-    auto ret = quad_tree_style_load(tree, begin, end, max_branch_factor, root_level, nullptr);
+    auto ret = quad_tree_style_load(tree, begin, end, max_branch_factor, root_level);
     tree->root = ret.first;
   } else {
     std::cout << "Bulk-loading algorithm is not recognized..." << std::endl;
