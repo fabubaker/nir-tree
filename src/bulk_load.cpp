@@ -1226,7 +1226,7 @@ void bulk_load_tree(
 #ifndef NDEBUG
   // run level test
   // Level of the R-tree root node (leaf has height 0)
-  unsigned root_level = std::ceil(log(end - begin) / log(max_branch_factor)) - 1;
+  unsigned root_level = max_depth;
   testLevels(tree, tree->root, root_level);
 #endif
 
