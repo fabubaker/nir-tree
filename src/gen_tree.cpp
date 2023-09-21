@@ -118,7 +118,6 @@ void generate_tree(std::map<std::string, size_t> &configU, std::map<std::string,
     
     spatialIndex = tree;
     tree->stat();
-    exit(0);
   } else {
     std::cout << "Only Supports NIR_Tree and R_STAR_TREE for gen_tree" << std::endl; 
     abort();
