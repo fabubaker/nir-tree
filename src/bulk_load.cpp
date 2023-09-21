@@ -1102,9 +1102,15 @@ void bulk_load_tree(
 ) {
   uint64_t num_els = (end - begin);
   // Keep in mind there is a 0th level, so floor is correct
-  uint64_t max_depth = std::floor(log(num_els) / log(max_branch_factor));
-  uint64_t cur_depth = max_depth;
+  // same question as above
+  // uint64_t max_depth = std::floor(log(num_els) / log(max_branch_factor));
+  // uint64_t cur_depth = max_depth;
+  uint64_t max_depth = std::ceil(log(num_els) / log(max_branch_factor)) - 1;
+  // bottom up
+  uint64_t cur_level = 0;
 
+  std::cout << "Num els: " << num_els << std::endl;
+  std::cout << "Max depth required: " << max_depth << std::endl;
   std::cout << "Size of R* branch node: " << sizeof(rstartreedisk::BranchNode<5, R_STAR_FANOUT>) << std::endl;
 
   /* Start measuring bulk load time */
@@ -1112,14 +1118,15 @@ void bulk_load_tree(
 
   if (configU["bulk_load_alg"] == STR) {
     std::cout << "Bulk-loading R* using Sort-Tile-Recursive..." << std::endl;
-    std::vector<tree_node_handle> leaves = str_packing_leaf(tree, begin, end, max_branch_factor, cur_depth);
-    cur_depth--;
-    std::vector<tree_node_handle> branches = str_packing_branch(tree, leaves, max_branch_factor, cur_depth);
-    cur_depth--;
+    std::vector<tree_node_handle> leaves = str_packing_leaf(tree, begin, end, max_branch_factor, cur_level);
+    cur_level++;
+    std::vector<tree_node_handle> branches = str_packing_branch(tree, leaves, max_branch_factor, cur_level);
+    cur_level++;
 
     while (branches.size() > 1) {
-      branches = str_packing_branch(tree, branches, max_branch_factor, cur_depth);
-      cur_depth--;
+      assert(cur_level <= max_depth);
+      branches = str_packing_branch(tree, branches, max_branch_factor, cur_level);
+      cur_level++;
     }
 
     tree->root = branches.at(0);
