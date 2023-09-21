@@ -378,8 +378,6 @@ public:
           Partition p, 
           bool is_downsplit);
 
-  //void condenseTree();
-
   // Miscellaneous
   // boundingBox() returns a MBB of all branches on BranchNode
   Rectangle boundingBox();
