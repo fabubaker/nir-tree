@@ -468,13 +468,12 @@ std::pair<tree_node_handle, Rectangle> quad_tree_style_load(
   std::vector<Point>::iterator start,
   std::vector<Point>::iterator stop,
   unsigned branch_factor,
-  unsigned cur_depth,
-  unsigned max_depth,
+  unsigned cur_level,
   tree_node_handle parent_handle
 ) {
   uint64_t num_els = (stop - start);
   tree_node_allocator *allocator = tree->node_allocator_.get();
-  if (cur_depth == max_depth) {
+  if (cur_level == 0) {
     if (num_els > branch_factor) {
       std::cout << "NUM ELS: " << num_els << std::endl;
     }
@@ -489,7 +488,8 @@ std::pair<tree_node_handle, Rectangle> quad_tree_style_load(
 
     auto leaf_node = alloc_data.first;
     auto leaf_handle = alloc_data.second;
-    leaf_handle.set_level(cur_depth);
+    leaf_handle.set_level(cur_level);
+    assert(leaf_handle.get_level() == 0);
 
     for (auto iter = start; iter != stop; iter++) {
       leaf_node->addPoint(*iter);
@@ -508,12 +508,12 @@ std::pair<tree_node_handle, Rectangle> quad_tree_style_load(
 
   auto branch_node = alloc_data.first;
   tree_node_handle branch_handle = alloc_data.second;
-  branch_handle.set_level(cur_depth);
+  branch_handle.set_level(cur_level);
 
   uint64_t partitions = std::ceil(sqrt(branch_factor));
   uint64_t sub_partitions = std::ceil(branch_factor / (float) partitions);
 
-  std::vector<uint64_t> x_lines = find_bounding_lines(start, stop, 0, branch_factor, partitions, sub_partitions, max_depth - cur_depth);
+  std::vector<uint64_t> x_lines = find_bounding_lines(start, stop, 0, branch_factor, partitions, sub_partitions, cur_level);
 
   std::vector<std::pair<IsotheticPolygon, tree_node_handle>> branch_handles;
   branch_handles.reserve(NIR_FANOUT);
@@ -523,7 +523,7 @@ std::pair<tree_node_handle, Rectangle> quad_tree_style_load(
     uint64_t x_end = x_lines.at(i + 1); /* not inclusive */
 
     std::vector<uint64_t> y_lines = find_bounding_lines(
-        start + x_start, start + x_end, 1, branch_factor, sub_partitions, 1, max_depth - cur_depth);
+        start + x_start, start + x_end, 1, branch_factor, sub_partitions, 1, cur_level);
     for (uint64_t j = 0; j < y_lines.size() - 1; j++) {
       uint64_t y_start = y_lines.at(j);
       uint64_t y_end = y_lines.at(j + 1); /* not inclusive */
@@ -543,8 +543,7 @@ std::pair<tree_node_handle, Rectangle> quad_tree_style_load(
           sub_start,
           sub_stop,
           branch_factor,
-          cur_depth + 1,
-          max_depth,
+          cur_level - 1,
           branch_handle
       );
 
@@ -1058,22 +1057,33 @@ void bulk_load_tree(
   auto tree_ptr = tree;
   uint64_t num_els = (end - begin);
   // Keep in mind there is a 0th level, so floor is correct
-  uint64_t max_depth = std::floor(log(num_els) / log(max_branch_factor));
+  // uint64_t max_depth = std::floor(log(num_els) / log(max_branch_factor));
+  // I think the above max_depth variable is defined incorrectly. Assume that 
+  // we have a branch_factor = 3, then a tree with 9 nodes will have max_depth = 2
+  // and a tree with 8 nodes will have max_depth = 1 based on the above definition. 
+  // However, I think they should be the same no matter if we consider leaf node 
+  // as 0th or 1th level. Please correct me if I'm wrong
+  uint64_t max_depth = std::ceil(log(num_els) / log(max_branch_factor)) - 1;
+  uint64_t root_level = max_depth;
 
   std::cout << "Num els: " << num_els << std::endl;
   std::cout << "Max depth required: " << max_depth << std::endl;
   std::cout << "Size of NIR branch node: " <<
     sizeof(nirtreedisk::BranchNode<5, NIR_FANOUT, nirtreedisk::ExperimentalStrategy>) << std::endl;
-
+  
+  std::cout << "Bulk-loading NIRTree using Quad Tree Style Load..." << std::endl;
   std::chrono::high_resolution_clock::time_point begin_time = std::chrono::high_resolution_clock::now();
   auto ret = quad_tree_style_load(
   tree_ptr, begin, end,
-      max_branch_factor, 0, max_depth, nullptr
+      max_branch_factor, root_level, nullptr
   );
   tree->root = ret.first;
   std::cout << "Out of line size: " << tree->node_allocator_.get()->out_of_line_nodes_size << std::endl;
   std::chrono::high_resolution_clock::time_point end_time = std::chrono::high_resolution_clock::now();
   std::chrono::duration<double> delta = std::chrono::duration_cast<std::chrono::duration<double>>(end_time - begin_time);
+
+  // run level test
+  testLevels(tree, tree->root, root_level);
 
   std::cout << "Bulk loading NIRTree took: " << delta.count() << std::endl;
   std::cout << "Completed with " << intersection_count << " intersections" << std::endl;
@@ -1102,7 +1112,7 @@ void bulk_load_tree(
 
   if (configU["bulk_load_alg"] == STR) {
     std::cout << "Bulk-loading R* using Sort-Tile-Recursive..." << std::endl;
-    std::vector<tree_node_handle> leaves = str_packing_leaf(tree, begin, end,max_branch_factor, cur_depth);
+    std::vector<tree_node_handle> leaves = str_packing_leaf(tree, begin, end, max_branch_factor, cur_depth);
     cur_depth--;
     std::vector<tree_node_handle> branches = str_packing_branch(tree, leaves, max_branch_factor, cur_depth);
     cur_depth--;
@@ -1123,7 +1133,7 @@ void bulk_load_tree(
   /* End measuring bulk load time */
 
   // run level test
-  // Height of the R-tree root node (leaf has height 0)
+  // Level of the R-tree root node (leaf has height 0)
   unsigned root_level = std::ceil(log(end - begin) / log(max_branch_factor)) - 1;
   testLevels(tree, tree->root, root_level);
 
