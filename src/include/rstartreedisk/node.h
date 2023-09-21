@@ -161,6 +161,7 @@ public:
   tree_node_handle chooseSubtree(
       RStarTreeDisk<min_branch_factor, max_branch_factor> *treeRef,
       tree_node_handle current_handle,
+      std::stack<tree_node_handle> &parentHandles,
       const NodeEntry &givenNodeEntry
   );
   tree_node_handle findLeaf(
@@ -1302,10 +1303,12 @@ std::vector<Point> rectangle_search(
   return accumulator;
 }
 
+// Populates parentHandles with the path taken to get to the leaf
 template <int min_branch_factor, int max_branch_factor>
 tree_node_handle BranchNode<min_branch_factor, max_branch_factor>::chooseSubtree(
         RStarTreeDisk<min_branch_factor, max_branch_factor> *treeRef,
         tree_node_handle current_handle,
+        std::stack<tree_node_handle> &parentHandles,
         const NodeEntry &givenNodeEntry
 ) {
   // CS1: This is called on the root! Just like insert/reinsert
@@ -1435,11 +1438,12 @@ tree_node_handle BranchNode<min_branch_factor, max_branch_factor>::chooseSubtree
     //std::cout << "Proceeding down index " << descentIndex <<
     //    std::endl;
     // Descend
+    // Keep track of the previous node before descending
+    parentHandles.push(node_handle);
     node_handle = node->entries[descentIndex].child;
   }
 
-  // Unsupported
-  abort();
+  assert(false);
 }
 
 template <int min_branch_factor, int max_branch_factor>
@@ -1841,7 +1845,12 @@ tree_node_handle BranchNode<min_branch_factor, max_branch_factor>::insert(
   assert(current_level > 0); // Branch nodes have level > 0
 
   // I1 [Find position for new record]
-  tree_node_handle insertion_point_handle = chooseSubtree(nodeEntry);
+  tree_node_handle insertion_point_handle = chooseSubtree(
+          treeRef,
+          current_handle,
+          parentHandles,
+          nodeEntry
+  );
   uint16_t insertion_point_level = insertion_point_handle.get_level();
 
   tree_node_handle sibling_handle = tree_node_handle(nullptr);
