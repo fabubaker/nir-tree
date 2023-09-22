@@ -560,6 +560,10 @@ std::pair<tree_node_handle, tree_node_handle> adjustTreeBottomHalf(
   tree_node_handle parent_handle = parentHandles.top();
   parentHandles.pop();
 
+  /* After a split, we have two nodes at the same level: the current node
+   * and the newly created sibling node. Current node has a new bounding box
+   * after the split and needs to be updated in the parent. The sibling node
+   * needs to be inserted into the parent. */
   auto parent_ptr = treeRef->get_branch_node(parent_handle);
   bool didUpdateBoundingBox = parent_ptr->updateBoundingBox(node_handle, node->boundingBox());
 
@@ -1876,8 +1880,8 @@ tree_node_handle BranchNode<min_branch_factor, max_branch_factor>::insert(
 
     // If we exceed treeRef->maxBranchFactor we need to do something about it
     if (num_els > max_branch_factor) {
-      // We call overflow treatment to determine how our sibling node is treated if we do a
-      // reInsert, sibling is nullptr. This is properly dealt with in adjustTree
+      // We call overflow treatment to determine how our sibling node is treated. If we do a
+      // reInsert, sibling is nullptr. This is properly dealt with in adjustTree.
       sibling_handle = insertion_point->overflowTreatment(treeRef, insertion_point_handle, hasReinsertedOnLevel);
     }
 
