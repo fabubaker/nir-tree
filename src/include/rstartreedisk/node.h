@@ -1707,6 +1707,7 @@ tree_node_handle BranchNode<min_branch_factor, max_branch_factor>::splitNode(
 
   newSibling->cur_offset_ = cur_offset_ - splitIndex;
 
+#ifndef NDEBUG
   for (unsigned i = 0; i < newSibling->cur_offset_; i++) {
     Branch &b = newSibling->entries.at(i);
 
@@ -1718,6 +1719,7 @@ tree_node_handle BranchNode<min_branch_factor, max_branch_factor>::splitNode(
       assert(sibling_handle.get_level() == b.child.get_level() + 1);
     }
   }
+#endif
 
   // Chop our node's data down
   cur_offset_ = splitIndex;
