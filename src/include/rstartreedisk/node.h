@@ -750,7 +750,7 @@ tree_node_handle LeafNode<min_branch_factor, max_branch_factor>::reInsert(
   // copy these out
   std::copy(entries.begin() + remainder, entries.begin() + cur_offset_, std::back_inserter(entriesToReinsert));
 
-  //adjust ending of array
+  // adjust ending of array
   cur_offset_ = remainder;
 
   // During this recursive insert (we are already in an insert, since we are reInserting), we
