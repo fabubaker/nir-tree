@@ -1904,13 +1904,8 @@ tree_node_handle BranchNode<min_branch_factor, max_branch_factor>::insert(
         }
         std::cout << "}" << std::endl;
         */
-    if (b.child.get_type() == LEAF_NODE) {
-      auto child = treeRef->get_leaf_node(b.child);
-      assert(insertion_point_level == b.child.get_level() + 1);
-    } else {
-      auto child = treeRef->get_branch_node(b.child);
-      assert(insertion_point_level == b.child.get_level() + 1);
-    }
+
+    assert(insertion_point_level == b.child.get_level() + 1);
 
     unsigned num_els = insertion_point->cur_offset_;
 
