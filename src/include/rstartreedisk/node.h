@@ -93,17 +93,19 @@ public:
     RStarTreeDisk<min_branch_factor, max_branch_factor> *treeRef,
     tree_node_handle current_handle,
     tree_node_handle sibling_handle,
-    std::stack<tree_node_handle> &parentHandles,
+    std::stack<tree_node_handle> parentHandles,
     std::vector<bool> &hasReinsertedOnLevel
   );
   tree_node_handle reInsert(
         RStarTreeDisk<min_branch_factor, max_branch_factor> *treeRef,
         tree_node_handle current_handle,
+        std::stack<tree_node_handle> parentHandles,
         std::vector<bool> &hasReinsertedOnLevel
   );
   tree_node_handle overflowTreatment(
           RStarTreeDisk<min_branch_factor, max_branch_factor> *treeRef,
           tree_node_handle current_handle,
+          std::stack<tree_node_handle> parentHandles,
           std::vector<bool> &hasReinsertedOnLevel
   );
   tree_node_handle condenseTree(std::vector<bool> &hasReinsertedOnLevel);
@@ -181,17 +183,19 @@ public:
           RStarTreeDisk<min_branch_factor, max_branch_factor> *treeRef,
           tree_node_handle current_handle,
           tree_node_handle sibling_handle,
-          std::stack<tree_node_handle> &parentHandles,
+          std::stack<tree_node_handle> parentHandles,
           std::vector<bool> &hasReinsertedOnLevel
   );
   tree_node_handle reInsert(
           RStarTreeDisk<min_branch_factor, max_branch_factor> *treeRef,
           tree_node_handle current_handle,
+          std::stack<tree_node_handle> parentHandles,
           std::vector<bool> &hasReinsertedOnLevel
   );
   tree_node_handle overflowTreatment(
           RStarTreeDisk<min_branch_factor, max_branch_factor> *treeRef,
           tree_node_handle current_handle,
+          std::stack<tree_node_handle> parentHandles,
           std::vector<bool> &hasReinsertedOnLevel
   );
   tree_node_handle condenseTree(std::vector<bool> &hasReinsertedOnLevel);
@@ -542,6 +546,7 @@ tree_node_handle LeafNode<min_branch_factor, max_branch_factor>::splitNode(
   return sibling_handle;
 }
 
+// Note: This function modifies parentHandles.
 template <class NT, class TR>
 std::pair<tree_node_handle, tree_node_handle> adjustTreeBottomHalf(
         TR *treeRef,
@@ -581,6 +586,7 @@ std::pair<tree_node_handle, tree_node_handle> adjustTreeBottomHalf(
       tree_node_handle sibling_parent_handle = parent_ptr->overflowTreatment(
               treeRef,
               parent_handle,
+              parentHandles,
               hasReinsertedOnLevel
       );
 
@@ -619,7 +625,7 @@ tree_node_handle adjustTreeSub(
         RStarTreeDisk<min_branch_factor, max_branch_factor> *treeRef,
         tree_node_handle current_handle,
         tree_node_handle sibling_handle,
-        std::stack<tree_node_handle> &parentHandles,
+        std::stack<tree_node_handle> parentHandles,
         std::vector<bool> &hasReinsertedOnLevel) {
   // AT1 [Initialize]
   for (;;) {
@@ -694,7 +700,7 @@ tree_node_handle LeafNode<min_branch_factor, max_branch_factor>::adjustTree(
         RStarTreeDisk<min_branch_factor, max_branch_factor> *treeRef,
         tree_node_handle current_handle,
         tree_node_handle sibling_handle,
-        std::stack<tree_node_handle> &parentHandles,
+        std::stack<tree_node_handle> parentHandles,
         std::vector<bool> &hasReinsertedOnLevel
 ) {
   return adjustTreeSub(treeRef, current_handle, sibling_handle, parentHandles, hasReinsertedOnLevel);
@@ -705,7 +711,7 @@ tree_node_handle BranchNode<min_branch_factor, max_branch_factor>::adjustTree(
         RStarTreeDisk<min_branch_factor, max_branch_factor> *treeRef,
         tree_node_handle current_handle,
         tree_node_handle sibling_handle,
-        std::stack<tree_node_handle> &parentHandles,
+        std::stack<tree_node_handle> parentHandles,
         std::vector<bool> &hasReinsertedOnLevel
 ) {
   return adjustTreeSub(treeRef, current_handle, sibling_handle, parentHandles, hasReinsertedOnLevel);
@@ -715,6 +721,7 @@ template <int min_branch_factor, int max_branch_factor>
 tree_node_handle LeafNode<min_branch_factor, max_branch_factor>::reInsert(
         RStarTreeDisk<min_branch_factor, max_branch_factor> *treeRef,
         tree_node_handle current_handle,
+        std::stack<tree_node_handle> parentHandles,
         std::vector<bool> &hasReinsertedOnLevel
 ) {
   // 1. RI1 Compute distance between each of the points and the bounding box containing them.
@@ -753,6 +760,33 @@ tree_node_handle LeafNode<min_branch_factor, max_branch_factor>::reInsert(
   // adjust ending of array
   cur_offset_ = remainder;
 
+  /* We removed some entries from this node, which means bounding boxes
+   * have to be updated. Do this now before the actual re-insertion. */
+  tree_node_handle child_handle = current_handle;
+
+  for (;;) {
+    if (parentHandles.empty()) {
+      break;
+    }
+
+    tree_node_handle parent_handle = parentHandles.top();
+    parentHandles.pop();
+
+    if (child_handle.get_type() == LEAF_NODE) {
+      auto child = treeRef->get_leaf_node(child_handle);
+      auto parent = treeRef->get_branch_node(parent_handle);
+
+      parent->updateBoundingBox(child_handle, child->boundingBox());
+    } else {
+      auto child = treeRef->get_branch_node(child_handle);
+      auto parent = treeRef->get_branch_node(parent_handle);
+
+      parent->updateBoundingBox(child_handle, child->boundingBox());
+    }
+
+    child_handle = parent_handle;
+  }
+
   // During this recursive insert (we are already in an insert, since we are reInserting), we
   // may end up here again. If we do, we should still be using the same hasReinsertedOnLevel
   // vector because it corresponds to the activities we have performed during a single
@@ -785,6 +819,7 @@ template <int min_branch_factor, int max_branch_factor>
 tree_node_handle LeafNode<min_branch_factor, max_branch_factor>::overflowTreatment(
         RStarTreeDisk<min_branch_factor, max_branch_factor> *treeRef,
         tree_node_handle current_handle,
+        std::stack<tree_node_handle> parentHandles,
         std::vector<bool> &hasReinsertedOnLevel
 ) {
   uint16_t current_level = current_handle.get_level();
@@ -798,7 +833,7 @@ tree_node_handle LeafNode<min_branch_factor, max_branch_factor>::overflowTreatme
     hasReinsertedOnLevel.at(current_level) = true;
     //std::cout << "Overflow treatment on leaf node, reinserting." <<
     //    std::endl;
-    return reInsert(treeRef, current_handle, hasReinsertedOnLevel);
+    return reInsert(treeRef, current_handle, parentHandles, hasReinsertedOnLevel);
   }
 }
 
@@ -841,6 +876,7 @@ tree_node_handle LeafNode<min_branch_factor, max_branch_factor>::insert(
     sibling_handle = overflowTreatment(
         treeRef,
         current_handle,
+        parentHandles,
         hasReinsertedOnLevel
     );
   }
@@ -1752,6 +1788,7 @@ template <int min_branch_factor, int max_branch_factor>
 tree_node_handle BranchNode<min_branch_factor, max_branch_factor>::reInsert(
         RStarTreeDisk<min_branch_factor, max_branch_factor> *treeRef,
         tree_node_handle current_handle,
+        std::stack<tree_node_handle> parentHandles,
         std::vector<bool> &hasReinsertedOnLevel
 ) {
   // 1. RI1 Compute distance between each of the points and the bounding box containing them.
@@ -1790,6 +1827,33 @@ tree_node_handle BranchNode<min_branch_factor, max_branch_factor>::reInsert(
   //adjust ending of array
   cur_offset_ = remainder;
 
+  /* We removed some entries from this node, which means bounding boxes
+   * have to be updated. Do this now before the actual re-insertion. */
+  tree_node_handle child_handle = current_handle;
+
+  for (;;) {
+    if (parentHandles.empty()) {
+      break;
+    }
+
+    tree_node_handle parent_handle = parentHandles.top();
+    parentHandles.pop();
+
+    if (child_handle.get_type() == LEAF_NODE) {
+      auto child = treeRef->get_leaf_node(child_handle);
+      auto parent = treeRef->get_branch_node(parent_handle);
+
+      parent->updateBoundingBox(child_handle, child->boundingBox());
+    } else {
+      auto child = treeRef->get_branch_node(child_handle);
+      auto parent = treeRef->get_branch_node(parent_handle);
+
+      parent->updateBoundingBox(child_handle, child->boundingBox());
+    }
+
+    child_handle = parent_handle;
+  }
+
   // During this recursive insert (we are already in an insert, since we are reInserting), we
   // may end up here again. If we do, we should still be using the same hasReinsertedOnLevel
   // vector because it corresponds to the activities we have performed during a single
@@ -1818,6 +1882,7 @@ template <int min_branch_factor, int max_branch_factor>
 tree_node_handle BranchNode<min_branch_factor, max_branch_factor>::overflowTreatment(
         RStarTreeDisk<min_branch_factor, max_branch_factor> *treeRef,
         tree_node_handle current_handle,
+        std::stack<tree_node_handle> parentHandles,
         std::vector<bool> &hasReinsertedOnLevel
 ) {
   uint16_t current_level = current_handle.get_level();
@@ -1831,7 +1896,7 @@ tree_node_handle BranchNode<min_branch_factor, max_branch_factor>::overflowTreat
     hasReinsertedOnLevel.at(current_level) = true;
     //std::cout << "Overflow treatment on branch node, reinserting." <<
     //    std::endl;
-    return reInsert(treeRef, current_handle, hasReinsertedOnLevel);
+    return reInsert(treeRef, current_handle, parentHandles, hasReinsertedOnLevel);
   }
 }
 
@@ -1881,7 +1946,12 @@ tree_node_handle BranchNode<min_branch_factor, max_branch_factor>::insert(
     if (num_els > max_branch_factor) {
       // We call overflow treatment to determine how our sibling node is treated. If we do a
       // reInsert, sibling is nullptr. This is properly dealt with in adjustTree.
-      sibling_handle = insertion_point->overflowTreatment(treeRef, insertion_point_handle, hasReinsertedOnLevel);
+      sibling_handle = insertion_point->overflowTreatment(
+              treeRef,
+              insertion_point_handle,
+              parentHandles,
+              hasReinsertedOnLevel
+      );
     }
 
     // I3 [Propogate overflow treatment changes upward]
@@ -1916,7 +1986,12 @@ tree_node_handle BranchNode<min_branch_factor, max_branch_factor>::insert(
     if (num_els > max_branch_factor) {
       // We call overflow treatment to determine how our sibling node is treated if we do a
       // reInsert, sibling is nullptr. This is properly dealt with in adjustTree
-      sibling_handle = insertion_point->overflowTreatment(treeRef, insertion_point_handle, hasReinsertedOnLevel);
+      sibling_handle = insertion_point->overflowTreatment(
+              treeRef,
+              insertion_point_handle,
+              parentHandles,
+              hasReinsertedOnLevel
+      );
     }
 
     // I3 [Propogate overflow treatment changes upward]
