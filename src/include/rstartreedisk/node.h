@@ -757,7 +757,6 @@ tree_node_handle LeafNode<min_branch_factor, max_branch_factor>::reInsert(
   // may end up here again. If we do, we should still be using the same hasReinsertedOnLevel
   // vector because it corresponds to the activities we have performed during a single
   // point/rectangle insertion (the top level one)
-  auto root_node = treeRef->get_branch_node(treeRef->root);
 
   /*
     std::cout << "Overflow treatment, need to reinsert nodes: {" <<
@@ -770,11 +769,11 @@ tree_node_handle LeafNode<min_branch_factor, max_branch_factor>::reInsert(
 
   for (const Point &entry : entriesToReinsert) {
     if (treeRef->root.get_type() == LEAF_NODE) {
-      treeRef->root = root_node->insert(treeRef, treeRef->root, entry, hasReinsertedOnLevel);
       auto root_node = treeRef->get_leaf_node(treeRef->root);
-    } else {
       treeRef->root = root_node->insert(treeRef, treeRef->root, entry, hasReinsertedOnLevel);
+    } else {
       auto root_node = treeRef->get_branch_node(treeRef->root);
+      treeRef->root = root_node->insert(treeRef, treeRef->root, entry, hasReinsertedOnLevel);
     }
   }
 
