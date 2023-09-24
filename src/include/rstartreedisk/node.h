@@ -1153,7 +1153,14 @@ bool BranchNode<min_branch_factor, max_branch_factor>::updateBoundingBox(tree_no
     }
   }
 
-//  assert(false);
+  /* If control-flow reaches here, that means the child wasn't found in
+   * the parent and no update happened.
+   *
+   * One case where this can happen is when a reinsertion happens which causes
+   * a split that changes the tree structure. In this case, the child may belong
+   * to a new parent, but parentHandles has the old parent. Since the recursive
+   * insert call from reinsertion already takes care of updating the tree correctly,
+   * it's OK to return false and not throw an error. */
   return false;
 }
 
