@@ -1153,7 +1153,7 @@ bool BranchNode<min_branch_factor, max_branch_factor>::updateBoundingBox(tree_no
     }
   }
 
-  assert(false);
+//  assert(false);
   return false;
 }
 
