@@ -278,6 +278,7 @@ class IsotheticPolygon
     bool containsPointWithMetrics(const Point &givenPoint, unsigned &intersectionCount) const;
     bool intersectsRectangleWithMetrics(const Rectangle &givenRectangle, unsigned int &intersectionCount) const;
     unsigned long computeMemory();
+    unsigned long computeMemoryUsingEncoding();
   private:
     friend class boost::serialization::access;
     template <typename Archive> void serialize(Archive &ar, const unsigned int version) {
