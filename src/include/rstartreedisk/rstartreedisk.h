@@ -133,12 +133,12 @@ void RStarTreeDisk<min_branch_factor, max_branch_factor>::insert(Point givenPoin
   if (root.get_type() == LEAF_NODE) {
     auto root_ptr = get_leaf_node(root);
     std::fill(hasReinsertedOnLevel.begin(), hasReinsertedOnLevel.end(), false);
-    root = root_ptr->insert(givenPoint, hasReinsertedOnLevel);
+    root = root_ptr->insert(this, this->root, givenPoint, hasReinsertedOnLevel);
     return;
   }
   auto root_ptr = get_branch_node(root);
   std::fill(hasReinsertedOnLevel.begin(), hasReinsertedOnLevel.end(), false);
-  root = root_ptr->insert(givenPoint, hasReinsertedOnLevel);
+  root = root_ptr->insert(this, this->root, givenPoint, hasReinsertedOnLevel);
 }
 
 template <int min_branch_factor, int max_branch_factor>

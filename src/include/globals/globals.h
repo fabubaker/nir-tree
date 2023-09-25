@@ -7,7 +7,7 @@
 
 const unsigned dimensions = DIM;
 
-const unsigned R_STAR_FANOUT = 84;
-// one extra space is saved for insertion which causes split 
+// one extra space is saved for insertion which causes split
+const unsigned R_STAR_FANOUT = 83;
 const unsigned NIR_FANOUT = 83;
 #endif

@@ -1226,12 +1226,14 @@ void bulk_load_tree(
 #ifndef NDEBUG
   // run level test
   // Level of the R-tree root node (leaf has height 0)
-  unsigned root_level = std::ceil(log(end - begin) / log(max_branch_factor)) - 1;
+  unsigned root_level = max_depth;
   testLevels(tree, tree->root, root_level);
 #endif
 
   std::cout << "Bulk loading tree took: " << delta.count() << std::endl;
   std::cout << "Total pages occupied: " << tree->node_allocator_->cur_page_ << std::endl;
+
+  tree->hasReinsertedOnLevel.resize(max_depth + 1, false);
   tree->write_metadata();
 }
 
@@ -1297,7 +1299,7 @@ void sequential_insert_tree(
   std::chrono::high_resolution_clock::time_point end_time = std::chrono::high_resolution_clock::now();
   std::chrono::duration<double> delta = std::chrono::duration_cast<std::chrono::duration<double>>(end_time - begin_time);
   
-  std::cout << "Sequentially Inserting "<< total_insert << " points to NIRTree took: " << delta.count() << std::endl;
+  std::cout << "Sequentially Inserting "<< total_insert << " points to R*-Tree took: " << delta.count() << std::endl;
   std::cout << "Total pages occupied now: " << tree->node_allocator_->get_total_pages_occupied() << std::endl;
   tree->write_metadata();
 }

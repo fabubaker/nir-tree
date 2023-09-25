@@ -57,7 +57,9 @@ typedef std::variant<Branch, Point> NodeEntry;
 template <int min_branch_factor, int max_branch_factor>
 class LeafNode {
 public:
-  std::array<Point, max_branch_factor> entries;
+  // Obnoxiously, this needs to have a +1 so we can overflow
+  // by 1 entry and deal with it later.
+  std::array<Point, max_branch_factor + 1> entries;
   unsigned cur_offset_;
 
   // Constructors and destructors
@@ -74,22 +76,50 @@ public:
   void removePoint(const Point &givenPoint);
 
   tree_node_handle chooseSubtree(const NodeEntry &nodeEntry);
-  tree_node_handle findLeaf(const Point &givenPoint);
+  tree_node_handle findLeaf(
+          RStarTreeDisk<min_branch_factor, max_branch_factor> *treeRef,
+          tree_node_handle selfHandle,
+          const Point &givenPoint
+  );
   unsigned chooseSplitLeafAxis();
   unsigned chooseSplitNonLeafAxis();
   unsigned chooseSplitAxis();
   unsigned chooseSplitIndex(unsigned axis);
-  tree_node_handle splitNode();
-  tree_node_handle adjustTree(tree_node_handle siblingLeaf, std::vector<bool> &hasReinsertedOnLevel);
-  tree_node_handle reInsert(std::vector<bool> &hasReinsertedOnLevel);
-  tree_node_handle overflowTreatment(std::vector<bool> &hasReinsertedOnLevel);
+  tree_node_handle splitNode(
+    RStarTreeDisk<min_branch_factor, max_branch_factor> *treeRef,
+    tree_node_handle current_handle
+  );
+  tree_node_handle adjustTree(
+    RStarTreeDisk<min_branch_factor, max_branch_factor> *treeRef,
+    tree_node_handle current_handle,
+    tree_node_handle sibling_handle,
+    std::stack<tree_node_handle> parentHandles,
+    std::vector<bool> &hasReinsertedOnLevel
+  );
+  tree_node_handle reInsert(
+        RStarTreeDisk<min_branch_factor, max_branch_factor> *treeRef,
+        tree_node_handle current_handle,
+        std::stack<tree_node_handle> parentHandles,
+        std::vector<bool> &hasReinsertedOnLevel
+  );
+  tree_node_handle overflowTreatment(
+          RStarTreeDisk<min_branch_factor, max_branch_factor> *treeRef,
+          tree_node_handle current_handle,
+          std::stack<tree_node_handle> parentHandles,
+          std::vector<bool> &hasReinsertedOnLevel
+  );
   tree_node_handle condenseTree(std::vector<bool> &hasReinsertedOnLevel);
 
   // Datastructure interface functions
   void exhaustiveSearch(const Point &requestedPoint, std::vector<Point> &accumulator) const;
 
   // These return the root of the tree.
-  tree_node_handle insert(Point nodeEntry, std::vector<bool> &hasReinsertedOnLevel);
+  tree_node_handle insert(
+        RStarTreeDisk<min_branch_factor, max_branch_factor> *treeRef,
+        tree_node_handle current_handle,
+        Point nodeEntry,
+        std::vector<bool> &hasReinsertedOnLevel
+  );
   tree_node_handle remove(Point &givenPoint, std::vector<bool> hasReinsertedOnLevel);
 
   // Miscellaneous
@@ -112,7 +142,7 @@ public:
   // Obnoxiously, this needs to have a +1 so we can overflow
   // by 1 entry and deal with it later.
   // Brad: This is needed for R-star overflow insertion.
-  std::array<Branch, max_branch_factor> entries;
+  std::array<Branch, max_branch_factor + 1> entries;
   unsigned cur_offset_;
 
   // Constructors and destructors
@@ -130,23 +160,56 @@ public:
   Rectangle boundingBox() const;
   bool updateBoundingBox(tree_node_handle child, Rectangle updatedBoundingBox);
   void removeChild(tree_node_handle child);
-  tree_node_handle chooseSubtree(const NodeEntry &nodeEntry);
-  tree_node_handle findLeaf(const Point &givenPoint);
+  tree_node_handle chooseSubtree(
+      RStarTreeDisk<min_branch_factor, max_branch_factor> *treeRef,
+      tree_node_handle current_handle,
+      std::stack<tree_node_handle> &parentHandles,
+      const NodeEntry &givenNodeEntry
+  );
+  tree_node_handle findLeaf(
+          RStarTreeDisk<min_branch_factor, max_branch_factor> *treeRef,
+          tree_node_handle selfHandle,
+          const Point &givenPoint
+  );
   unsigned chooseSplitLeafAxis();
   unsigned chooseSplitNonLeafAxis();
   unsigned chooseSplitAxis();
   unsigned chooseSplitIndex(unsigned axis);
-  tree_node_handle splitNode();
-  tree_node_handle adjustTree(tree_node_handle siblingLeaf, std::vector<bool> &hasReinsertedOnLevel);
-  tree_node_handle reInsert(std::vector<bool> &hasReinsertedOnLevel);
-  tree_node_handle overflowTreatment(std::vector<bool> &hasReinsertedOnLevel);
+  tree_node_handle splitNode(
+    RStarTreeDisk<min_branch_factor, max_branch_factor> *treeRef,
+    tree_node_handle current_handle
+  );
+  tree_node_handle adjustTree(
+          RStarTreeDisk<min_branch_factor, max_branch_factor> *treeRef,
+          tree_node_handle current_handle,
+          tree_node_handle sibling_handle,
+          std::stack<tree_node_handle> parentHandles,
+          std::vector<bool> &hasReinsertedOnLevel
+  );
+  tree_node_handle reInsert(
+          RStarTreeDisk<min_branch_factor, max_branch_factor> *treeRef,
+          tree_node_handle current_handle,
+          std::stack<tree_node_handle> parentHandles,
+          std::vector<bool> &hasReinsertedOnLevel
+  );
+  tree_node_handle overflowTreatment(
+          RStarTreeDisk<min_branch_factor, max_branch_factor> *treeRef,
+          tree_node_handle current_handle,
+          std::stack<tree_node_handle> parentHandles,
+          std::vector<bool> &hasReinsertedOnLevel
+  );
   tree_node_handle condenseTree(std::vector<bool> &hasReinsertedOnLevel);
 
   // Datastructure interface functions
   void exhaustiveSearch(const Point &requestedPoint, std::vector<Point> &accumulator) const;
 
   // These return the root of the tree.
-  tree_node_handle insert(NodeEntry nodeEntry, std::vector<bool> &hasReinsertedOnLevel);
+  tree_node_handle insert(
+          RStarTreeDisk<min_branch_factor, max_branch_factor> *treeRef,
+          tree_node_handle current_handle,
+          NodeEntry nodeEntry,
+          std::vector<bool> &hasReinsertedOnLevel
+  );
   tree_node_handle remove(Point &givenPoint, std::vector<bool> hasReinsertedOnLevel);
 
   // Miscellaneous
@@ -168,10 +231,8 @@ double computeOverlapGrowth(unsigned index, const std::array<B, N + 1> &entries,
   assert(els_to_consider > 0);
 
   // 1. Make a test rectangle we will use to not modify the original
-  const Rectangle &origRectangle =
-      entries[index].boundingBox;
-  Rectangle newRectangle =
-      entries[index].boundingBox;
+  const Rectangle &origRectangle = entries[index].boundingBox;
+  Rectangle newRectangle = entries[index].boundingBox;
 
   // 2. Add the point to the copied Rectangle
   newRectangle.expand(givenBox);
@@ -179,6 +240,7 @@ double computeOverlapGrowth(unsigned index, const std::array<B, N + 1> &entries,
   // 3. Compute the overlap expansion area
   double overlapDiff = 0;
   unsigned num_entries_els = els_to_consider;
+
   for (unsigned i = 0; i < num_entries_els; ++i) {
     const auto &entry = entries[i];
 
@@ -259,25 +321,22 @@ void LeafNode<min_branch_factor, max_branch_factor>::exhaustiveSearch(const Poin
 
 template <int min_branch_factor, int max_branch_factor>
 tree_node_handle LeafNode<min_branch_factor, max_branch_factor>::chooseSubtree(const NodeEntry &givenNodeEntry) {
-  //    std::cout << "ChooseSubTree for point: " << std::get<Point>(
-  //           givenNodeEntry ) << std::endl;
-
-  // Unsupported
-  abort();
+    std::cout << "ChooseSubTree for point: " << std::get<Point>(givenNodeEntry) << std::endl;
 }
 
 template <int min_branch_factor, int max_branch_factor>
-tree_node_handle LeafNode<min_branch_factor, max_branch_factor>::findLeaf(const Point &givenPoint) {
-//  for (unsigned i = 0; i < cur_offset_; i++) {
-//    if (entries.at(i) == givenPoint) {
-//      return self_handle_;
-//    }
-//  }
-//
-//  return tree_node_handle(nullptr);
+tree_node_handle LeafNode<min_branch_factor, max_branch_factor>::findLeaf(
+    RStarTreeDisk<min_branch_factor, max_branch_factor> *treeRef,
+    tree_node_handle selfHandle,
+    const Point &givenPoint
+) {
+  for (unsigned i = 0; i < cur_offset_; i++) {
+    if (entries.at(i) == givenPoint) {
+      return selfHandle;
+    }
+  }
 
-// Unsupported
-  abort();
+  return tree_node_handle(nullptr);
 }
 
 template <int min_branch_factor, int max_branch_factor>
@@ -312,8 +371,7 @@ unsigned LeafNode<min_branch_factor, max_branch_factor>::chooseSplitLeafAxis() {
         boundingBoxA.expand(*groupA[i]);
       }
 
-      Rectangle boundingBoxB(*groupB[0],
-                             Point::closest_larger_point(*groupB[0]));
+      Rectangle boundingBoxB(*groupB[0], Point::closest_larger_point(*groupB[0]));
       for (unsigned i = 1; i < groupB.size(); i++) {
         boundingBoxB.expand(*groupB[i]);
       }
@@ -335,9 +393,7 @@ unsigned LeafNode<min_branch_factor, max_branch_factor>::chooseSplitLeafAxis() {
 
   // Sort along our best axis
   std::sort(entries.begin(), entries.begin() + cur_offset_,
-            [optimalAxis](Point &a, Point &b) {
-                return a[optimalAxis] < b[optimalAxis];
-            });
+            [optimalAxis](Point &a, Point &b) { return a[optimalAxis] < b[optimalAxis]; });
 
   return optimalAxis;
 }
@@ -426,15 +482,17 @@ unsigned LeafNode<min_branch_factor, max_branch_factor>::chooseSplitIndex(unsign
 }
 
 template <int min_branch_factor, int max_branch_factor>
-tree_node_handle LeafNode<min_branch_factor, max_branch_factor>::splitNode() {
-#if 0
+tree_node_handle LeafNode<min_branch_factor, max_branch_factor>::splitNode(
+      RStarTreeDisk<min_branch_factor, max_branch_factor> *treeRef,
+      tree_node_handle current_handle
+) {
   using NodeType = LeafNode<min_branch_factor, max_branch_factor>;
   // S1: Call chooseSplitAxis to determine the axis perpendicular to which the split is performed
   // S2: Invoke chooseSplitIndex given the axis to determine the best distribution along this axis
   // S3: Distribute the entries among these two groups
 
   // Call chooseSplitAxis to determine the axis perpendicular to which the split is performed
-  // For now we will save the axis as a int -> since this allows for room for growth in the future
+  // For now we will save the axis as an int -> since this allows for room for growth in the future
   // Call ChooseSplitIndex to create optimal splitting of data array
   unsigned splitAxis = chooseSplitAxis();
   unsigned splitIndex = chooseSplitIndex(splitAxis);
@@ -450,31 +508,17 @@ tree_node_handle LeafNode<min_branch_factor, max_branch_factor>::splitNode() {
         */
 
   tree_node_allocator *allocator = get_node_allocator(treeRef);
-  auto alloc_data =
-          allocator->create_new_tree_node<NodeType>(NodeHandleType(
-                  LEAF_NODE));
+  auto alloc_data = allocator->create_new_tree_node<NodeType>(NodeHandleType(LEAF_NODE));
+  uint16_t current_level = current_handle.get_level();
 
   auto newSibling = alloc_data.first;
   tree_node_handle sibling_handle = alloc_data.second;
 
-  new (&(*(newSibling))) NodeType(treeRef, sibling_handle, parent,
-                                  level);
-
-  newSibling->parent = parent;
-  newSibling->level = level;
-  newSibling->treeRef = treeRef;
-  newSibling->self_handle_ = sibling_handle;
-
-#if !defined(NDEBUG)
-  if (parent) {
-    auto parent_ptr = treeRef->get_branch_node(parent);
-    assert(level + 1 == parent_ptr->level);
-  }
-#endif
+  new (&(*(newSibling))) NodeType();
+  sibling_handle.set_level(current_level);
 
   // Copy everything to the right of the splitPoint (inclusive) to the new sibling
-  std::copy(entries.begin() + splitIndex, entries.begin() + cur_offset_,
-            newSibling->entries.begin());
+  std::copy(entries.begin() + splitIndex, entries.begin() + cur_offset_, newSibling->entries.begin());
 
   newSibling->cur_offset_ = cur_offset_ - splitIndex;
 
@@ -500,49 +544,54 @@ tree_node_handle LeafNode<min_branch_factor, max_branch_factor>::splitNode() {
 
   // Return our newly minted sibling
   return sibling_handle;
-#endif
-
-  // Unsupported
-  abort();
 }
 
-template <class NT>
+// Note: This function modifies parentHandles.
+template <class NT, class TR>
 std::pair<tree_node_handle, tree_node_handle> adjustTreeBottomHalf(
+        TR *treeRef,
         NT node,
         NT sibling,
+        tree_node_handle current_handle,
+        tree_node_handle sibling_handle,
+        std::stack<tree_node_handle> &parentHandles,
         std::vector<bool> &hasReinsertedOnLevel,
         int max_branch_factor)
 {
-  auto *tree_ref_backup = node->treeRef;
+  // The caller should ensure that parentHandles is not empty.
+  assert(!parentHandles.empty());
 
-  tree_node_handle parent_handle = node->parent;
-  tree_node_handle node_handle = node->self_handle_;
-  auto parent_ptr = tree_ref_backup->get_branch_node(parent_handle);
+  tree_node_handle node_handle = current_handle;
+  tree_node_handle parent_handle = parentHandles.top();
+  parentHandles.pop();
 
+  /* After a split, we have two nodes at the same level: the current node
+   * and the newly created sibling node. Current node has a new bounding box
+   * after the split and needs to be updated in the parent. The sibling node
+   * needs to be inserted into the parent. */
+  auto parent_ptr = treeRef->get_branch_node(parent_handle);
   bool didUpdateBoundingBox = parent_ptr->updateBoundingBox(node_handle, node->boundingBox());
 
   // If we have a split then deal with it otherwise move up the tree
   if (sibling != nullptr) {
-    tree_node_handle sibling_handle = sibling->self_handle_;
     Rectangle bb = sibling->boundingBox();
     // AT4 [Propogate the node split upwards]
     Branch b(bb, sibling_handle);
     parent_ptr->addBranchToNode(b);
 
     unsigned sz = parent_ptr->cur_offset_;
-    if (sz >= (unsigned)max_branch_factor) {
-      tree_node_handle parent_before_handle = node->parent;
-      tree_node_handle sibling_parent_handle = parent_ptr->overflowTreatment(hasReinsertedOnLevel);
+
+    if (sz >= (unsigned) max_branch_factor) {
+      tree_node_handle parent_before_handle = parent_handle;
+      tree_node_handle sibling_parent_handle = parent_ptr->overflowTreatment(
+              treeRef,
+              parent_handle,
+              parentHandles,
+              hasReinsertedOnLevel
+      );
 
       if (sibling_parent_handle) {
         // We split our parent, so now we have two (possible) parents
-        assert(node->parent == sibling_parent_handle ||
-               node->parent == parent_before_handle);
-        assert(sibling->parent ==
-               sibling_parent_handle ||
-               sibling->parent ==
-               parent_before_handle);
-
         // Need to keep traversing up
         node_handle = parent_before_handle;
         sibling_handle = sibling_parent_handle;
@@ -552,42 +601,46 @@ std::pair<tree_node_handle, tree_node_handle> adjustTreeBottomHalf(
       }
     }
 
-    node_handle = parent_ptr->self_handle_;
+    node_handle = parent_handle;
     sibling_handle = tree_node_handle(nullptr);
 
     return std::make_pair(node_handle, sibling_handle);
   }
+
   // AT5 [Move up to next level]
   if (didUpdateBoundingBox) {
-    node_handle = parent_ptr->self_handle_;
+    node_handle = parent_handle;
   } else {
     // If we didn't update our bounding box and there was no split, no reason to keep
     // going.
     return std::make_pair(tree_node_handle(nullptr),
                           tree_node_handle(nullptr));
   }
+
   return std::make_pair(node_handle, tree_node_handle(nullptr));
 }
 
 template <int min_branch_factor, int max_branch_factor>
 tree_node_handle adjustTreeSub(
-        tree_node_handle node_handle,
+        RStarTreeDisk<min_branch_factor, max_branch_factor> *treeRef,
+        tree_node_handle current_handle,
         tree_node_handle sibling_handle,
-        std::vector<bool> &hasReinsertedOnLevel,
-        RStarTreeDisk<min_branch_factor, max_branch_factor> *treeRef) {
+        std::stack<tree_node_handle> parentHandles,
+        std::vector<bool> &hasReinsertedOnLevel) {
   // AT1 [Initialize]
   for (;;) {
-    assert(node_handle);
+    assert(current_handle);
 
-    if (node_handle.get_type() == LEAF_NODE) {
-      auto node = treeRef->get_leaf_node(node_handle);
-      if (!node->parent) {
-        break;
-      }
+    if (parentHandles.empty()) { // No more parents to traverse up
+      break;
+    }
 
-      pinned_node_ptr<LeafNode<min_branch_factor, max_branch_factor>>
-              sibling_node(treeRef->node_allocator_->buffer_pool_, nullptr,
-                           nullptr);
+    if (current_handle.get_type() == LEAF_NODE) {
+      auto node = treeRef->get_leaf_node(current_handle);
+
+      pinned_node_ptr<LeafNode<min_branch_factor, max_branch_factor>> sibling_node(
+        treeRef->node_allocator_->buffer_pool_, nullptr, nullptr
+      );
       assert(sibling_node == nullptr);
 
       if (sibling_handle) {
@@ -596,20 +649,23 @@ tree_node_handle adjustTreeSub(
       }
 
       auto ret_data = adjustTreeBottomHalf(
+              treeRef,
               node,
               sibling_node,
+              current_handle,
+              sibling_handle,
+              parentHandles,
               hasReinsertedOnLevel,
               max_branch_factor);
-      node_handle = ret_data.first;
+
+      current_handle = ret_data.first;
       sibling_handle = ret_data.second;
     } else {
-      auto node = treeRef->get_branch_node(node_handle);
-      if (!node->parent) {
-        break;
-      }
-      pinned_node_ptr<BranchNode<min_branch_factor, max_branch_factor>>
-              sibling_node(treeRef->node_allocator_->buffer_pool_, nullptr,
-                           nullptr);
+      auto node = treeRef->get_branch_node(current_handle);
+
+      pinned_node_ptr<BranchNode<min_branch_factor, max_branch_factor>> sibling_node(
+              treeRef->node_allocator_->buffer_pool_, nullptr, nullptr
+      );
       assert(sibling_node == nullptr);
 
       if (sibling_handle) {
@@ -618,14 +674,20 @@ tree_node_handle adjustTreeSub(
       }
 
       auto ret_data = adjustTreeBottomHalf(
+              treeRef,
               node,
               sibling_node,
+              current_handle,
+              sibling_handle,
+              parentHandles,
               hasReinsertedOnLevel,
               max_branch_factor);
-      node_handle = ret_data.first;
+
+      current_handle = ret_data.first;
       sibling_handle = ret_data.second;
     }
-    if (!node_handle) {
+
+    if (!current_handle) {
       break;
     }
   }
@@ -634,31 +696,42 @@ tree_node_handle adjustTreeSub(
 }
 
 template <int min_branch_factor, int max_branch_factor>
-tree_node_handle LeafNode<min_branch_factor, max_branch_factor>::adjustTree(tree_node_handle sibling_handle, std::vector<bool> &hasReinsertedOnLevel) {
-//  return adjustTreeSub(self_handle_, sibling_handle, hasReinsertedOnLevel, treeRef);
-
-  // Unsupported
-  abort();
+tree_node_handle LeafNode<min_branch_factor, max_branch_factor>::adjustTree(
+        RStarTreeDisk<min_branch_factor, max_branch_factor> *treeRef,
+        tree_node_handle current_handle,
+        tree_node_handle sibling_handle,
+        std::stack<tree_node_handle> parentHandles,
+        std::vector<bool> &hasReinsertedOnLevel
+) {
+  return adjustTreeSub(treeRef, current_handle, sibling_handle, parentHandles, hasReinsertedOnLevel);
 }
 
 template <int min_branch_factor, int max_branch_factor>
-tree_node_handle BranchNode<min_branch_factor, max_branch_factor>::adjustTree(tree_node_handle sibling_handle, std::vector<bool> &hasReinsertedOnLevel) {
-//  return adjustTreeSub(self_handle_, sibling_handle, hasReinsertedOnLevel, treeRef);
-
-  // Unsupported
-  abort();
+tree_node_handle BranchNode<min_branch_factor, max_branch_factor>::adjustTree(
+        RStarTreeDisk<min_branch_factor, max_branch_factor> *treeRef,
+        tree_node_handle current_handle,
+        tree_node_handle sibling_handle,
+        std::stack<tree_node_handle> parentHandles,
+        std::vector<bool> &hasReinsertedOnLevel
+) {
+  return adjustTreeSub(treeRef, current_handle, sibling_handle, parentHandles, hasReinsertedOnLevel);
 }
 
 template <int min_branch_factor, int max_branch_factor>
-tree_node_handle LeafNode<min_branch_factor, max_branch_factor>::reInsert(std::vector<bool> &hasReinsertedOnLevel) {
-#if 0
+tree_node_handle LeafNode<min_branch_factor, max_branch_factor>::reInsert(
+        RStarTreeDisk<min_branch_factor, max_branch_factor> *treeRef,
+        tree_node_handle current_handle,
+        std::stack<tree_node_handle> parentHandles,
+        std::vector<bool> &hasReinsertedOnLevel
+) {
   // 1. RI1 Compute distance between each of the points and the bounding box containing them.
   // 2. RI2 Sort the entries by DECREASING index -> ok let's define an
   // 		extra helper function that gets to do this and pass it into sort
 
   Point globalCenterPoint = boundingBox().centrePoint();
 
-  assert(hasReinsertedOnLevel.at(level));
+  auto current_level = current_handle.get_level();
+  assert(hasReinsertedOnLevel.at(current_level));
 
   std::sort(entries.begin(), entries.begin() + cur_offset_,
             [&globalCenterPoint](Point &a, Point &b) {
@@ -673,7 +746,6 @@ tree_node_handle LeafNode<min_branch_factor, max_branch_factor>::reInsert(std::v
 
   // 4. Insert the removed entries -> OK we can also specify a flag that is
   //		if you want to reinsert starting with largest values (i.e. start at index 0) or closest values (Start at index p)
-
   unsigned remainder = cur_offset_ - numNodesToReinsert;
 
   // We need to reinsert these entries
@@ -683,44 +755,42 @@ tree_node_handle LeafNode<min_branch_factor, max_branch_factor>::reInsert(std::v
   entriesToReinsert.reserve(numNodesToReinsert);
 
   // copy these out
-  std::copy(
-          entries.begin() + remainder,
-          entries.begin() + cur_offset_,
-          std::back_inserter(entriesToReinsert));
+  std::copy(entries.begin() + remainder, entries.begin() + cur_offset_, std::back_inserter(entriesToReinsert));
 
-  //adjust ending of array
+  // adjust ending of array
   cur_offset_ = remainder;
+
+  /* We removed some entries from this node, which means bounding boxes
+   * have to be updated. Do this now before the actual re-insertion. */
+  tree_node_handle child_handle = current_handle;
+
+  for (;;) {
+    if (parentHandles.empty()) {
+      break;
+    }
+
+    tree_node_handle parent_handle = parentHandles.top();
+    parentHandles.pop();
+
+    if (child_handle.get_type() == LEAF_NODE) {
+      auto child = treeRef->get_leaf_node(child_handle);
+      auto parent = treeRef->get_branch_node(parent_handle);
+
+      parent->updateBoundingBox(child_handle, child->boundingBox());
+    } else {
+      auto child = treeRef->get_branch_node(child_handle);
+      auto parent = treeRef->get_branch_node(parent_handle);
+
+      parent->updateBoundingBox(child_handle, child->boundingBox());
+    }
+
+    child_handle = parent_handle;
+  }
 
   // During this recursive insert (we are already in an insert, since we are reInserting), we
   // may end up here again. If we do, we should still be using the same hasReinsertedOnLevel
   // vector because it corresponds to the activities we have performed during a single
   // point/rectangle insertion (the top level one)
-
-  // Find the root node
-  tree_node_handle root_handle = self_handle_;
-  for (;;) {
-
-    // Get the node and check if it has a parent
-    if (root_handle.get_type() == LEAF_NODE) {
-      auto root_node = treeRef->get_leaf_node(root_handle);
-
-      // If it does not, then we've found the root
-      if (!root_node->parent) {
-        break;
-      }
-
-      root_handle = root_node->parent;
-    } else {
-      auto root_node = treeRef->get_branch_node(root_handle);
-
-      // If it does not, then we've found the root
-      if (!root_node->parent) {
-        break;
-      }
-
-      root_handle = root_node->parent;
-    }
-  }
 
   /*
     std::cout << "Overflow treatment, need to reinsert nodes: {" <<
@@ -732,57 +802,63 @@ tree_node_handle LeafNode<min_branch_factor, max_branch_factor>::reInsert(std::v
     */
 
   for (const Point &entry : entriesToReinsert) {
-    if (root_handle.get_type() == LEAF_NODE) {
-      auto root_node = treeRef->get_leaf_node(root_handle);
-      root_handle = root_node->insert(entry, hasReinsertedOnLevel);
+    if (treeRef->root.get_type() == LEAF_NODE) {
+      auto root_node = treeRef->get_leaf_node(treeRef->root);
+      treeRef->root = root_node->insert(treeRef, treeRef->root, entry, hasReinsertedOnLevel);
     } else {
-      auto root_node = treeRef->get_branch_node(root_handle);
-      root_handle = root_node->insert(entry, hasReinsertedOnLevel);
+      auto root_node = treeRef->get_branch_node(treeRef->root);
+      treeRef->root = root_node->insert(treeRef, treeRef->root, entry, hasReinsertedOnLevel);
     }
   }
 
   return tree_node_handle(nullptr);
-#endif
-
-  // Unsupported
-  abort();
 }
 
-// Overflow treatement for dealing with a node that is too big (overflow)
+// Overflow treatment for dealing with a node that is too big (overflow)
 template <int min_branch_factor, int max_branch_factor>
-tree_node_handle LeafNode<min_branch_factor, max_branch_factor>::overflowTreatment(std::vector<bool> &hasReinsertedOnLevel) {
-#if 0
-  assert(hasReinsertedOnLevel.size() > level);
+tree_node_handle LeafNode<min_branch_factor, max_branch_factor>::overflowTreatment(
+        RStarTreeDisk<min_branch_factor, max_branch_factor> *treeRef,
+        tree_node_handle current_handle,
+        std::stack<tree_node_handle> parentHandles,
+        std::vector<bool> &hasReinsertedOnLevel
+) {
+  uint16_t current_level = current_handle.get_level();
+  assert(hasReinsertedOnLevel.size() > current_level);
 
-  if (hasReinsertedOnLevel.at(level)) {
+  if (hasReinsertedOnLevel.at(current_level)) {
     //std::cout << "Overflow treatment on leaf node, splitting." <<
     //    std::endl;
-    return splitNode();
+    return splitNode(treeRef, current_handle);
   } else {
-    hasReinsertedOnLevel.at(level) = true;
+    hasReinsertedOnLevel.at(current_level) = true;
     //std::cout << "Overflow treatment on leaf node, reinserting." <<
     //    std::endl;
-    return reInsert(hasReinsertedOnLevel);
+    return reInsert(treeRef, current_handle, parentHandles, hasReinsertedOnLevel);
   }
-#endif
-
-  // Unsupported
-  abort();
 }
 
+// insert() is always called on the root node. If this gets called,
+// that means the tree only has one leaf node.
 template <int min_branch_factor, int max_branch_factor>
-tree_node_handle LeafNode<min_branch_factor, max_branch_factor>::insert(Point nodeEntry, std::vector<bool> &hasReinsertedOnLevel) {
-#if 0
+tree_node_handle LeafNode<min_branch_factor, max_branch_factor>::insert(
+        RStarTreeDisk<min_branch_factor, max_branch_factor> *treeRef,
+        tree_node_handle current_handle,
+        Point nodeEntry,
+        std::vector<bool> &hasReinsertedOnLevel
+) {
   tree_node_allocator *allocator = get_node_allocator(treeRef);
-
-  // Always called on root, this = root
-  assert(!parent);
 
   // I1 [Find position for new record]
   tree_node_handle sibling_handle = tree_node_handle(nullptr);
 
   // I2 [Add record to leaf node]
   addPoint(nodeEntry);
+
+  // Empty parentHandles since we are the only node in the tree.
+  std::stack<tree_node_handle> parentHandles;
+
+  uint16_t current_level = current_handle.get_level();
+  assert(current_level == 0); // Leaf nodes have level = 0
 
   /*std::cout << "Inserted Point: " << nodeEntry <<
         std::endl;
@@ -795,80 +871,65 @@ tree_node_handle LeafNode<min_branch_factor, max_branch_factor>::insert(Point no
 
   // If we exceed treeRef->maxBranchFactor we need to do something about it
   if (cur_offset_ > max_branch_factor) {
-    // We call overflow treatment to determine how our sibling node is treated if we do a
-    // reInsert, sibling is nullptr. This is properly dealt with in adjustTree
-    sibling_handle = overflowTreatment(hasReinsertedOnLevel);
+    // We call overflow treatment to determine how our sibling node is treated. If we do a
+    // reInsert, sibling is nullptr. This is properly dealt with in adjustTree.
+    sibling_handle = overflowTreatment(
+        treeRef,
+        current_handle,
+        parentHandles,
+        hasReinsertedOnLevel
+    );
   }
 
-  // I3 [Propogate overflow treatment changes upward]
-  sibling_handle = adjustTree(sibling_handle, hasReinsertedOnLevel);
+  // I3 [Propagate overflow treatment changes upward]
+  sibling_handle = adjustTree(
+          treeRef,
+          current_handle,
+          sibling_handle,
+          parentHandles,
+          hasReinsertedOnLevel
+  );
 
   // I4 [Grow tree taller]
   if (sibling_handle) {
+    // Sanity check that we're still the root
+    assert(treeRef->root == current_handle);
 
-    assert(!parent);
     auto alloc_data =
             allocator->create_new_tree_node<BranchNode<min_branch_factor, max_branch_factor>>(
                     NodeHandleType(BRANCH_NODE));
     auto newRoot = alloc_data.first;
+    tree_node_handle new_root_handle = alloc_data.second;
+    new_root_handle.set_level(current_level + 1);
 
-    tree_node_handle root_handle = alloc_data.second;
     auto sibling = treeRef->get_leaf_node(sibling_handle);
 
-    new (&(*(newRoot)))
-            BranchNode<min_branch_factor, max_branch_factor>(treeRef, root_handle,
-                                    tree_node_handle(nullptr), this->level + 1);
-
-    this->parent = root_handle;
+    new (&(*(newRoot))) BranchNode<min_branch_factor, max_branch_factor>();
 
     // Make the existing root a child of newRoot
-    Branch b1(boundingBox(), self_handle_);
-
+    Branch b1(boundingBox(), current_handle);
     newRoot->addBranchToNode(b1);
 
     // Make the new sibling node a child of newRoot
-    sibling->parent = root_handle;
-
     Branch b2(sibling->boundingBox(), sibling_handle);
     newRoot->addBranchToNode(b2);
 
     // Ensure newRoot has both children
     assert(newRoot->cur_offset_ == 2);
-    assert(sibling->level + 1 == newRoot->level);
+    assert(sibling_handle.get_level() + 1 == new_root_handle.get_level());
 
     // Fix the reinserted length
     hasReinsertedOnLevel.push_back(false);
 
-    return root_handle;
+    return new_root_handle;
   } else {
     // We might no longer be the parent.  If we hit overflowTreatment, we may have triggered
     // reInsert, which then triggered a split. That insert will have returned newRoot, but
     // because reInsert() returns nullptr, we don't know about it
-    tree_node_handle root_handle = self_handle_;
-
-    for (;;) {
-      if (root_handle.get_type() == LEAF_NODE) {
-        auto node_data = treeRef->get_leaf_node(root_handle);
-        if (!node_data->parent) {
-          return root_handle;
-        }
-
-        root_handle = node_data->parent;
-      } else {
-        auto node_data = treeRef->get_branch_node(root_handle);
-        if (!node_data->parent) {
-          return root_handle;
-        }
-
-        root_handle = node_data->parent;
-      }
-    }
-    return root_handle;
+    // P.S: Technically reInsert changes treeRef->root, which will always contain the most
+    // up-to-date root handle.
+    return treeRef->root;
   }
-#endif
-
-  // Unsupported
-  abort();
 }
 
 // To be called on a leaf
@@ -1095,7 +1156,14 @@ bool BranchNode<min_branch_factor, max_branch_factor>::updateBoundingBox(tree_no
     }
   }
 
-  assert(false);
+  /* If control-flow reaches here, that means the child wasn't found in
+   * the parent and no update happened.
+   *
+   * One case where this can happen is when a reinsertion happens which causes
+   * a split that changes the tree structure. In this case, the child may belong
+   * to a new parent, but parentHandles has the old parent. Since the recursive
+   * insert call from reinsertion already takes care of updating the tree correctly,
+   * it's OK to return false and not throw an error. */
   return false;
 }
 
@@ -1284,45 +1352,43 @@ std::vector<Point> rectangle_search(
   return accumulator;
 }
 
+// Populates parentHandles with the path taken to get to the leaf
 template <int min_branch_factor, int max_branch_factor>
-tree_node_handle BranchNode<min_branch_factor, max_branch_factor>::chooseSubtree(const NodeEntry &givenNodeEntry) {
-#if 0
-  // CS1: This is CAlled on the root! Just like above
+tree_node_handle BranchNode<min_branch_factor, max_branch_factor>::chooseSubtree(
+        RStarTreeDisk<min_branch_factor, max_branch_factor> *treeRef,
+        tree_node_handle current_handle,
+        std::stack<tree_node_handle> &parentHandles,
+        const NodeEntry &givenNodeEntry
+) {
+  // CS1: This is called on the root! Just like insert/reinsert
   // CS2: If N is a leaf return N (same)
-  // CS3: If the child pointers (bounding boxes) -> choose reactangle that needs least
-  // 		overlap enlargment to fit the new Point/bounding rectangle if tie return smallest area
+  // CS3: If the child pointers (bounding boxes) -> choose rectangle that needs least
+  // 		overlap enlargement to fit the new Point/bounding rectangle. If tie return smallest area.
   // 		i.e. the rectangle that has the least overlap -> tbh I'm not sure we can just leave this
   // 	Else:
-  // 		If not child pointers (bounding boxes) -> choose reactangle that needs least
-  // 		overlap enlargment to fit the new Point (same as before) if tie return smallest area (same)
+  // 		If not child pointers (bounding boxes) -> choose rectangle that needs least
+  // 		overlap enlargement to fit the new Point (same as before) if tie return smallest area (same)
 
   // CL1 [Initialize]
-  tree_node_handle node_handle = self_handle_;
+  tree_node_handle node_handle = current_handle;
 
-  // Always called on root, this = root
-  assert(!parent);
-
-  unsigned stoppingLevel = 0;
+  unsigned stoppingLevel = 0; // stoppingLevel = 0 represents the leaf level
   bool entryIsBranch = std::holds_alternative<Branch>(givenNodeEntry);
   Rectangle givenEntryBoundingBox;
+
   if (entryIsBranch) {
     const Branch &b = std::get<Branch>(givenNodeEntry);
     //std::cout << "ChooseSubTree for branch: " << b.boundingBox <<
     //    std::endl;
     givenEntryBoundingBox = b.boundingBox;
     tree_node_handle child_handle = b.child;
-    if (child_handle.get_type() == LEAF_NODE) {
-      auto child = treeRef->get_leaf_node(child_handle);
-      stoppingLevel = child->level + 1;
-    } else {
-      auto child = treeRef->get_branch_node(child_handle);
-      stoppingLevel = child->level + 1;
-    }
+    stoppingLevel = child_handle.get_level() + 1;
   } else {
     const Point &p = std::get<Point>(givenNodeEntry);
     //std::cout << "ChooseSubTree for point: " << p << std::endl;
     givenEntryBoundingBox = Rectangle(p, Point::closest_larger_point(p));
   }
+
   for (;;) {
     if (node_handle.get_type() == LEAF_NODE) {
       // This is a deviation from before, but i presume if this a
@@ -1333,14 +1399,14 @@ tree_node_handle BranchNode<min_branch_factor, max_branch_factor>::chooseSubtree
     }
 
     auto node = treeRef->get_branch_node(node_handle);
-    if (node->level == stoppingLevel) {
+    if (node_handle.get_level() == stoppingLevel) {
       return node_handle;
     }
 
     unsigned descentIndex = 0;
-
     auto child_handle = node->entries.at(0).child;
     bool childrenAreLeaves = (child_handle.get_type() == LEAF_NODE);
+
     if (childrenAreLeaves) {
       //std::cout << "ChildrenAreLeaves: " << childrenAreLeaves <<
       //    std::endl;
@@ -1355,8 +1421,10 @@ tree_node_handle BranchNode<min_branch_factor, max_branch_factor>::chooseSubtree
 
         // Compute overlap
         double testOverlapExpansionArea =
-                computeOverlapGrowth<NodeEntry, Branch, max_branch_factor>(i, node->entries,
-                                                                           node->cur_offset_, givenEntryBoundingBox);
+                computeOverlapGrowth<NodeEntry, Branch, max_branch_factor>(
+                  i, node->entries,
+           node->cur_offset_, givenEntryBoundingBox
+                );
 
         //std::cout << "overlapGrowth " << i << ": " <<
         //    testOverlapExpansionArea << std::endl;
@@ -1391,13 +1459,14 @@ tree_node_handle BranchNode<min_branch_factor, max_branch_factor>::chooseSubtree
     } else {
       double smallestExpansionArea = std::numeric_limits<double>::infinity();
       double smallestArea = std::numeric_limits<double>::infinity();
+      unsigned num_entries_els = node->cur_offset_;
 
       // CL2 [Choose subtree]
       // Find the bounding box with least required expansion/overlap
-      unsigned num_entries_els = node->cur_offset_;
       for (unsigned i = 0; i < num_entries_els; i++) {
         const Branch &b = node->entries.at(i);
         double testExpansionArea = b.boundingBox.computeExpansionArea(givenEntryBoundingBox);
+
         if (smallestExpansionArea > testExpansionArea) {
           descentIndex = i;
           smallestExpansionArea = testExpansionArea;
@@ -1405,6 +1474,7 @@ tree_node_handle BranchNode<min_branch_factor, max_branch_factor>::chooseSubtree
         } else if (smallestExpansionArea == testExpansionArea) {
           // Use area to break tie
           double testArea = b.boundingBox.area();
+
           if (smallestArea > testArea) {
             descentIndex = i;
             // Don't need to update smallestExpansionArea
@@ -1417,17 +1487,20 @@ tree_node_handle BranchNode<min_branch_factor, max_branch_factor>::chooseSubtree
     //std::cout << "Proceeding down index " << descentIndex <<
     //    std::endl;
     // Descend
+    // Keep track of the previous node before descending
+    parentHandles.push(node_handle);
     node_handle = node->entries[descentIndex].child;
   }
-#endif
 
-  // Unsupported
-  abort();
+  assert(false);
 }
 
 template <int min_branch_factor, int max_branch_factor>
-tree_node_handle BranchNode<min_branch_factor, max_branch_factor>::findLeaf(const Point &givenPoint) {
-#if 0
+tree_node_handle BranchNode<min_branch_factor, max_branch_factor>::findLeaf(
+        RStarTreeDisk<min_branch_factor, max_branch_factor> *treeRef,
+        tree_node_handle selfHandle,
+        const Point &givenPoint
+) {
   assert(cur_offset_ > 0);
 
   for (unsigned i = 0; i < cur_offset_; i++) {
@@ -1436,12 +1509,13 @@ tree_node_handle BranchNode<min_branch_factor, max_branch_factor>::findLeaf(cons
     if (b.boundingBox.containsPoint(givenPoint)) {
       tree_node_handle ret_handle(nullptr);
       tree_node_handle child_handle = b.child;
+
       if (child_handle.get_type() == LEAF_NODE) {
         auto child = treeRef->get_leaf_node(child_handle);
-        ret_handle = child->findLeaf(givenPoint);
+        ret_handle = child->findLeaf(treeRef, child_handle, givenPoint);
       } else {
         auto child = treeRef->get_branch_node(child_handle);
-        ret_handle = child->findLeaf(givenPoint);
+        ret_handle = child->findLeaf(treeRef, child_handle, givenPoint);
       }
 
       if (ret_handle) {
@@ -1453,10 +1527,6 @@ tree_node_handle BranchNode<min_branch_factor, max_branch_factor>::findLeaf(cons
   }
 
   return tree_node_handle(nullptr);
-#endif
-
-  // Unsupported
-  abort();
 }
 
 template <int min_branch_factor, int max_branch_factor>
@@ -1647,8 +1717,11 @@ unsigned BranchNode<min_branch_factor, max_branch_factor>::chooseSplitIndex(unsi
 }
 
 template <int min_branch_factor, int max_branch_factor>
-tree_node_handle BranchNode<min_branch_factor, max_branch_factor>::splitNode() {
-#if 0
+tree_node_handle BranchNode<min_branch_factor, max_branch_factor>::splitNode(
+    RStarTreeDisk<min_branch_factor, max_branch_factor> *treeRef,
+    tree_node_handle current_handle
+) {
+  using NodeType = BranchNode<min_branch_factor, max_branch_factor>;
   // S1: Call chooseSplitAxis to determine the axis perpendicular to which the split is performed
   // S2: Invoke chooseSplitIndex given the axis to determine the best distribution along this axis
   // S3: Distribute the entries among these two groups
@@ -1669,49 +1742,33 @@ tree_node_handle BranchNode<min_branch_factor, max_branch_factor>::splitNode() {
     */
 
   tree_node_allocator *allocator = get_node_allocator(treeRef);
-  auto alloc_data =
-          allocator->create_new_tree_node<BranchNode<min_branch_factor, max_branch_factor>>(
-                  NodeHandleType(BRANCH_NODE));
+  auto alloc_data = allocator->create_new_tree_node<NodeType>(NodeHandleType(BRANCH_NODE));
+  uint16_t current_level = current_handle.get_level();
 
   auto newSibling = alloc_data.first;
   tree_node_handle sibling_handle = alloc_data.second;
 
-  new (&(*(newSibling))) BranchNode<min_branch_factor, max_branch_factor>(treeRef, sibling_handle, parent,
-                                                 level);
-
-  newSibling->parent = parent;
-  newSibling->level = level;
-  newSibling->treeRef = treeRef;
-  newSibling->self_handle_ = sibling_handle;
-
-#if !defined(NDEBUG)
-  if (parent) {
-    auto parent_ptr = treeRef->get_branch_node(parent);
-    assert(level + 1 == parent_ptr->level);
-  }
-#endif
+  new (&(*(newSibling))) NodeType();
+  sibling_handle.set_level(current_level);
 
   // Copy everything to the right of the splitPoint (inclusive) to the new sibling
-  std::copy(entries.begin() + splitIndex, entries.begin() + cur_offset_,
-            newSibling->entries.begin());
+  std::copy(entries.begin() + splitIndex, entries.begin() + cur_offset_, newSibling->entries.begin());
 
   newSibling->cur_offset_ = cur_offset_ - splitIndex;
 
+#ifndef NDEBUG
   for (unsigned i = 0; i < newSibling->cur_offset_; i++) {
-    // Update parents
     Branch &b = newSibling->entries.at(i);
+
     if (b.child.get_type() == LEAF_NODE) {
-      auto child = treeRef->get_leaf_node(b.child);
-      child->parent = sibling_handle;
-      assert(level == child->level + 1);
-      assert(newSibling->level == child->level + 1);
+      assert(current_level == b.child.get_level() + 1);
+      assert(sibling_handle.get_level() == b.child.get_level() + 1);
     } else {
-      auto child = treeRef->get_branch_node(b.child);
-      child->parent = sibling_handle;
-      assert(level == child->level + 1);
-      assert(newSibling->level == child->level + 1);
+      assert(current_level == b.child.get_level() + 1);
+      assert(sibling_handle.get_level() == b.child.get_level() + 1);
     }
   }
+#endif
 
   // Chop our node's data down
   cur_offset_ = splitIndex;
@@ -1735,22 +1792,23 @@ tree_node_handle BranchNode<min_branch_factor, max_branch_factor>::splitNode() {
 
   // Return our newly minted sibling
   return sibling_handle;
-#endif
-
-  // Unsupported
-  abort();
 }
 
 template <int min_branch_factor, int max_branch_factor>
-tree_node_handle BranchNode<min_branch_factor, max_branch_factor>::reInsert(std::vector<bool> &hasReinsertedOnLevel) {
-#if 0
+tree_node_handle BranchNode<min_branch_factor, max_branch_factor>::reInsert(
+        RStarTreeDisk<min_branch_factor, max_branch_factor> *treeRef,
+        tree_node_handle current_handle,
+        std::stack<tree_node_handle> parentHandles,
+        std::vector<bool> &hasReinsertedOnLevel
+) {
   // 1. RI1 Compute distance between each of the points and the bounding box containing them.
   // 2. RI2 Sort the entries by DECREASING index -> ok let's define an
   // 		extra helper function that gets to do this and pass it into sort
 
   Point globalCenterPoint = boundingBox().centrePoint();
 
-  assert(hasReinsertedOnLevel.at(level));
+  auto current_level = current_handle.get_level();
+  assert(hasReinsertedOnLevel.at(current_level));
 
   std::sort(entries.begin(), entries.begin() + cur_offset_,
             [&globalCenterPoint](Branch &a, Branch &b) {
@@ -1765,7 +1823,6 @@ tree_node_handle BranchNode<min_branch_factor, max_branch_factor>::reInsert(std:
 
   // 4. Insert the removed entries -> OK we can also specify a flag that is
   //		if you want to reinsert starting with largest values (i.e. start at index 0) or closest values (Start at index p)
-
   unsigned remainder = cur_offset_ - numNodesToReinsert;
 
   // We need to reinsert these entries
@@ -1780,29 +1837,38 @@ tree_node_handle BranchNode<min_branch_factor, max_branch_factor>::reInsert(std:
   //adjust ending of array
   cur_offset_ = remainder;
 
+  /* We removed some entries from this node, which means bounding boxes
+   * have to be updated. Do this now before the actual re-insertion. */
+  tree_node_handle child_handle = current_handle;
+
+  for (;;) {
+    if (parentHandles.empty()) {
+      break;
+    }
+
+    tree_node_handle parent_handle = parentHandles.top();
+    parentHandles.pop();
+
+    if (child_handle.get_type() == LEAF_NODE) {
+      auto child = treeRef->get_leaf_node(child_handle);
+      auto parent = treeRef->get_branch_node(parent_handle);
+
+      parent->updateBoundingBox(child_handle, child->boundingBox());
+    } else {
+      auto child = treeRef->get_branch_node(child_handle);
+      auto parent = treeRef->get_branch_node(parent_handle);
+
+      parent->updateBoundingBox(child_handle, child->boundingBox());
+    }
+
+    child_handle = parent_handle;
+  }
+
   // During this recursive insert (we are already in an insert, since we are reInserting), we
   // may end up here again. If we do, we should still be using the same hasReinsertedOnLevel
   // vector because it corresponds to the activities we have performed during a single
   // point/rectangle insertion (the top level one)
-
-  // Find the root node
-  tree_node_handle root_handle = self_handle_;
-  for (;;) {
-
-    // Get the node and check if it has a parent
-    // Since I am branch, whatever root_handle is must also be a
-    // branch
-    auto root_node = treeRef->get_branch_node(root_handle);
-
-    // If it does not, then we've found the root
-    if (!root_node->parent) {
-      break;
-    }
-
-    root_handle = root_node->parent;
-  }
-
-  auto root_node = treeRef->get_branch_node(root_handle);
+  auto root_node = treeRef->get_branch_node(treeRef->root);
 
   /*
     std::cout << "Overflow treatment, need to reinsert nodes: {" <<
@@ -1814,10 +1880,8 @@ tree_node_handle BranchNode<min_branch_factor, max_branch_factor>::reInsert(std:
     */
 
   for (const Branch &entry : entriesToReinsert) {
-    assert(!root_node->parent);
-
-    root_handle = root_node->insert(entry, hasReinsertedOnLevel);
-    root_node = treeRef->get_branch_node(root_handle);
+    treeRef->root = root_node->insert(treeRef, treeRef->root, entry, hasReinsertedOnLevel);
+    root_node = treeRef->get_branch_node(treeRef->root);
   }
 
   return tree_node_handle(nullptr);
@@ -1825,34 +1889,49 @@ tree_node_handle BranchNode<min_branch_factor, max_branch_factor>::reInsert(std:
 
 // Overflow treatement for dealing with a node that is too big (overflow)
 template <int min_branch_factor, int max_branch_factor>
-tree_node_handle BranchNode<min_branch_factor, max_branch_factor>::overflowTreatment(std::vector<bool> &hasReinsertedOnLevel) {
-  assert(hasReinsertedOnLevel.size() > level);
+tree_node_handle BranchNode<min_branch_factor, max_branch_factor>::overflowTreatment(
+        RStarTreeDisk<min_branch_factor, max_branch_factor> *treeRef,
+        tree_node_handle current_handle,
+        std::stack<tree_node_handle> parentHandles,
+        std::vector<bool> &hasReinsertedOnLevel
+) {
+  uint16_t current_level = current_handle.get_level();
+  assert(hasReinsertedOnLevel.size() > current_level);
 
-  if (hasReinsertedOnLevel.at(level)) {
+  if (hasReinsertedOnLevel.at(current_level)) {
     //std::cout << "Overflow treatment on branch node, splitting." <<
     //    std::endl;
-    return splitNode();
+    return splitNode(treeRef, current_handle);
   } else {
-    hasReinsertedOnLevel.at(level) = true;
+    hasReinsertedOnLevel.at(current_level) = true;
     //std::cout << "Overflow treatment on branch node, reinserting." <<
     //    std::endl;
-    return reInsert(hasReinsertedOnLevel);
+    return reInsert(treeRef, current_handle, parentHandles, hasReinsertedOnLevel);
   }
-#endif
-
-  // Unsupported
-  abort();
 }
 
+// insert() is always called on the root node.
 template <int min_branch_factor, int max_branch_factor>
-tree_node_handle BranchNode<min_branch_factor, max_branch_factor>::insert(NodeEntry nodeEntry, std::vector<bool> &hasReinsertedOnLevel) {
-#if 0
+tree_node_handle BranchNode<min_branch_factor, max_branch_factor>::insert(
+        RStarTreeDisk<min_branch_factor, max_branch_factor> *treeRef,
+        tree_node_handle current_handle,
+        NodeEntry nodeEntry,
+        std::vector<bool> &hasReinsertedOnLevel
+) {
   tree_node_allocator *allocator = get_node_allocator(treeRef);
-  // Always called on root, this = root
-  assert(!parent);
+
+  std::stack<tree_node_handle> parentHandles; // Populated by chooseSubtree
+  uint16_t current_level = current_handle.get_level();
+  assert(current_level > 0); // Branch nodes have level > 0
 
   // I1 [Find position for new record]
-  tree_node_handle insertion_point_handle = chooseSubtree(nodeEntry);
+  tree_node_handle insertion_point_handle = chooseSubtree(
+          treeRef,
+          current_handle,
+          parentHandles,
+          nodeEntry
+  );
+  uint16_t insertion_point_level = insertion_point_handle.get_level();
 
   tree_node_handle sibling_handle = tree_node_handle(nullptr);
 
@@ -1875,15 +1954,24 @@ tree_node_handle BranchNode<min_branch_factor, max_branch_factor>::insert(NodeEn
 
     // If we exceed treeRef->maxBranchFactor we need to do something about it
     if (num_els > max_branch_factor) {
-      // We call overflow treatment to determine how our sibling node is treated if we do a
-      // reInsert, sibling is nullptr. This is properly dealt with in adjustTree
-      sibling_handle = insertion_point->overflowTreatment(hasReinsertedOnLevel);
+      // We call overflow treatment to determine how our sibling node is treated. If we do a
+      // reInsert, sibling is nullptr. This is properly dealt with in adjustTree.
+      sibling_handle = insertion_point->overflowTreatment(
+              treeRef,
+              insertion_point_handle,
+              parentHandles,
+              hasReinsertedOnLevel
+      );
     }
 
     // I3 [Propogate overflow treatment changes upward]
     sibling_handle = insertion_point->adjustTree(
-            sibling_handle, hasReinsertedOnLevel);
-
+            treeRef,
+            insertion_point_handle,
+            sibling_handle,
+            parentHandles,
+            hasReinsertedOnLevel
+    );
   } else {
     auto insertion_point = treeRef->get_branch_node(insertion_point_handle);
     Branch &b = std::get<Branch>(nodeEntry);
@@ -1899,15 +1987,8 @@ tree_node_handle BranchNode<min_branch_factor, max_branch_factor>::insert(NodeEn
         }
         std::cout << "}" << std::endl;
         */
-    if (b.child.get_type() == LEAF_NODE) {
-      auto child = treeRef->get_leaf_node(b.child);
-      assert(insertion_point->level == child->level + 1);
-      child->parent = insertion_point_handle;
-    } else {
-      auto child = treeRef->get_branch_node(b.child);
-      assert(insertion_point->level == child->level + 1);
-      child->parent = insertion_point_handle;
-    }
+
+    assert(insertion_point_level == b.child.get_level() + 1);
 
     unsigned num_els = insertion_point->cur_offset_;
 
@@ -1915,69 +1996,64 @@ tree_node_handle BranchNode<min_branch_factor, max_branch_factor>::insert(NodeEn
     if (num_els > max_branch_factor) {
       // We call overflow treatment to determine how our sibling node is treated if we do a
       // reInsert, sibling is nullptr. This is properly dealt with in adjustTree
-      sibling_handle = insertion_point->overflowTreatment(hasReinsertedOnLevel);
+      sibling_handle = insertion_point->overflowTreatment(
+              treeRef,
+              insertion_point_handle,
+              parentHandles,
+              hasReinsertedOnLevel
+      );
     }
 
     // I3 [Propogate overflow treatment changes upward]
     sibling_handle = insertion_point->adjustTree(
-            sibling_handle, hasReinsertedOnLevel);
+            treeRef,
+            insertion_point_handle,
+            sibling_handle,
+            parentHandles,
+            hasReinsertedOnLevel
+    );
   }
 
   // I4 [Grow tree taller]
   if (sibling_handle) {
+    // Sanity check that we're still the root
+    assert(treeRef->root == current_handle);
 
-    assert(!parent);
     auto alloc_data =
             allocator->create_new_tree_node<BranchNode<min_branch_factor, max_branch_factor>>(
                     NodeHandleType(BRANCH_NODE));
     auto newRoot = alloc_data.first;
-    tree_node_handle root_handle = alloc_data.second;
+    tree_node_handle new_root_handle = alloc_data.second;
+    new_root_handle.set_level(current_level + 1);
 
     auto sibling = treeRef->get_branch_node(sibling_handle);
 
-    new (&(*(newRoot)))
-            BranchNode<min_branch_factor, max_branch_factor>(treeRef, root_handle, tree_node_handle(nullptr), this->level + 1);
-
-    this->parent = root_handle;
+    new (&(*(newRoot))) BranchNode<min_branch_factor, max_branch_factor>();
 
     // Make the existing root a child of newRoot
-    Branch b1(boundingBox(), self_handle_);
+    Branch b1(boundingBox(), current_handle);
     newRoot->addBranchToNode(b1);
 
     // Make the new sibling node a child of newRoot
-    sibling->parent = root_handle;
     Branch b2(sibling->boundingBox(), sibling_handle);
     newRoot->addBranchToNode(b2);
 
     // Ensure newRoot has both children
     assert(newRoot->cur_offset_ == 2);
-    assert(sibling->level + 1 == newRoot->level);
+    assert(sibling_handle.get_level() + 1 == new_root_handle.get_level());
 
     // Fix the reinserted length
     hasReinsertedOnLevel.push_back(false);
 
-    return root_handle;
+    return new_root_handle;
   } else {
-
     // We might no longer be the parent.  If we hit overflowTreatment, we may have triggered
     // reInsert, which then triggered a split. That insert will have returned newRoot, but
     // because reInsert() returns nullptr, we don't know about it
-    tree_node_handle root_handle = self_handle_;
-
-    for (;;) {
-      auto node_data = treeRef->get_branch_node(root_handle);
-      if (!node_data->parent) {
-        return root_handle;
-      }
-
-      root_handle = node_data->parent;
-    }
-    return root_handle;
+    // P.S: Technically reInsert changes treeRef->root, which will always contain the most
+    // up-to-date root handle.
+    return treeRef->root;
   }
-#endif
-
-  // Unsupported
-  abort();
 }
 
 // Always called on root, this = root

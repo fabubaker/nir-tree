@@ -38,14 +38,12 @@
 #include <vector>
 #include <fstream>
 
-#define NDEBUG
 #define DEBUG_TEST 0
 #define DEBUG_TESTDISJOINT 0
 #define DEBUG_TESTCONTAINPOINTS 0
 #define DEBUG_TESTCOUNT 0
 #define DEBUG_TESTLEVELS 0
 #define IGNORE_REINSERTION 1
-
 
 namespace nirtreedisk {
 
