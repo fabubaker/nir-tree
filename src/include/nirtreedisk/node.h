@@ -3223,9 +3223,19 @@ void stat_node(tree_node_handle start_handle, NIRTreeDisk<min_branch_factor, max
 
   // Print out what we have found
   STATEXEC(std::cout << "### Statistics ###" << std::endl);
-  // Memory footprint is wrong!
+
+  // Print tree size
+  STATEXEC(std::cout << "Tree ");
   STATMEM(memoryFootprint);
+
+  // Print polygon size
+  STATEXEC(std::cout << "Polygon ");
   STATMEM(memoryPolygons);
+
+  // Print polygon size as percent of tree size
+  double polygonPercent = ((double) memoryPolygons / memoryFootprint) * 100;
+  STATEXEC(std::cout << "Polygon size percent: " << polygonPercent << "%" << std::endl);
+
   //STATHEIGHT(height());
   STATSIZE(totalNodes);
   //STATEXEC(std::cout << "DeadSpace: " << deadSpace << std::endl);
