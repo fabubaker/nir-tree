@@ -1295,6 +1295,60 @@ unsigned long IsotheticPolygon::computeMemory() {
   return memory;
 }
 
+
+unsigned long encodePoint(Point point, Point reference) {
+  unsigned numBytes = 0;
+
+  // The points are the same, we can fully encode point using reference.
+  // We will need one byte per dimension.
+  if (point == reference) {
+    numBytes = 1;
+    return numBytes * dimensions;
+  }
+
+  // Loop through each dimension and see if there are any common values
+  // between point and reference.
+  for (unsigned d = 0; d < dimensions; d++) {
+    double refValue = reference[d];
+    double pointValue = point[d];
+
+    // The values are the same, so encode using one byte.
+    if (refValue == pointValue) {
+      numBytes += 1;
+    } else {
+      // The values are different, we need the full double here.
+      numBytes += sizeof(double);
+    }
+  }
+
+  return numBytes;
+}
+
+/* Compute the size of a polygon given the underlying minimum bounding box.
+ *
+ * Two overlapping MBRs are fragmented based on their overlapping region.
+ * As the overlapping region is fragmented into polygons, the defining points
+ * of the polygons often lie on the axis of the original MBRs. Using this
+ * observation, we can store polygons more efficiently, using the points
+ * of the underlying MBRs as references. */
+unsigned long IsotheticPolygon::computeMemoryUsingEncoding() {
+  unsigned long memory = 0;
+  Point mbrLower = boundingBox.lowerLeft;
+  Point mbrUpper = boundingBox.upperRight;
+
+  for (const Rectangle &basicRectangle: basicRectangles) {
+    Point polyLower = basicRectangle.lowerLeft;
+    Point polyUpper = basicRectangle.upperRight;
+
+    unsigned long prevMemory = memory;
+
+    memory += encodePoint(mbrLower, polyLower);
+    memory += encodePoint(mbrUpper, polyUpper);
+  }
+
+  return memory;
+}
+
 bool operator==(const InlineBoundedIsotheticPolygon &lhs, const
         InlineBoundedIsotheticPolygon &rhs) {
     return lhs.rectangle_count_ == rhs.rectangle_count_ and

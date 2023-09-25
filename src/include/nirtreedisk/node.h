@@ -3139,6 +3139,7 @@ void stat_node(tree_node_handle start_handle, NIRTreeDisk<min_branch_factor, max
   unsigned long totalLines = 0;
   size_t memoryFootprint = 0;
   size_t memoryPolygons = 0;
+  size_t memoryPolygonsWithEncoding = 0;
   unsigned long totalNodes = 0;
   unsigned long totalLeaves = 0;
   size_t deadSpace = 0;
@@ -3200,8 +3201,9 @@ void stat_node(tree_node_handle start_handle, NIRTreeDisk<min_branch_factor, max
         // Compute space occupied by polygons
         // Ignore polygons with just one rectangle, we don't actually store
         // them in the map, they are constructed at run-time.
-        if (polygon.basicRectangles.size() > 1) {
+        if (polygonSize > 1) {
           memoryPolygons += polygon.computeMemory();
+          memoryPolygonsWithEncoding += polygon.computeMemoryUsingEncoding();
         }
 
         // FIXME: these stats are all wrong now.
@@ -3231,10 +3233,14 @@ void stat_node(tree_node_handle start_handle, NIRTreeDisk<min_branch_factor, max
   // Print polygon size
   STATEXEC(std::cout << "Polygon ");
   STATMEM(memoryPolygons);
+  STATEXEC(std::cout << "Polygon with encoding");
+  STATMEM(memoryPolygonsWithEncoding);
 
   // Print polygon size as percent of tree size
   double polygonPercent = ((double) memoryPolygons / memoryFootprint) * 100;
-  STATEXEC(std::cout << "Polygon size percent: " << polygonPercent << "%" << std::endl);
+  STATEXEC(std::cout << "Polygon percent: " << polygonPercent << "%" << std::endl);
+  double polygonWithEncodingPercent = ((double) memoryPolygonsWithEncoding / memoryFootprint) * 100;
+  STATEXEC(std::cout << "Polygon encoding percent: " << polygonWithEncodingPercent << "%" << std::endl);
 
   //STATHEIGHT(height());
   STATSIZE(totalNodes);
