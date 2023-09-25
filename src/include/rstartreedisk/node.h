@@ -892,6 +892,9 @@ tree_node_handle LeafNode<min_branch_factor, max_branch_factor>::insert(
 
   // I4 [Grow tree taller]
   if (sibling_handle) {
+    // Sanity check that we're still the root
+    assert(treeRef->root == current_handle);
+
     auto alloc_data =
             allocator->create_new_tree_node<BranchNode<min_branch_factor, max_branch_factor>>(
                     NodeHandleType(BRANCH_NODE));
@@ -2013,6 +2016,9 @@ tree_node_handle BranchNode<min_branch_factor, max_branch_factor>::insert(
 
   // I4 [Grow tree taller]
   if (sibling_handle) {
+    // Sanity check that we're still the root
+    assert(treeRef->root == current_handle);
+
     auto alloc_data =
             allocator->create_new_tree_node<BranchNode<min_branch_factor, max_branch_factor>>(
                     NodeHandleType(BRANCH_NODE));
