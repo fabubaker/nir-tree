@@ -1340,8 +1340,6 @@ unsigned long IsotheticPolygon::computeMemoryUsingEncoding() {
     Point polyLower = basicRectangle.lowerLeft;
     Point polyUpper = basicRectangle.upperRight;
 
-    unsigned long prevMemory = memory;
-
     memory += encodePoint(mbrLower, polyLower);
     memory += encodePoint(mbrUpper, polyUpper);
   }
