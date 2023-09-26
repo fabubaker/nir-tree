@@ -3274,7 +3274,9 @@ void stat_node(tree_node_handle root_handle, NIRTreeDisk<min_branch_factor, max_
         totalCount += histogramFanoutAtLevel.at(lvl).at(i);
       }
     }
-    STATHIST(i, totalCount);
+    if (totalCount > 0){
+      STATHIST(i, totalCount);
+    }
   }
   STATFANHISTATLEVEL();
   for (unsigned lvl = 0; lvl < treeHeight; lvl++){
@@ -3299,7 +3301,9 @@ void stat_node(tree_node_handle root_handle, NIRTreeDisk<min_branch_factor, max_
         totalCount += histogramPolygonAtLevel.at(lvl).at(i);
       }
     }
-    STATHIST(i, totalCount);
+    if (totalCount > 0){
+      STATHIST(i, totalCount);
+    }
   }
   STATPOLYHISTATLEVEL();
   for (unsigned lvl = 0; lvl < treeHeight; lvl++){
