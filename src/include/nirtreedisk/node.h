@@ -3184,8 +3184,8 @@ void stat_node(tree_node_handle root_handle, NIRTreeDisk<min_branch_factor, max_
       totalLeaves++;
       memoryFootprint += sizeof(LeafNode<min_branch_factor, max_branch_factor, strategy>);
     } else if (currentContext.get_type() == BRANCH_NODE) {
+      assert(lvl > 0);
       auto current_branch_node = treeRef->get_branch_node(currentContext);
-
       unsigned fanout = current_branch_node->cur_offset_;
       if (fanout >= histogramFanoutAtLevel.at(lvl).size()) {
         histogramFanoutAtLevel.at(lvl).resize(2 * fanout, 0);
@@ -3195,6 +3195,7 @@ void stat_node(tree_node_handle root_handle, NIRTreeDisk<min_branch_factor, max_
       // Compute the overlap and coverage of our children
       for (unsigned i = 0; i < current_branch_node->cur_offset_; i++) {
         Branch &b = current_branch_node->entries.at(i);
+        auto child_lvl = b.child.get_level();
         IsotheticPolygon polygon;
 
         auto itr = treeRef->polygons.find(b.child);
@@ -3207,8 +3208,8 @@ void stat_node(tree_node_handle root_handle, NIRTreeDisk<min_branch_factor, max_
         coverage += polygon.area();
 
         polygonSize = polygon.basicRectangles.size();
-        assert(polygonSize < histogramPolygonAtLevel.at(lvl).size());
-        histogramPolygonAtLevel.at(lvl).at(polygonSize)++;
+        assert(polygonSize < histogramPolygonAtLevel.at(child_lvl).size());
+        histogramPolygonAtLevel.at(child_lvl).at(polygonSize)++;
         totalPolygonSize += polygonSize;
 
         // Compute space occupied by polygons
@@ -3280,7 +3281,7 @@ void stat_node(tree_node_handle root_handle, NIRTreeDisk<min_branch_factor, max_
   }
   STATFANHISTATLEVEL();
   for (unsigned lvl = 0; lvl < treeHeight; lvl++){
-    STATEXEC(std::cout << "=== LEVEL: " << lvl << "===" << std::endl);
+    STATEXEC(std::cout << "=== LEVEL: " << lvl << " ===" << std::endl);
     for (unsigned i = 0; i < histogramFanoutAtLevel.at(lvl).size(); i++) {
       if (histogramFanoutAtLevel.at(lvl).at(i) > 0) {
         STATHISTATLEVEL(i, histogramFanoutAtLevel.at(lvl).at(i), lvl);
@@ -3307,7 +3308,7 @@ void stat_node(tree_node_handle root_handle, NIRTreeDisk<min_branch_factor, max_
   }
   STATPOLYHISTATLEVEL();
   for (unsigned lvl = 0; lvl < treeHeight; lvl++){
-    STATEXEC(std::cout << "=== LEVEL: " << lvl << "===" << std::endl);
+    STATEXEC(std::cout << "=== LEVEL: " << lvl << " ===" << std::endl);
     for (unsigned i = 0; i < histogramPolygonAtLevel.at(lvl).size(); i++) {
       if (histogramPolygonAtLevel.at(lvl).at(i) > 0) {
         STATHISTATLEVEL(i, histogramPolygonAtLevel.at(lvl).at(i), lvl);
