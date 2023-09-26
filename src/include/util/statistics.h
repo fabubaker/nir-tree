@@ -189,6 +189,9 @@ class Statistics {
 	#define STATRANGESEARCHHIST() std::cout << "Histogram of Range Searched Nodes Follows:" << std::endl
 	#define STATRANGELEAVESHIST() std::cout << "Histogram of Range Searched Leaves Follows:" << std::endl
 	#define STATHIST(bucket, count) std::cout << "  " << bucket << " : " << count << std::endl
+	#define STATHISTATLEVEL(bucket, count, level) std::cout << " L-" << level << "  " << bucket << " : " << count << std::endl
+	#define STATFANHISTATLEVEL() std::cout << "Histogram of Fanout for each level Follows: " << std::endl
+	#define STATPOLYHISTATLEVEL() std::cout << "Histogram of Polygon Sizes for each level Follows: " << std::endl
 #else 
 	#define STATEXEC(e)
 	#define STATMEM(mem)
@@ -210,6 +213,9 @@ class Statistics {
 	#define STATRANGESEARCHHIST()
 	#define STATRANGELEAVESHIST()
 	#define STATHIST(bucket, count)
+	#define STATHISTATLEVEL(bucket, count, level)
+	#define STATFANHISTATLEVEL()
+	#define STATPOLYHISTATLEVEL()
 
 #endif
 
