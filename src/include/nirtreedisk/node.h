@@ -3165,6 +3165,12 @@ void stat_node(tree_node_handle root_handle, NIRTreeDisk<min_branch_factor, max_
     histogramFanoutAtLevel.at(lvl).resize(10000,0);
   }
 
+  // polygon at root level should has size 1
+  assert(treeRef->polygons.find(root_handle) == treeRef->polygons.end());
+  unsigned root_lvl = root_handle.get_level();
+  unsigned root_polygonSize = 1;
+  histogramPolygonAtLevel.at(root_lvl).at(root_polygonSize)++;
+
   while (!context.empty()) {
     auto currentContext = context.top();
     context.pop();
@@ -3172,7 +3178,7 @@ void stat_node(tree_node_handle root_handle, NIRTreeDisk<min_branch_factor, max_
     auto lvl = currentContext.get_level();
 
     if (currentContext.get_type() == LEAF_NODE) {
-      assert(lvl == 0);
+      assert(lvl == 0); // Leaf Node has level 0
       auto current_node = treeRef->get_leaf_node(currentContext);
       unsigned fanout = current_node->cur_offset_;
 
@@ -3186,6 +3192,7 @@ void stat_node(tree_node_handle root_handle, NIRTreeDisk<min_branch_factor, max_
     } else if (currentContext.get_type() == BRANCH_NODE) {
       assert(lvl > 0);
       auto current_branch_node = treeRef->get_branch_node(currentContext);
+
       unsigned fanout = current_branch_node->cur_offset_;
       if (fanout >= histogramFanoutAtLevel.at(lvl).size()) {
         histogramFanoutAtLevel.at(lvl).resize(2 * fanout, 0);
@@ -3196,15 +3203,7 @@ void stat_node(tree_node_handle root_handle, NIRTreeDisk<min_branch_factor, max_
       for (unsigned i = 0; i < current_branch_node->cur_offset_; i++) {
         Branch &b = current_branch_node->entries.at(i);
         auto child_lvl = b.child.get_level();
-        IsotheticPolygon polygon;
-
-        auto itr = treeRef->polygons.find(b.child);
-        if (itr == treeRef->polygons.end()) {
-          polygon = IsotheticPolygon(b.boundingBox);
-        } else {
-          polygon = itr->second;
-        }
-
+        IsotheticPolygon polygon = find_polygon(treeRef, b);
         coverage += polygon.area();
 
         polygonSize = polygon.basicRectangles.size();
