@@ -2570,66 +2570,36 @@ SplitResult BranchNode<min_branch_factor, max_branch_factor, strategy>::splitNod
         // index isn't updated here as removeBranch() decrements cur_offset_
       }
     } else {
-      // Partially spanned by both nodes, need to downsplit
-      // Downward Split
-      SplitResult downwardSplit;
-      if (branch.child.get_type() == LEAF_NODE) {
-        auto child_node = treeRef->get_leaf_node(branch.child);
-        downwardSplit = child_node->splitNode(treeRef, branch.child, current_handle, p, true);
-        Branch child_updated = downwardSplit.leftBranch;
-        Branch child_sibling = downwardSplit.rightBranch;
-        assert(child_updated.child == branch.child);
-        assert(child_sibling.child.get_type() == LEAF_NODE);
-
-        // check if child_node is empty after downward split
-        if (child_node->cur_offset_ > 0) {
-          this->updateBranch(child_updated);
-          index = index + 1;
+      // Partially spanned by both nodes
+      IsotheticPolygon branch_poly = find_polygon(treeRef, branch); 
+      // Decide go left or right based on intersection area
+      Point left_LL = summary_rectangle.lowerLeft;
+      Point left_UR;
+      Point right_LL;
+      Point right_UR = summary_rectangle.upperRight;
+      for (unsigned d = 0; d < dimensions; d++){
+        if (d == p.dimension){
+          left_UR[d] = p.location;
+          right_LL[d] = p.location;
         } else {
-          this->removeAndFreeBranch(treeRef, branch.child); //update cur_offset_
-        }
-
-        // check if child_sibling_node is empty after downward split 
-        auto child_sibling_node = treeRef->get_leaf_node(child_sibling.child);
-        if (child_sibling_node->cur_offset_ > 0){
-          sibling_node->addBranchToNode(child_sibling);
-        } else {
-          allocator->free(child_sibling.child, sizeof(LeafNode<min_branch_factor, max_branch_factor, strategy>));
-        }
-      } else {
-        auto child_node = treeRef->get_branch_node(branch.child);
-        downwardSplit = child_node->splitNode(treeRef, branch.child, current_handle, p, true);
-        Branch child_updated = downwardSplit.leftBranch;
-        Branch child_sibling = downwardSplit.rightBranch;
-        assert(child_updated.child == branch.child);
-        assert(child_sibling.child.get_type() == BRANCH_NODE);
-
-        // check if child_node is empty after downward split
-        if (child_node->cur_offset_ > 0) {
-          this->updateBranch(child_updated);
-          index = index + 1;
-        } else {
-          this->removeAndFreeBranch(treeRef, branch.child);
-        }
-
-        // check if child_sibling_node is empty after downward split 
-        auto child_sibling_node = treeRef->get_branch_node(child_sibling.child);
-        if (child_sibling_node->cur_offset_ > 0){
-          sibling_node->addBranchToNode(child_sibling);
-        } else {
-          allocator->free(child_sibling.child, sizeof(BranchNode<min_branch_factor, max_branch_factor, strategy>));
+          left_UR[d] = summary_rectangle.upperRight[d];
+          right_LL[d] = summary_rectangle.lowerLeft[d];
         }
       }
-
-#if DEBUG_TEST
-  IsotheticPolygon left_polygon = find_polygon(treeRef, downwardSplit.leftBranch);
-  IsotheticPolygon right_polygon = find_polygon(treeRef, downwardSplit.rightBranch);
-  assert(left_polygon.disjoint(right_polygon));
-#endif
-
-    } //downsplit
-
-  }  //split
+      double left_intersection = branch_poly.computeIntersectionArea(Rectangle(left_LL, left_UR));
+      double right_intersection = branch_poly.computeIntersectionArea(Rectangle(right_LL, right_UR));
+      assert(left_intersection > 0);
+      assert(right_intersection > 0);
+      if ( left_intersection > right_intersection){
+        assert(split.leftBranch.child == left_handle);
+        left_node->addBranchToNode(branch);
+      } else {
+        assert(split.rightBranch.child == right_handle);
+        right_node->addBranchToNode(branch);
+      }
+    }
+    // [TODO] : some mechanisms to prevent overflowing one side of the node
+  }   //split
   // It is possible that after splitting on the geometric median,
   // we still end up with an overfull node. This can happen
   // everything gets assigned to the left node except for one
@@ -2649,7 +2619,36 @@ SplitResult BranchNode<min_branch_factor, max_branch_factor, strategy>::splitNod
   IsotheticPolygon left_polygon(this->boundingBox());
   IsotheticPolygon right_polygon(sibling_node->boundingBox());
 
+  // clip right_polygon according to left_node
+  left_node->make_disjoint_from_children(treeRef, tree_node_handle(nullptr), right_polygon);
+  // clip left_polygon according to right_node
+  right_node->make_disjoint_from_children(treeRef, tree_node_handle(nullptr), left_polygon);
+  // now left_polygon and right_polygon can overlap for dead space which should be removed for optimization
+  if (left_polygon.basicRectangles.size() < right_polygon.basicRectangles.size()){
+    left_polygon.increaseResolution(Point::atInfinity, right_polygon);
+    assert(left_polygon.basicRectangles.size() > 0);
+    // remove duplicated rectangles
+    left_polygon.refine();
+    assert(left_polygon.basicRectangles.size() > 0);
+    // recompute bounding box
+    left_polygon.recomputeBoundingBox();
+  } else {
+    right_polygon.increaseResolution(Point::atInfinity, left_polygon);
+    assert(right_polygon.basicRectangles.size() > 0);
+    // remove duplicated rectangles
+    right_polygon.refine();
+    assert(right_polygon.basicRectangles.size() > 0);
+    // recompute bounding box
+    right_polygon.recomputeBoundingBox();
+  }
   assert(left_polygon.disjoint(right_polygon));
+  // [TODO] test to check if all branches are contained in clipped polygon
+  // for (unsigned i = 0; i < left_node->cur_offset_; i++){
+  //   Branch &branch = left_node->entries.at(i);
+  //   IsotheticPolygon child_poly = find_polygon(treeRef, branch); 
+  //   left_polygon.containPoly(child_poly);
+  // }
+
   // When downsplitting our node, one part of this node goes
   // to the "left parent", and one part of the node goes to
   // the "right parent". These node parts could revise their
@@ -3667,6 +3666,7 @@ void remove_polygon(
     treeRef->polygons.erase(it); 
   } 
 }
+
 
 // Helper function for find_parent_handles 
 template <int min_branch_factor, int max_branch_factor, class strategy>
