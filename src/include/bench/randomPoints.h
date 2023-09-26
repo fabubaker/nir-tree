@@ -167,10 +167,10 @@ public:
 };
 class Tweets : public Benchmark {
 public:
-    static constexpr size_t size = TweetsDataSize;
-    static constexpr unsigned querySize = 0;
-    static constexpr unsigned dimensions = 2;
-    static constexpr char fileName[] = "/ssd1/nir-tree_git/data/tweets.csv";
+  static constexpr size_t size = TweetsDataSize;
+  static constexpr unsigned querySize = 0;
+  static constexpr unsigned dimensions = 2;
+  static constexpr char fileName[] = "/ssd1/nir-tree_git/data/tweets.csv";
 };
 }; // namespace BenchTypeClasses
 
