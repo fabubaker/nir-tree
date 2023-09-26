@@ -3126,12 +3126,13 @@ unsigned BranchNode<min_branch_factor, max_branch_factor, strategy>::height(
 }
 
 // called by NIRTreeDisk<min_branch_factor, max_branch_factor, strategy>::stat()
+// it is always called on root node
 template <int min_branch_factor, int max_branch_factor, class strategy>
-void stat_node(tree_node_handle start_handle, NIRTreeDisk<min_branch_factor, max_branch_factor, strategy> *treeRef) {
+void stat_node(tree_node_handle root_handle, NIRTreeDisk<min_branch_factor, max_branch_factor, strategy> *treeRef) {
   std::stack<tree_node_handle> context;
 
   // Initialize our context stack
-  context.push(start_handle);
+  context.push(root_handle);
   unsigned long polygonSize;
   unsigned long totalPolygonSize = 0;
   unsigned long totalLines = 0;
@@ -3141,59 +3142,77 @@ void stat_node(tree_node_handle start_handle, NIRTreeDisk<min_branch_factor, max
   unsigned long totalNodes = 0;
   unsigned long totalLeaves = 0;
   size_t deadSpace = 0;
-
-  std::vector<unsigned long> histogramPolygon;
-  histogramPolygon.resize(10000, 0);
-  std::vector<unsigned long> histogramFanout;
-  histogramFanout.resize(max_branch_factor, 0);
-
   double coverage = 0.0;
+  unsigned treeHeight;
+  // histogramPolygonAtLevel stores count of polygon with different size at each level
+  // Eg. histogramPolygonAtLevel.at(1).at(2) stores count of polygon with size 2 at level 1
+  std::vector<std::vector<unsigned long>> histogramPolygonAtLevel;
+  // histogramFanoutAtLevel stores count of branch with different fanout at each level
+  // Eg. histogramFanoutAtLevel.at(1).at(2) stores count of branch with fanout=2 at level 1
+  std::vector<std::vector<unsigned long>> histogramFanoutAtLevel;
 
   tree_node_allocator *allocator = get_node_allocator(treeRef);
+  
+  if (root_handle.get_type() == LEAF_NODE) {
+    auto root_node = treeRef->get_leaf_node(root_handle);
+    treeHeight = root_node->height();
+  } else {
+    assert(root_handle.get_type() == BRANCH_NODE);
+    auto root_node = treeRef->get_branch_node(root_handle);
+    treeHeight = root_node->height(treeRef, root_handle);
+  }
+
+  histogramPolygonAtLevel.resize(treeHeight);
+  histogramFanoutAtLevel.resize(treeHeight);
+  for (unsigned lvl = 0; lvl < treeHeight; lvl++){
+    histogramPolygonAtLevel.at(lvl).resize(10000, 0);
+    histogramFanoutAtLevel.at(lvl).resize(10000,0);
+  }
+
+  // polygon at root level should has size 1
+  assert(treeRef->polygons.find(root_handle) == treeRef->polygons.end());
+  unsigned root_lvl = root_handle.get_level();
+  unsigned root_polygonSize = 1;
+  histogramPolygonAtLevel.at(root_lvl).at(root_polygonSize)++;
 
   while (!context.empty()) {
     auto currentContext = context.top();
-
     context.pop();
     totalNodes++;
+    auto lvl = currentContext.get_level();
 
     if (currentContext.get_type() == LEAF_NODE) {
+      assert(lvl == 0); // Leaf Node has level 0
       auto current_node = treeRef->get_leaf_node(currentContext);
       unsigned fanout = current_node->cur_offset_;
 
-      if (fanout >= histogramFanout.size()) {
-        histogramFanout.resize(2 * fanout, 0);
+      if (fanout >= histogramFanoutAtLevel.at(lvl).size()) {
+        histogramFanoutAtLevel.at(lvl).resize(2 * fanout, 0);
       }
 
-      histogramFanout[fanout]++;
+      histogramFanoutAtLevel.at(lvl).at(fanout)++;
       totalLeaves++;
       memoryFootprint += sizeof(LeafNode<min_branch_factor, max_branch_factor, strategy>);
     } else if (currentContext.get_type() == BRANCH_NODE) {
+      assert(lvl > 0);
       auto current_branch_node = treeRef->get_branch_node(currentContext);
 
       unsigned fanout = current_branch_node->cur_offset_;
-      if (fanout >= histogramFanout.size()) {
-        histogramFanout.resize(2 * fanout, 0);
+      if (fanout >= histogramFanoutAtLevel.at(lvl).size()) {
+        histogramFanoutAtLevel.at(lvl).resize(2 * fanout, 0);
       }
-      histogramFanout[fanout]++;
+      histogramFanoutAtLevel.at(lvl).at(fanout)++;
 
       // Compute the overlap and coverage of our children
       for (unsigned i = 0; i < current_branch_node->cur_offset_; i++) {
         Branch &b = current_branch_node->entries.at(i);
-        IsotheticPolygon polygon;
-
-        auto itr = treeRef->polygons.find(b.child);
-        if (itr == treeRef->polygons.end()) {
-          polygon = IsotheticPolygon(b.boundingBox);
-        } else {
-          polygon = itr->second;
-        }
-
+        auto child_lvl = b.child.get_level();
+        IsotheticPolygon polygon = find_polygon(treeRef, b);
         coverage += polygon.area();
 
         polygonSize = polygon.basicRectangles.size();
-        assert(polygonSize < histogramPolygon.size());
-        histogramPolygon[polygonSize]++;
+        assert(polygonSize < histogramPolygonAtLevel.at(child_lvl).size());
+        histogramPolygonAtLevel.at(child_lvl).at(polygonSize)++;
         totalPolygonSize += polygonSize;
 
         // Compute space occupied by polygons
@@ -3248,17 +3267,63 @@ void stat_node(tree_node_handle start_handle, NIRTreeDisk<min_branch_factor, max
   STATBRANCH(totalNodes - totalLeaves);
   STATCOVER(coverage);
   STATFANHIST();
-  for (unsigned i = 0; i < histogramFanout.size(); ++i) {
-    if (histogramFanout[i] > 0) {
-      STATHIST(i, histogramFanout[i]);
+  unsigned maxBucket = 0;
+  // Get the max fanout for all levels
+  for (unsigned lvl = 0; lvl < treeHeight; lvl++){
+    maxBucket = histogramFanoutAtLevel.at(lvl).size() > maxBucket ? histogramFanoutAtLevel.at(lvl).size() : maxBucket;
+  }
+  // Print histogram of fanout summed for all levels
+  for (unsigned i = 0; i < maxBucket; i++) {
+    unsigned totalCount = 0;
+    // Sum up the count of branches with fanout=i at all levels
+    for (unsigned lvl = 0; lvl < treeHeight; lvl++){
+      if (histogramFanoutAtLevel.at(lvl).size() > i && histogramFanoutAtLevel.at(lvl).at(i) > 0){
+        totalCount += histogramFanoutAtLevel.at(lvl).at(i);
+      }
+    }
+    if (totalCount > 0){
+      STATHIST(i, totalCount);
+    }
+  }
+  STATFANHISTATLEVEL();
+  // Print histogram of fanout at each level
+  for (unsigned lvl = 0; lvl < treeHeight; lvl++){
+    STATEXEC(std::cout << "=== LEVEL: " << lvl << " ===" << std::endl);
+    for (unsigned i = 0; i < histogramFanoutAtLevel.at(lvl).size(); i++) {
+      if (histogramFanoutAtLevel.at(lvl).at(i) > 0) {
+        STATHISTATLEVEL(i, histogramFanoutAtLevel.at(lvl).at(i), lvl);
+      }
     }
   }
   STATLINES(totalLines);
   STATTOTALPOLYSIZE(totalPolygonSize);
   STATPOLYHIST();
-  for (unsigned i = 0; i < histogramPolygon.size(); ++i) {
-    if (histogramPolygon[i] > 0) {
-      STATHIST(i, histogramPolygon[i]);
+  maxBucket = 0;
+  // Get the max polygon size for all levels
+  for (unsigned lvl = 0; lvl < treeHeight; lvl++){
+    maxBucket = histogramPolygonAtLevel.at(lvl).size() > maxBucket ? histogramPolygonAtLevel.at(lvl).size() : maxBucket;
+  }
+  // Print histogram of polygon size summed for all levels
+  for (unsigned i = 0; i < maxBucket; i++) {
+    unsigned totalCount = 0;
+    // Sum up the count of polygon with size i at all levels
+    for (unsigned lvl = 0; lvl < treeHeight; lvl++){
+      if (histogramPolygonAtLevel.at(lvl).size() > i && histogramPolygonAtLevel.at(lvl).at(i) > 0){
+        totalCount += histogramPolygonAtLevel.at(lvl).at(i);
+      }
+    }
+    if (totalCount > 0){
+      STATHIST(i, totalCount);
+    }
+  }
+  STATPOLYHISTATLEVEL();
+  // Print histogram of polygon size at each level
+  for (unsigned lvl = 0; lvl < treeHeight; lvl++){
+    STATEXEC(std::cout << "=== LEVEL: " << lvl << " ===" << std::endl);
+    for (unsigned i = 0; i < histogramPolygonAtLevel.at(lvl).size(); i++) {
+      if (histogramPolygonAtLevel.at(lvl).at(i) > 0) {
+        STATHISTATLEVEL(i, histogramPolygonAtLevel.at(lvl).at(i), lvl);
+      }
     }
   }
   std::cout << treeRef->stats;
