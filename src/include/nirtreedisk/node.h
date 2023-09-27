@@ -2537,6 +2537,9 @@ SplitResult BranchNode<min_branch_factor, max_branch_factor, strategy>::splitNod
   // Save polygon of current branch node before split 
   IsotheticPolygon polygon_before_split = find_polygon(treeRef, current_handle, this->boundingBox()); 
   
+  std::stack<Rectangle> left_mbb_addon;
+  std::stack<Rectangle> right_mbb_addon;
+  
   // So we are going to split all branches at this branch node.
   // Cautious: both of index and cur_offset_ can be updated within the loop 
   unsigned index = 0;
