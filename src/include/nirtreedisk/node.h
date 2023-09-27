@@ -2524,17 +2524,16 @@ SplitResult BranchNode<min_branch_factor, max_branch_factor, strategy>::splitNod
   SplitResult split = {{Rectangle(), left_handle},
                        {Rectangle(), right_handle}};
   
-  std::stack<Rectangle> left_mbb_addon;
-  std::stack<Rectangle> right_mbb_addon;
+  std::vector<Rectangle> left_mbb_extra;
+  std::vector<Rectangle> right_mbb_extra;
   
   // So we are going to split all branches at this branch node.
   for (unsigned i = 0; i < this->cur_offset_; i++) {
     Branch &branch = entries.at(i);
-    Rectangle summary_rectangle = branch.boundingBox;
-    IsotheticPolygon branch_polygon = find_polygon(treeRef, branch);
+    Rectangle branch_mbb = branch.boundingBox;
 
-    bool is_contained_left = summary_rectangle.upperRight[p.dimension] <= p.location;
-    bool is_contained_right = summary_rectangle.lowerLeft[p.dimension] >= p.location;
+    bool is_contained_left = branch_mbb.upperRight[p.dimension] <= p.location;
+    bool is_contained_right = branch_mbb.lowerLeft[p.dimension] >= p.location;
     assert( not(is_contained_left and is_contained_right));
 
     if (is_contained_left and not is_contained_right) {
@@ -2545,10 +2544,9 @@ SplitResult BranchNode<min_branch_factor, max_branch_factor, strategy>::splitNod
       // Entirely contained in the right polygon
       assert(split.rightBranch.child == right_handle);
       right_node->addBranchToNode(branch);
-    
-    } else if (summary_rectangle.upperRight[p.dimension] ==
-               summary_rectangle.lowerLeft[p.dimension] and
-               summary_rectangle.lowerLeft[p.dimension] ==
+    } else if (branch_mbb.upperRight[p.dimension] ==
+               branch_mbb.lowerLeft[p.dimension] and
+               branch_mbb.lowerLeft[p.dimension] ==
                p.location) {
       // These go left or right situationally
       if (left_node->cur_offset_ <= right_node->cur_offset_) {
@@ -2562,29 +2560,39 @@ SplitResult BranchNode<min_branch_factor, max_branch_factor, strategy>::splitNod
       // Partially spanned by both nodes
       IsotheticPolygon branch_poly = find_polygon(treeRef, branch); 
       // Decide go left or right based on intersection area
-      Point left_LL = summary_rectangle.lowerLeft;
+      Point left_LL = branch_mbb.lowerLeft;
       Point left_UR;
       Point right_LL;
-      Point right_UR = summary_rectangle.upperRight;
+      Point right_UR = branch_mbb.upperRight;
       for (unsigned d = 0; d < dimensions; d++){
         if (d == p.dimension){
           left_UR[d] = p.location;
           right_LL[d] = p.location;
         } else {
-          left_UR[d] = summary_rectangle.upperRight[d];
-          right_LL[d] = summary_rectangle.lowerLeft[d];
+          left_UR[d] = branch_mbb.upperRight[d];
+          right_LL[d] = branch_mbb.lowerLeft[d];
         }
       }
-      double left_intersection = branch_poly.computeIntersectionArea(Rectangle(left_LL, left_UR));
-      double right_intersection = branch_poly.computeIntersectionArea(Rectangle(right_LL, right_UR));
+      Rectangle left_mbb(left_LL, left_UR);
+      Rectangle right_mbb(right_LL, right_UR);
+      double left_intersection = branch_poly.computeIntersectionArea(left_mbb);
+      double right_intersection = branch_poly.computeIntersectionArea(right_mbb);
       assert(left_intersection > 0);
       assert(right_intersection > 0);
       if ( left_intersection > right_intersection){
         assert(split.leftBranch.child == left_handle);
         left_node->addBranchToNode(branch);
+        std::vector<Rectangle> intersection_rec = branch_poly.intersection(right_mbb);
+        for (auto rec : intersection_rec){
+          left_mbb_extra.push_back(rec);
+        }
       } else {
         assert(split.rightBranch.child == right_handle);
         right_node->addBranchToNode(branch);
+        std::vector<Rectangle> intersection_rec = branch_poly.intersection(left_mbb);
+        for (auto rec : intersection_rec){
+          right_mbb_extra.push_back(rec);
+        }
       }
     }
     // [TODO] : some mechanisms to prevent overflowing one side of the node
@@ -2603,24 +2611,57 @@ SplitResult BranchNode<min_branch_factor, max_branch_factor, strategy>::splitNod
   assert(left_node->cur_offset_ <= max_branch_factor and
          right_node->cur_offset_ <= max_branch_factor);
   
-  IsotheticPolygon left_polygon(left_node->boundingBox());
-  IsotheticPolygon right_polygon(right_node->boundingBox());
+  IsotheticPolygon left_polygon;
+  IsotheticPolygon right_polygon;
+  Rectangle left_mbb = left_node->boundingBox();
+  Rectangle right_mbb = right_node->boundingBox();
+  Rectangle left_mbb_updated;
+  Rectangle right_mbb_updated;  
 
-  // clip right_polygon according to left_node
-  left_node->make_disjoint_from_children(treeRef, tree_node_handle(nullptr), right_polygon);
-  // clip left_polygon according to right_node
-  right_node->make_disjoint_from_children(treeRef, tree_node_handle(nullptr), left_polygon);
-  // now left_polygon and right_polygon can overlap for dead space which should be removed for optimization
-  if (left_polygon.basicRectangles.size() < right_polygon.basicRectangles.size()){
-    left_polygon.increaseResolution(Point::atInfinity, right_polygon);
+  if (left_mbb_extra.empty()){
+    left_polygon = IsotheticPolygon(left_mbb);
+  } else {
+    Point left_LL = left_mbb.lowerLeft;
+    Point left_UR = left_mbb.upperRight;
+    left_UR[p.dimension] = p.location;
+
+    left_mbb_updated = Rectangle(left_LL, left_UR);
+    left_mbb_extra.push_back(left_mbb_updated);
+    left_polygon = IsotheticPolygon(left_mbb_extra);
+  }
+
+  if (right_mbb_extra.empty()){
+    right_polygon = IsotheticPolygon(right_mbb);
+  } else {
+    Point right_LL = right_mbb.lowerLeft;
+    Point right_UR = right_mbb.upperRight;
+    right_LL[p.dimension] = p.location;
+
+    right_mbb_updated = Rectangle(right_LL, right_UR);
+    right_mbb_extra.push_back(right_mbb_updated);
+    right_polygon = IsotheticPolygon(right_mbb_extra);
+  }
+  
+  // Clipping Left polygon
+  if (not right_mbb_extra.empty()) {
+    right_mbb_extra.pop_back();
+    for (auto right_rect : right_mbb_extra) {
+      left_polygon.increaseResolution(Point::atInfinity, right_rect);
+    }
     assert(left_polygon.basicRectangles.size() > 0);
     // remove duplicated rectangles
     left_polygon.refine();
     assert(left_polygon.basicRectangles.size() > 0);
     // recompute bounding box
     left_polygon.recomputeBoundingBox();
-  } else {
-    right_polygon.increaseResolution(Point::atInfinity, left_polygon);
+  }
+  
+  // Clipping Right polygon
+  if (not left_mbb_extra.empty()) {
+    left_mbb_extra.pop_back();
+    for (auto left_rect : left_mbb_extra) {
+      right_polygon.increaseResolution(Point::atInfinity, left_rect);
+    }
     assert(right_polygon.basicRectangles.size() > 0);
     // remove duplicated rectangles
     right_polygon.refine();
@@ -2628,6 +2669,28 @@ SplitResult BranchNode<min_branch_factor, max_branch_factor, strategy>::splitNod
     // recompute bounding box
     right_polygon.recomputeBoundingBox();
   }
+  // // clip right_polygon according to left_node
+  // left_node->make_disjoint_from_children(treeRef, tree_node_handle(nullptr), right_polygon);
+  // // clip left_polygon according to right_node
+  // right_node->make_disjoint_from_children(treeRef, tree_node_handle(nullptr), left_polygon);
+  // // now left_polygon and right_polygon can overlap for dead space which should be removed for optimization
+  // if (left_polygon.basicRectangles.size() < right_polygon.basicRectangles.size()){
+  //   left_polygon.increaseResolution(Point::atInfinity, right_polygon);
+  //   assert(left_polygon.basicRectangles.size() > 0);
+  //   // remove duplicated rectangles
+  //   left_polygon.refine();
+  //   assert(left_polygon.basicRectangles.size() > 0);
+  //   // recompute bounding box
+  //   left_polygon.recomputeBoundingBox();
+  // } else {
+  //   right_polygon.increaseResolution(Point::atInfinity, left_polygon);
+  //   assert(right_polygon.basicRectangles.size() > 0);
+  //   // remove duplicated rectangles
+  //   right_polygon.refine();
+  //   assert(right_polygon.basicRectangles.size() > 0);
+  //   // recompute bounding box
+  //   right_polygon.recomputeBoundingBox();
+  // }
   assert(left_polygon.disjoint(right_polygon));
   // [TODO] test to check if all branches are contained in clipped polygon
   // for (unsigned i = 0; i < left_node->cur_offset_; i++){
