@@ -644,6 +644,14 @@ IsotheticPolygon::IsotheticPolygon(const Rectangle &baseRectangle)
 	basicRectangles.push_back(baseRectangle);
 }
 
+IsotheticPolygon::IsotheticPolygon(const std::vector<Rectangle> &baseRectangleVector)
+{
+	for (auto rectangle : baseRectangleVector){
+		basicRectangles.push_back(rectangle);
+	}
+	recomputeBoundingBox();
+}
+
 IsotheticPolygon::IsotheticPolygon(const IsotheticPolygon &basePolygon)
 {
 	boundingBox = basePolygon.boundingBox;

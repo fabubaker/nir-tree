@@ -207,6 +207,7 @@ class IsotheticPolygon
     void reset();
 		explicit IsotheticPolygon(const Rectangle &baseRectangle);
 		IsotheticPolygon(const IsotheticPolygon &basePolygon);
+        IsotheticPolygon(const std::vector<Rectangle> &baseRectangleVector);
 
 		double area() const;
 		double computeIntersectionArea(const Rectangle &givenRectangle) const;
