@@ -77,7 +77,6 @@ public:
   static size_t size;
   static unsigned dimensions;
   static unsigned seed;
-  static constexpr char fileName[] = "";
   static int precision;
 };
 
@@ -95,7 +94,6 @@ public:
   static double alpha;
   static unsigned dimensions;
   static unsigned seed;
-  static constexpr char fileName[] = "";
   static unsigned num_elements;
 
   static unsigned binary_search(double needle, std::vector<double> &cummulative);
@@ -107,7 +105,6 @@ public:
   static size_t size;
   static unsigned dimensions;
   static unsigned seed;
-  static constexpr char fileName[] = "";
 };
 
 class California : public Benchmark {
