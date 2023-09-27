@@ -2524,10 +2524,14 @@ SplitResult BranchNode<min_branch_factor, max_branch_factor, strategy>::splitNod
   SplitResult split = {{Rectangle(), left_handle},
                        {Rectangle(), right_handle}};
   
+  std::stack<Rectangle> left_mbb_addon;
+  std::stack<Rectangle> right_mbb_addon;
+  
   // So we are going to split all branches at this branch node.
   for (unsigned i = 0; i < this->cur_offset_; i++) {
     Branch &branch = entries.at(i);
     Rectangle summary_rectangle = branch.boundingBox;
+    IsotheticPolygon branch_polygon = find_polygon(treeRef, branch);
 
     bool is_contained_left = summary_rectangle.upperRight[p.dimension] <= p.location;
     bool is_contained_right = summary_rectangle.lowerLeft[p.dimension] >= p.location;
