@@ -1,0 +1,377 @@
+### GEN TREE PARAMETERS ###
+  tree = NIR_TREE
+  benchmark = UNIFORM
+  size = 50000
+  seed = 2141
+  buffer pool memory = 50000000
+  bulk load percentage = 0.5
+### ### ### ### ### ###
+
+Produced generator using seed: 2141
+Bulk loading 25000 points.
+Sequentially inserting 25000 points.
+Bulk Loading...
+Creating tree with 50000000bytes
+Num els: 25000
+Max depth required: 2
+Size of NIR branch node: 4040
+Bulk-loading NIRTree using Quad Tree Style Load...
+Bulk loading NIRTree took: 0.0285111
+Completed with 0 intersections
+Total pages occupied: 306
+Sequential Inserting...
+Num els to insert: 25000
+Finished insertion for 1000 points with 0.0270146s...
+Finished insertion for 2000 points with 0.0554606s...
+Finished insertion for 3000 points with 0.1139s...
+Finished insertion for 4000 points with 0.157944s...
+Finished insertion for 5000 points with 0.311226s...
+Finished insertion for 6000 points with 0.321756s...
+Finished insertion for 7000 points with 0.736556s...
+Finished insertion for 8000 points with 0.88966s...
+Finished insertion for 9000 points with 0.896509s...
+Finished insertion for 10000 points with 1.02567s...
+Finished insertion for 11000 points with 1.30188s...
+Finished insertion for 12000 points with 1.35489s...
+Finished insertion for 13000 points with 2.0883s...
+Finished insertion for 14000 points with 2.01632s...
+Finished insertion for 15000 points with 1.97213s...
+Finished insertion for 16000 points with 2.50355s...
+Finished insertion for 17000 points with 3.21588s...
+Finished insertion for 18000 points with 3.77196s...
+Finished insertion for 19000 points with 3.71216s...
+Finished insertion for 20000 points with 4.26679s...
+Finished insertion for 21000 points with 3.80984s...
+Finished insertion for 22000 points with 3.82404s...
+Finished insertion for 23000 points with 5.54856s...
+Finished insertion for 24000 points with 5.49767s...
+Finished insertion for 25000 points with 7.41054s...
+Sequentially Inserting 25000 points to NIRTree took: 56.8302
+Total pages occupied now: 773
+Created NIRTree.
+### Statistics ###
+Tree Memory Usage: 1056KB, 1MB, 0GB
+Polygon Memory Usage: 309KB, 0MB, 0GB
+Polygon with encodingMemory Usage: 276KB, 0MB, 0GB
+Polygon percent: 29.2985%
+Polygon encoding percent: 26.1778%
+Tree Nodes: 774
+Tree Leaves: 761
+Tree Branches: 13
+Total Coverage: 2.81639
+Histogram of Fanout Follows: 
+  12 : 1
+  15 : 1
+  19 : 2
+  21 : 1
+  22 : 2
+  24 : 1
+  27 : 2
+  28 : 3
+  29 : 3
+  30 : 5
+  32 : 2
+  33 : 2
+  34 : 2
+  35 : 3
+  36 : 6
+  37 : 4
+  38 : 6
+  39 : 7
+  40 : 5
+  41 : 12
+  42 : 13
+  43 : 15
+  44 : 11
+  45 : 17
+  46 : 13
+  47 : 13
+  48 : 17
+  49 : 13
+  50 : 14
+  51 : 12
+  52 : 15
+  53 : 13
+  54 : 9
+  55 : 15
+  56 : 12
+  57 : 10
+  58 : 9
+  59 : 12
+  60 : 15
+  61 : 11
+  62 : 10
+  63 : 4
+  64 : 13
+  65 : 11
+  66 : 9
+  67 : 12
+  68 : 3
+  69 : 8
+  70 : 8
+  71 : 8
+  72 : 3
+  73 : 11
+  74 : 4
+  75 : 3
+  76 : 4
+  77 : 3
+  78 : 7
+  79 : 12
+  80 : 2
+  81 : 4
+  82 : 5
+  83 : 301
+Histogram of Fanout for each level Follows: 
+=== LEVEL: 0 ===
+ L-0  15 : 1
+ L-0  19 : 2
+ L-0  21 : 1
+ L-0  22 : 2
+ L-0  24 : 1
+ L-0  27 : 2
+ L-0  28 : 3
+ L-0  29 : 3
+ L-0  30 : 5
+ L-0  32 : 2
+ L-0  33 : 2
+ L-0  34 : 2
+ L-0  35 : 3
+ L-0  36 : 6
+ L-0  37 : 4
+ L-0  38 : 5
+ L-0  39 : 7
+ L-0  40 : 4
+ L-0  41 : 12
+ L-0  42 : 13
+ L-0  43 : 15
+ L-0  44 : 10
+ L-0  45 : 17
+ L-0  46 : 13
+ L-0  47 : 13
+ L-0  48 : 17
+ L-0  49 : 13
+ L-0  50 : 14
+ L-0  51 : 12
+ L-0  52 : 15
+ L-0  53 : 12
+ L-0  54 : 9
+ L-0  55 : 15
+ L-0  56 : 12
+ L-0  57 : 9
+ L-0  58 : 9
+ L-0  59 : 12
+ L-0  60 : 15
+ L-0  61 : 10
+ L-0  62 : 10
+ L-0  63 : 4
+ L-0  64 : 13
+ L-0  65 : 10
+ L-0  66 : 9
+ L-0  67 : 12
+ L-0  68 : 3
+ L-0  69 : 8
+ L-0  70 : 8
+ L-0  71 : 8
+ L-0  72 : 3
+ L-0  73 : 11
+ L-0  74 : 4
+ L-0  75 : 2
+ L-0  76 : 4
+ L-0  77 : 3
+ L-0  78 : 7
+ L-0  79 : 11
+ L-0  80 : 2
+ L-0  81 : 4
+ L-0  82 : 5
+ L-0  83 : 298
+=== LEVEL: 1 ===
+ L-1  38 : 1
+ L-1  40 : 1
+ L-1  44 : 1
+ L-1  53 : 1
+ L-1  57 : 1
+ L-1  61 : 1
+ L-1  65 : 1
+ L-1  75 : 1
+ L-1  79 : 1
+ L-1  83 : 3
+=== LEVEL: 2 ===
+ L-2  12 : 1
+Bounding Lines: 0
+Total Polygon Size: 10271
+Histogram of Polygon Sizes Follows:
+  1 : 371
+  2 : 21
+  3 : 26
+  4 : 14
+  5 : 28
+  6 : 19
+  7 : 22
+  8 : 20
+  9 : 16
+  10 : 25
+  11 : 16
+  12 : 9
+  13 : 15
+  14 : 10
+  15 : 12
+  16 : 5
+  17 : 9
+  18 : 6
+  19 : 4
+  20 : 6
+  21 : 7
+  22 : 4
+  23 : 6
+  24 : 4
+  25 : 5
+  26 : 1
+  27 : 2
+  28 : 6
+  29 : 5
+  30 : 3
+  31 : 5
+  33 : 3
+  34 : 3
+  35 : 4
+  36 : 2
+  37 : 2
+  38 : 5
+  39 : 3
+  40 : 3
+  41 : 1
+  43 : 5
+  44 : 1
+  45 : 1
+  46 : 1
+  47 : 2
+  49 : 1
+  51 : 1
+  52 : 1
+  53 : 1
+  56 : 1
+  63 : 1
+  65 : 1
+  66 : 1
+  67 : 1
+  68 : 1
+  69 : 1
+  70 : 1
+  74 : 1
+  76 : 3
+  78 : 2
+  85 : 1
+  88 : 1
+  89 : 1
+  102 : 1
+  106 : 1
+  110 : 1
+  114 : 1
+  118 : 1
+  120 : 1
+  129 : 1
+  146 : 1
+  153 : 1
+  177 : 1
+  193 : 1
+  308 : 1
+  442 : 1
+  496 : 1
+  633 : 1
+Histogram of Polygon Sizes for each level Follows: 
+=== LEVEL: 0 ===
+ L-0  1 : 366
+ L-0  2 : 21
+ L-0  3 : 26
+ L-0  4 : 14
+ L-0  5 : 28
+ L-0  6 : 19
+ L-0  7 : 22
+ L-0  8 : 20
+ L-0  9 : 16
+ L-0  10 : 25
+ L-0  11 : 16
+ L-0  12 : 9
+ L-0  13 : 15
+ L-0  14 : 10
+ L-0  15 : 12
+ L-0  16 : 5
+ L-0  17 : 9
+ L-0  18 : 6
+ L-0  19 : 4
+ L-0  20 : 6
+ L-0  21 : 7
+ L-0  22 : 4
+ L-0  23 : 6
+ L-0  24 : 4
+ L-0  25 : 5
+ L-0  26 : 1
+ L-0  27 : 2
+ L-0  28 : 6
+ L-0  29 : 5
+ L-0  30 : 3
+ L-0  31 : 5
+ L-0  33 : 3
+ L-0  34 : 3
+ L-0  35 : 4
+ L-0  36 : 2
+ L-0  37 : 2
+ L-0  38 : 5
+ L-0  39 : 3
+ L-0  40 : 3
+ L-0  41 : 1
+ L-0  43 : 5
+ L-0  44 : 1
+ L-0  45 : 1
+ L-0  46 : 1
+ L-0  47 : 2
+ L-0  49 : 1
+ L-0  51 : 1
+ L-0  52 : 1
+ L-0  53 : 1
+ L-0  56 : 1
+ L-0  63 : 1
+ L-0  65 : 1
+ L-0  66 : 1
+ L-0  67 : 1
+ L-0  68 : 1
+ L-0  69 : 1
+ L-0  70 : 1
+ L-0  74 : 1
+ L-0  76 : 3
+ L-0  78 : 2
+ L-0  85 : 1
+ L-0  88 : 1
+ L-0  102 : 1
+ L-0  110 : 1
+ L-0  114 : 1
+ L-0  118 : 1
+ L-0  120 : 1
+ L-0  129 : 1
+ L-0  153 : 1
+ L-0  193 : 1
+=== LEVEL: 1 ===
+ L-1  1 : 4
+ L-1  89 : 1
+ L-1  106 : 1
+ L-1  146 : 1
+ L-1  177 : 1
+ L-1  308 : 1
+ L-1  442 : 1
+ L-1  496 : 1
+ L-1  633 : 1
+=== LEVEL: 2 ===
+ L-2  1 : 1
+Histogram of Searched Nodes Follows:
+  3 : 10000
+Histogram of Searched Leaves Follows:
+  1 : 10000
+Histogram of Range Searched Nodes Follows:
+Histogram of Range Searched Leaves Follows:
+Histogram of Scatter Follows:
+  1 : 20000
+Histogram of Out of Line Follows:
+### ### ### ###
+Total time to search: 0.0175959s
+Avg time to search: 1.75959e-06s
