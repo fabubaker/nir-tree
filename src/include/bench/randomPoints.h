@@ -20,6 +20,7 @@
 #include <rtreedisk/rtreedisk.h>
 #include <string>
 #include <globals/globals.h>
+#include <util/env.h>
 
 static const unsigned BitDataSize = 60000;
 static const unsigned BitQuerySize = 3164;
@@ -76,7 +77,6 @@ public:
   static size_t size;
   static unsigned dimensions;
   static unsigned seed;
-  static constexpr char fileName[] = "";
   static int precision;
 };
 
@@ -85,7 +85,7 @@ public:
   static constexpr size_t size = BitDataSize;
   static constexpr unsigned querySize = BitQuerySize;
   static constexpr unsigned dimensions = 2;
-  static constexpr char fileName[] = "/home/bjglasbe/Documents/code/nir-tree/data/bits02";
+  static constexpr char filePathEnv[] = "";
 };
 
 class Zipf : public Benchmark {
@@ -94,7 +94,6 @@ public:
   static double alpha;
   static unsigned dimensions;
   static unsigned seed;
-  static constexpr char fileName[] = "";
   static unsigned num_elements;
 
   static unsigned binary_search(double needle, std::vector<double> &cummulative);
@@ -106,7 +105,6 @@ public:
   static size_t size;
   static unsigned dimensions;
   static unsigned seed;
-  static constexpr char fileName[] = "";
 };
 
 class California : public Benchmark {
@@ -114,9 +112,7 @@ public:
   static constexpr size_t size = CaliforniaDataSize;
   static constexpr unsigned querySize = CaliforniaQuerySize;
   static constexpr unsigned dimensions = 2;
-  static constexpr char fileName[] =
-      "/home/bjglasbe/Documents/code/nir-tree/data/uniq_cali";
-  //california";
+  static constexpr char filePathEnv[] = "";
 };
 
 class Biological : public Benchmark {
@@ -124,7 +120,7 @@ public:
   static constexpr size_t size = BiologicalDataSize;
   static constexpr unsigned querySize = BiologicalQuerySize;
   static constexpr unsigned dimensions = 3;
-  static constexpr char fileName[] = "/home/bjglasbe/Documents/code/nir-tree/data/biological";
+  static constexpr char filePathEnv[] = "";
 };
 
 class Forest : public Benchmark {
@@ -132,7 +128,7 @@ public:
   static constexpr size_t size = ForestDataSize;
   static constexpr unsigned querySize = ForestQuerySize;
   static constexpr unsigned dimensions = 5;
-  static constexpr char fileName[] = "/home/bjglasbe/Documents/code/nir-tree/data/forest";
+  static constexpr char filePathEnv[] = "";
 };
 
 class Canada : public Benchmark {
@@ -140,7 +136,7 @@ public:
   static constexpr size_t size = CanadaDataSize;
   static constexpr unsigned querySize = CanadaQuerySize;
   static constexpr unsigned dimensions = 2;
-  static constexpr char fileName[] = "/home/bjglasbe/Documents/code/nir-tree/data/canada";
+  static constexpr char filePathEnv[] = "";
 };
 
 class Gaia : public Benchmark {
@@ -148,7 +144,7 @@ public:
   static constexpr size_t size = GaiaDataSize;
   static constexpr unsigned querySize = GaiaQuerySize;
   static constexpr unsigned dimensions = 3;
-  static constexpr char fileName[] = "/home/bjglasbe/Documents/code/nir-tree/data/gaia";
+  static constexpr char filePathEnv[] = "";
 };
 
 class MicrosoftBuildings : public Benchmark {
@@ -156,21 +152,21 @@ public:
   static constexpr size_t size = MicrosoftBuildingsDataSize;
   static constexpr unsigned querySize = 0;
   static constexpr unsigned dimensions = 2;
-  static constexpr char fileName[] = "/home/bjglasbe/Documents/code/nir-tree/data/microsoftbuildings";
+  static constexpr char filePathEnv[] = "";
 };
 class Pois : public Benchmark {
 public:
   static constexpr size_t size = PoisDataSize;
   static constexpr unsigned querySize = 0;
   static constexpr unsigned dimensions = 2;
-  static constexpr char fileName[] = "/ssd1/nir-tree_git/data/pois.csv";
+  static constexpr char filePathEnv[] = "NIR_POIS_PATH";
 };
 class Tweets : public Benchmark {
 public:
-    static constexpr size_t size = TweetsDataSize;
-    static constexpr unsigned querySize = 0;
-    static constexpr unsigned dimensions = 2;
-    static constexpr char fileName[] = "/ssd1/nir-tree_git/data/tweets.csv";
+  static constexpr size_t size = TweetsDataSize;
+  static constexpr unsigned querySize = 0;
+  static constexpr unsigned dimensions = 2;
+  static constexpr char filePathEnv[] = "NIR_TWEETS_PATH";
 };
 }; // namespace BenchTypeClasses
 
@@ -266,11 +262,17 @@ PointGenerator<T>::PointGenerator(BenchTag::DistributionGenerated) : benchmarkSi
 }
 
 template <typename T>
-PointGenerator<T>::PointGenerator(BenchTag::FileBackedReadAll) : benchmarkSize(T::size), backingFile(T::fileName), offset(0) {
+PointGenerator<T>::PointGenerator(BenchTag::FileBackedReadAll) :
+  benchmarkSize(T::size),
+  backingFile(util::getenv_exc(T::filePathEnv)),
+  offset(0) {
 }
 
 template <typename T>
-PointGenerator<T>::PointGenerator(BenchTag::FileBackedReadChunksAtATime) : benchmarkSize(T::size), backingFile(T::fileName), offset(0) {
+PointGenerator<T>::PointGenerator(BenchTag::FileBackedReadChunksAtATime) :
+  benchmarkSize(T::size),
+  backingFile(util::getenv_exc(T::filePathEnv)),
+  offset(0) {
 }
 
 template <typename T>
