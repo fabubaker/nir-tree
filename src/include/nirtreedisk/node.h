@@ -254,7 +254,7 @@ public:
           tree_node_handle parent_handle);
   // splitNode: splits Leafnode with current_handle into two LeafNode objects 
   // according to partition p
- SplitResult splitNode(
+  SplitResult splitNode(
           NIRTreeDisk<min_branch_factor, max_branch_factor, strategy> *treeRef,
           tree_node_handle current_handle,
           tree_node_handle parent_handle,
@@ -336,26 +336,15 @@ public:
   void addBranchToNode(const Branch &entry) {
     entries.at(this->cur_offset_++) = entry;
   };
-  // updateBranch: update the Branch with the same tree_node_handle
-  void updateBranch(const Branch &entry) {
-    // Locate the child
-    unsigned childIndex = 0;
-    tree_node_handle entry_handle = entry.child;
-    while( entries.at(childIndex).child != entry_handle and childIndex < this->cur_offset_ )
-    { 
-      childIndex++; 
-    }
-    assert(entries.at(childIndex).child == entry_handle);
-    // Update the branch
-    entries.at(childIndex) = entry;
-  };
+  // removeBranchFromNode: just remove branch from Node without deleting the branch
+  void removeBranchFromNode(unsigned index);
+  // updateBranch: update the Branch at node with the same entry.child
+  void updateBranchAtNode(const Branch &entry);
   // removeBranch: remove branch from BranchNode and free the memory associated with Branch
   // as well as removing polygon associated with this node from map 
   void removeBranchAndDelete(
           NIRTreeDisk<min_branch_factor, max_branch_factor, strategy> *treeRef,
           const tree_node_handle entry);
-  void removeBranchFromNode(const tree_node_handle entry);
-  void removeBranchFromNode(unsigned index);
   // choose a LeafNode for adding a point 
   // expansion and clipping of polygon are also done here 
   tree_node_handle chooseNodePoint(
@@ -1567,7 +1556,7 @@ SplitResult adjustTreeSub(
       }
       // Update updated child branch at Parent node
       // Add splitted sibling branch to Parent node
-      current_branch_node->updateBranch(propagationSplit.leftBranch);
+      current_branch_node->updateBranchAtNode(propagationSplit.leftBranch);
       current_branch_node->addBranchToNode(propagationSplit.rightBranch);
     }
 
@@ -1880,27 +1869,9 @@ void BranchNode<min_branch_factor, max_branch_factor, strategy>::removeBranchAnd
   // Truncate array size
   this->cur_offset_--;
 }
-template <int min_branch_factor, int max_branch_factor, class strategy>
-void BranchNode<min_branch_factor, max_branch_factor, strategy>::removeBranchFromNode(
-          const tree_node_handle entry)
-{
-  // Locate the child
-  unsigned childIndex = 0;
-  while( entries.at(childIndex).child != entry and childIndex < this->cur_offset_ )
-  { 
-    childIndex++; 
-  }
-  assert(entries.at(childIndex).child == entry);
-  
-  // Replace this index with whatever is in the last position
-  entries.at(childIndex) = entries.at(this->cur_offset_ - 1);
 
-  // Truncate array size
-  this->cur_offset_--;
-}
 template <int min_branch_factor, int max_branch_factor, class strategy>
-void BranchNode<min_branch_factor, max_branch_factor, strategy>::removeBranchFromNode(
-          unsigned index)
+void BranchNode<min_branch_factor, max_branch_factor, strategy>::removeBranchFromNode(unsigned index)
 {
   assert(index < this->cur_offset_);
   
@@ -1910,6 +1881,21 @@ void BranchNode<min_branch_factor, max_branch_factor, strategy>::removeBranchFro
   // Truncate array size
   this->cur_offset_--;
 }
+
+template <int min_branch_factor, int max_branch_factor, class strategy>
+void BranchNode<min_branch_factor, max_branch_factor, strategy>::updateBranchAtNode(const Branch &entry) {
+  // Locate the child
+  unsigned childIndex = 0;
+  tree_node_handle entry_handle = entry.child;
+  while( entries.at(childIndex).child != entry_handle and childIndex < this->cur_offset_ )
+  { 
+    childIndex++; 
+  }
+  assert(entries.at(childIndex).child == entry_handle);
+  // Update the branch
+  entries.at(childIndex) = entry;
+};
+
 // [UNUSED]
 template <int min_branch_factor, int max_branch_factor, class strategy, typename functor>
 void is_vertical_stripe(NIRTreeDisk<min_branch_factor, max_branch_factor, strategy> *treeRef, tree_node_handle root, functor &f) {
@@ -2621,7 +2607,7 @@ SplitResult BranchNode<min_branch_factor, max_branch_factor, strategy>::splitNod
 
         // check if child_node is empty after downward split
         if (child_node->cur_offset_ > 0) {
-          this->updateBranch(child_updated);
+          this->updateBranchAtNode(child_updated);
           index = index + 1;
         } else {
           this->removeBranchAndDelete(treeRef, branch.child); //update cur_offset_
@@ -2644,7 +2630,7 @@ SplitResult BranchNode<min_branch_factor, max_branch_factor, strategy>::splitNod
 
         // check if child_node is empty after downward split
         if (child_node->cur_offset_ > 0) {
-          this->updateBranch(child_updated);
+          this->updateBranchAtNode(child_updated);
           index = index + 1;
         } else {
           this->removeBranchAndDelete(treeRef, branch.child);
