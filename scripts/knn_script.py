@@ -19,13 +19,23 @@ def calculate_mbr(neighbors):
     return min_x, max_x, min_y, max_y
 
 if __name__ == "__main__":
-    if len(sys.argv) != 4:
-        print("Usage: python script_name.py <input_file_path> <k> <n>")
+    if len(sys.argv) != 5:
+        print("Generates rectangles containing a specific number of points using a knn algorithm.")
+        print("The points themselves are obtained from an input file.")
+        print("")
+        print("Usage: python knn_script.py <input_file_path> <k> <n> <output_file_path>")
+        print("<input_file_path> - Path to input file containing points to knn")
+        print("<k> - How many points to collect in a rectangle")
+        print("<n> - The total number of rectangles containing k points to generate")
+        print("<output_file_path> - The output file to save rectangles to")
         sys.exit(1)
 
     input_file_path = sys.argv[1]
     k = int(sys.argv[2])
     n = int(sys.argv[3])
+    output_file_path = sys.argv[4]
+
+    output_file = open(output_file_path, 'w')
 
     # Load points from the input file
     print("Loading points from the input file...")
@@ -39,6 +49,7 @@ if __name__ == "__main__":
     query_points = []
     print(f"Loading {n} query points from the input file...")
     skip = math.ceil(len(points)/n)
+
     for i in range(0, len(points), skip):
         query_points.append(points[i])
 
@@ -59,3 +70,8 @@ if __name__ == "__main__":
 
         print(f"MBR for query point {idx+1} (min X, min Y, max X, max Y) | {min_x} {min_y} {max_x} {max_y}")
         print()  # Add an empty line between query points
+
+        output_file.write(f"{min_x} {min_y} {max_x} {max_y}\n")
+
+    print(f"{n} MBRs with {k} points written to {output_file_path}")
+    output_file.close()
