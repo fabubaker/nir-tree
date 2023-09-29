@@ -216,7 +216,7 @@ public:
   unsigned checksum() const;
   void print() const;
   void printTree() const;
-  unsigned height() const;
+  unsigned height(tree_node_handle self_handle) const;
 
   // Operators
   bool operator<(const BranchNode &otherNode) const;
@@ -1101,11 +1101,7 @@ unsigned LeafNode<min_branch_factor, max_branch_factor>::checksum() const {
 
 template <int min_branch_factor, int max_branch_factor>
 unsigned LeafNode<min_branch_factor, max_branch_factor>::height() const {
-//  assert(parent == nullptr);
-//  return level + 1;
-
-// Unsupported
-  abort();
+  return 1;
 }
 
 //// BRANCH STARTS
@@ -2217,37 +2213,70 @@ unsigned BranchNode<min_branch_factor, max_branch_factor>::checksum() const {
 }
 
 template <int min_branch_factor, int max_branch_factor>
-unsigned BranchNode<min_branch_factor, max_branch_factor>::height() const {
-//  assert(parent == nullptr);
-//  return level + 1;
-
-// Unsupported
-  abort();
+unsigned BranchNode<min_branch_factor, max_branch_factor>::height(tree_node_handle self_handle) const {
+  return self_handle.get_level() + 1;
 }
 
 template <int min_branch_factor, int max_branch_factor>
-void stat_node(tree_node_handle start_handle, RStarTreeDisk<min_branch_factor, max_branch_factor> *treeRef) {
+void stat_node(tree_node_handle root_handle, RStarTreeDisk<min_branch_factor, max_branch_factor> *treeRef) {
   std::stack<tree_node_handle> context;
 
-  context.push(start_handle);
+  context.push(root_handle);
   size_t memoryFootprint = 0;
   unsigned long totalNodes = 0;
   unsigned long totalLeaves = 0;
+  unsigned treeHeight;
+  size_t deadSpace = 0;
+  // histogramFanoutAtLevel stores count of branch with different fanout at each level
+  // Eg. histogramFanoutAtLevel.at(1).at(2) stores count of branch with fanout=2 at level 1
+  std::vector<std::vector<unsigned long>> histogramFanoutAtLevel;
 
   tree_node_allocator *allocator = get_node_allocator(treeRef);
+
+  if (root_handle.get_type() == LEAF_NODE) {
+    auto root_node = treeRef->get_leaf_node(root_handle);
+    treeHeight = root_node->height();
+  } else {
+    assert(root_handle.get_type() == BRANCH_NODE);
+    auto root_node = treeRef->get_branch_node(root_handle);
+    treeHeight = root_node->height(root_handle);
+  }
+
+  histogramFanoutAtLevel.resize(treeHeight);
+  for (unsigned lvl = 0; lvl < treeHeight; lvl++) {
+    histogramFanoutAtLevel.at(lvl).resize(10000,0);
+  }
 
   while (!context.empty()) {
     auto currentContext = context.top();
     context.pop();
     totalNodes++;
+    auto lvl = currentContext.get_level();
 
     if (currentContext.get_type() == LEAF_NODE) {
       auto current_node = treeRef->get_leaf_node(currentContext);
-      totalLeaves++;
+      unsigned fanout = current_node->cur_offset_;
+
+      if (fanout >= histogramFanoutAtLevel.at(lvl).size()) {
+        histogramFanoutAtLevel.at(lvl).resize(2 * fanout, 0);
+      }
+
+      histogramFanoutAtLevel.at(lvl).at(fanout)++;
       memoryFootprint += sizeof(LeafNode<min_branch_factor, max_branch_factor>);
+      deadSpace += (sizeof(Point) * (max_branch_factor - current_node->cur_offset_));
+      totalLeaves++;
     } else if (currentContext.get_type() == BRANCH_NODE) {
       auto current_node = treeRef->get_branch_node(currentContext);
+      unsigned fanout = current_node->cur_offset_;
+
+      if (fanout >= histogramFanoutAtLevel.at(lvl).size()) {
+        histogramFanoutAtLevel.at(lvl).resize(2 * fanout, 0);
+      }
+
+      histogramFanoutAtLevel.at(lvl).at(fanout)++;
       memoryFootprint += sizeof(BranchNode<min_branch_factor, max_branch_factor>);
+      deadSpace += (sizeof(Branch) * (max_branch_factor - current_node->cur_offset_));
+
       for (unsigned i = 0; i < current_node->cur_offset_; i++) {
         context.push(current_node->entries.at(i).child);
       }
@@ -2260,9 +2289,39 @@ void stat_node(tree_node_handle start_handle, RStarTreeDisk<min_branch_factor, m
   STATMEM(memoryFootprint);
   //STATHEIGHT(height());
   STATSIZE(totalNodes);
-  //STATEXEC(std::cout << "DeadSpace: " << deadSpace << std::endl);
+  STATEXEC(std::cout << "DeadSpace: " << deadSpace << std::endl);
   //STATSINGULAR(singularBranches);
   STATLEAF(totalLeaves);
+  STATFANHIST();
+  unsigned maxBucket = 0;
+  // Get the max fanout for all levels
+  for (unsigned lvl = 0; lvl < treeHeight; lvl++) {
+    maxBucket = histogramFanoutAtLevel.at(lvl).size() > maxBucket ? histogramFanoutAtLevel.at(lvl).size() : maxBucket;
+  }
+  // Print histogram of fanout summed for all levels
+  for (unsigned i = 0; i < maxBucket; i++) {
+    unsigned totalCount = 0;
+    // Sum up the count of branches with fanout=i at all levels
+    for (unsigned lvl = 0; lvl < treeHeight; lvl++){
+      if (histogramFanoutAtLevel.at(lvl).size() > i && histogramFanoutAtLevel.at(lvl).at(i) > 0){
+        totalCount += histogramFanoutAtLevel.at(lvl).at(i);
+      }
+    }
+    if (totalCount > 0){
+      STATHIST(i, totalCount);
+    }
+  }
+  STATFANHISTATLEVEL();
+  // Print histogram of fanout at each level
+  for (unsigned lvl = 0; lvl < treeHeight; lvl++){
+    STATEXEC(std::cout << "=== LEVEL: " << lvl << " ===" << std::endl);
+    for (unsigned i = 0; i < histogramFanoutAtLevel.at(lvl).size(); i++) {
+      if (histogramFanoutAtLevel.at(lvl).at(i) > 0) {
+        STATHISTATLEVEL(i, histogramFanoutAtLevel.at(lvl).at(i), lvl);
+      }
+    }
+  }
+
   std::cout << treeRef->stats << std::endl;
 }
 } // namespace rstartreedisk

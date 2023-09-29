@@ -3191,17 +3191,21 @@ void stat_node(tree_node_handle root_handle, NIRTreeDisk<min_branch_factor, max_
       }
 
       histogramFanoutAtLevel.at(lvl).at(fanout)++;
-      totalLeaves++;
       memoryFootprint += sizeof(LeafNode<min_branch_factor, max_branch_factor, strategy>);
+      deadSpace += (sizeof(Point) * (max_branch_factor - current_node->cur_offset_));
+      totalLeaves++;
     } else if (currentContext.get_type() == BRANCH_NODE) {
       assert(lvl > 0);
       auto current_branch_node = treeRef->get_branch_node(currentContext);
-
       unsigned fanout = current_branch_node->cur_offset_;
+
       if (fanout >= histogramFanoutAtLevel.at(lvl).size()) {
         histogramFanoutAtLevel.at(lvl).resize(2 * fanout, 0);
       }
+
       histogramFanoutAtLevel.at(lvl).at(fanout)++;
+      memoryFootprint += sizeof(BranchNode<min_branch_factor, max_branch_factor, strategy>);
+      deadSpace += (sizeof(Branch) * (max_branch_factor - current_branch_node->cur_offset_));
 
       // Compute the overlap and coverage of our children
       for (unsigned i = 0; i < current_branch_node->cur_offset_; i++) {
@@ -3232,11 +3236,6 @@ void stat_node(tree_node_handle root_handle, NIRTreeDisk<min_branch_factor, max_
 
         context.push(b.child);
       }
-
-      memoryFootprint += sizeof(BranchNode<min_branch_factor, max_branch_factor, strategy>); // +
-      // other out of line polys
-
-      deadSpace += (sizeof(Branch) * (max_branch_factor - current_branch_node->cur_offset_));
     }
   }
 
@@ -3261,7 +3260,7 @@ void stat_node(tree_node_handle root_handle, NIRTreeDisk<min_branch_factor, max_
 
   //STATHEIGHT(height());
   STATSIZE(totalNodes);
-  //STATEXEC(std::cout << "DeadSpace: " << deadSpace << std::endl);
+  STATEXEC(std::cout << "DeadSpace: " << deadSpace << std::endl);
   //STATSINGULAR(singularBranches);
   STATLEAF(totalLeaves);
   STATBRANCH(totalNodes - totalLeaves);
