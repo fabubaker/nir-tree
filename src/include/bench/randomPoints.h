@@ -825,69 +825,29 @@ static std::vector<Rectangle> generateZipfRectangles(
   return rectangles;
 }
 
-static std::vector<Rectangle> generatePoisRectangles(size_t numRectangles, std::vector<Point> points, double lengthMultiplier) {
-  Point ll;
-  Point ur;
+static std::vector<Rectangle> generateRectanglesFromFile(std::string fileName) {
+  std::fstream file;
+  file.open(fileName);
+  fileGoodOrDie(file);
+
+  Point lowerLeft, upperRight;
+
+  std::string line;
   std::vector<Rectangle> rectangles;
-  unsigned seed = 1317;
-  std::default_random_engine generator(seed);
-  unsigned lengthSeed = 2454;
-  std::default_random_engine lengthGenerator(lengthSeed);
 
-  // Pick a random point, and add a random length to it to obtain a search rectangle
-  std::uniform_int_distribution<size_t> randomPointIdx(0, points.size());
+  while(std::getline(file, line)) {
+    std::istringstream ss(line);
 
-  double minLength = 1 * lengthMultiplier;
-  double maxLength = 5 * lengthMultiplier;
-  std::uniform_real_distribution<double> xLength(minLength, maxLength);
-  std::uniform_real_distribution<double> yLength(minLength, maxLength);
+    for (int i = 0; i < DIM; i++) {
+      ss >> lowerLeft[i];
+    }
 
-  for (unsigned i = 0; i < numRectangles; i++) {
-    auto idx = randomPointIdx(generator);
-    ll = points[idx];
-    ur[0] = ll[0] + xLength(lengthGenerator);
-    ur[1] = ll[1] + yLength(lengthGenerator);
+    for (int i = 0; i < DIM; i++) {
+      ss >> upperRight[i];
+    }
 
-    Rectangle rectangle(ll, ur);
-    rectangles.emplace_back(rectangle);
-  }
-
-  return rectangles;
-}
-
-static std::vector<Rectangle> generateTweetsRectangles(size_t numRectangles, double lengthMultiplier) {
-  Point ll;
-  Point ur;
-  std::vector<Rectangle> rectangles;
-  unsigned seed = 1317;
-  std::default_random_engine generator(seed);
-  unsigned lengthSeed = 2454;
-  std::default_random_engine lengthGenerator(lengthSeed);
-
-// The coordinates below represent the most densely populated tweets area (USA)
-  double xmin = -125;
-  double xmax = -70;
-  double ymin = 25;
-  double ymax = 50;
-  double minLength = 1 * lengthMultiplier;
-  double maxLength = 5 * lengthMultiplier;
-  std::uniform_real_distribution<double> xPoint(xmin, xmax);
-  std::uniform_real_distribution<double> yPoint(ymin, ymax);
-  std::uniform_real_distribution<double> xLength(minLength, maxLength);
-  std::uniform_real_distribution<double> yLength(minLength, maxLength);
-
-  for (unsigned i = 0; i < numRectangles; i++) {
-    ll[0] = xPoint(generator);
-    ll[1] = yPoint(generator);
-    ur[0] = ll[0] + xLength(lengthGenerator);
-    ur[1] = ll[1] + yLength(lengthGenerator);
-
-    // If 'ur' is outside of the MBR, clip it.
-    ur[0] = ur[0] < xmax ? ur[0] : xmax;
-    ur[1] = ur[1] < ymax ? ur[1] : ymax;
-
-    Rectangle rectangle(ll, ur);
-    rectangles.emplace_back(rectangle);
+    Rectangle rect(lowerLeft, upperRight);
+    rectangles.push_back(rect);
   }
 
   return rectangles;
@@ -1024,14 +984,9 @@ runBench(PointGenerator<T> &pointGen,
       configU["num_elements"]
     );
   } else if (configU["distribution"] == POIS) {
-    searchRectangles = generatePoisRectangles(
-            configU["rectanglescount"], pointGen.pointBuffer,
-            configD["length_multiplier"]
-    );
+    searchRectangles = generateRectanglesFromFile(configS["rects_file"]);
   } else if (configU["distribution"] == TWEETS) {
-    searchRectangles = generateTweetsRectangles(
-            configU["rectanglescount"], configD["length_multiplier"]
-    );
+    searchRectangles = generateRectanglesFromFile(configS["rects_file"]);
   } else {
     // Do nothing, rectangle searches are disabled for now...
   }
@@ -1096,8 +1051,9 @@ runBench(PointGenerator<T> &pointGen,
   }
 
 	// Search for rectangles
-  if (configU["rectanglescount"] > 0){
+  if (!configS["rects_file"].empty()){
     unsigned rangeSearchChecksum = 0;
+
     std::cout << "Beginning search for " << searchRectangles.size() << " rectangles..." << std::endl;
     for (unsigned i = 0; i < searchRectangles.size(); ++i)
     {
@@ -1164,7 +1120,6 @@ runBench(PointGenerator<T> &pointGen,
       bufferPool->resetStat();
     }
     std::cout << "Delete OK." << std::endl;
-
   } else {
     std::cout << "Test for points deletion is disabled" << std::endl; 
   }
