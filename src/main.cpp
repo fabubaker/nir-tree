@@ -130,7 +130,7 @@ int main(int argc, char *argv[]) {
   std::map<std::string, double> configD;
   std::map<std::string, std::string> configS;
 
-  while ((option = getopt(argc, argv, "t:m:a:b:n:s:r:v:z:g:p:B:P:S:f:L:A:D:")) != -1) {
+  while ((option = getopt(argc, argv, "t:m:a:b:n:s:r:v:z:g:p:B:P:S:f:L:A:D:R:")) != -1) {
     switch (option) {
       case 't': // Tree
       {
