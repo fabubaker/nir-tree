@@ -167,6 +167,11 @@ int main(int argc, char *argv[]) {
         configU["rectanglescount"] = std::stoull(optarg);
         break;
       }
+      case 'R': // Load search rectangles from file
+      {
+        configS["rects_file"] = optarg;
+        break;
+      }
       case 'v': // Visualization
       {
         configU["visualization"] = true;
