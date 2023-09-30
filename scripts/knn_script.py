@@ -3,6 +3,8 @@ import numpy as np
 from sklearn.neighbors import NearestNeighbors
 import math
 
+DEBUG = False
+
 def load_points(file_path):
     points = []
     with open(file_path, 'r') as file:
@@ -64,9 +66,10 @@ if __name__ == "__main__":
         # Calculate the minimum bounding rectangle
         min_x, max_x, min_y, max_y = calculate_mbr(neighbors)
 
-        print(f"The {k} Nearest Neighbors of the point {query_point} are:")
-        for i, index in enumerate(indices[0]):
-            print(f"Neighbor {i+1}: {points[index]} (Distance: {distances[0][i]})")
+        if DEBUG:
+            print(f"The {k} Nearest Neighbors of the point {query_point} are:")
+            for i, index in enumerate(indices[0]):
+                print(f"Neighbor {i+1}: {points[index]} (Distance: {distances[0][i]})")
 
         print(f"MBR for query point {idx+1} (min X, min Y, max X, max Y) | {min_x} {min_y} {max_x} {max_y}")
         print()  # Add an empty line between query points
