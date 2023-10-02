@@ -31,6 +31,7 @@ void parameters(std::map<std::string, uint64_t> &configU, std::map<std::string, 
   std::cout << "  points to search = " << configU["num_points_to_search"] << std::endl;
   std::cout << "  points to delete = " << configU["num_points_to_delete"] << std::endl;
   std::cout << "  db file name = " << configS["db_file_name"] << std::endl;
+  std::cout << "  rectangles file name = " << configS["rects_file"] << std::endl;
   std::cout << "### ### ### ### ### ###" << std::endl << std::endl;
 }
 
@@ -130,7 +131,7 @@ int main(int argc, char *argv[]) {
   std::map<std::string, double> configD;
   std::map<std::string, std::string> configS;
 
-  while ((option = getopt(argc, argv, "t:m:a:b:n:s:r:v:z:g:p:B:P:S:f:L:A:D:")) != -1) {
+  while ((option = getopt(argc, argv, "t:m:a:b:n:s:r:v:z:g:p:B:P:S:f:L:A:D:R:")) != -1) {
     switch (option) {
       case 't': // Tree
       {
@@ -165,6 +166,11 @@ int main(int argc, char *argv[]) {
       case 'r': // Number of search rectangles
       {
         configU["rectanglescount"] = std::stoull(optarg);
+        break;
+      }
+      case 'R': // Load search rectangles from file
+      {
+        configS["rects_file"] = optarg;
         break;
       }
       case 'v': // Visualization

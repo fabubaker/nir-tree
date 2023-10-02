@@ -825,69 +825,29 @@ static std::vector<Rectangle> generateZipfRectangles(
   return rectangles;
 }
 
-static std::vector<Rectangle> generatePoisRectangles(size_t numRectangles, std::vector<Point> points, double lengthMultiplier) {
-  Point ll;
-  Point ur;
+static std::vector<Rectangle> generateRectanglesFromFile(std::string fileName) {
+  std::fstream file;
+  file.open(fileName);
+  fileGoodOrDie(file);
+
+  Point lowerLeft, upperRight;
+
+  std::string line;
   std::vector<Rectangle> rectangles;
-  unsigned seed = 1317;
-  std::default_random_engine generator(seed);
-  unsigned lengthSeed = 2454;
-  std::default_random_engine lengthGenerator(lengthSeed);
 
-  // Pick a random point, and add a random length to it to obtain a search rectangle
-  std::uniform_int_distribution<size_t> randomPointIdx(0, points.size());
+  while(std::getline(file, line)) {
+    std::istringstream ss(line);
 
-  double minLength = 1 * lengthMultiplier;
-  double maxLength = 5 * lengthMultiplier;
-  std::uniform_real_distribution<double> xLength(minLength, maxLength);
-  std::uniform_real_distribution<double> yLength(minLength, maxLength);
+    for (int i = 0; i < DIM; i++) {
+      ss >> lowerLeft[i];
+    }
 
-  for (unsigned i = 0; i < numRectangles; i++) {
-    auto idx = randomPointIdx(generator);
-    ll = points[idx];
-    ur[0] = ll[0] + xLength(lengthGenerator);
-    ur[1] = ll[1] + yLength(lengthGenerator);
+    for (int i = 0; i < DIM; i++) {
+      ss >> upperRight[i];
+    }
 
-    Rectangle rectangle(ll, ur);
-    rectangles.emplace_back(rectangle);
-  }
-
-  return rectangles;
-}
-
-static std::vector<Rectangle> generateTweetsRectangles(size_t numRectangles, double lengthMultiplier) {
-  Point ll;
-  Point ur;
-  std::vector<Rectangle> rectangles;
-  unsigned seed = 1317;
-  std::default_random_engine generator(seed);
-  unsigned lengthSeed = 2454;
-  std::default_random_engine lengthGenerator(lengthSeed);
-
-// The coordinates below represent the most densely populated tweets area (USA)
-  double xmin = -125;
-  double xmax = -70;
-  double ymin = 25;
-  double ymax = 50;
-  double minLength = 1 * lengthMultiplier;
-  double maxLength = 5 * lengthMultiplier;
-  std::uniform_real_distribution<double> xPoint(xmin, xmax);
-  std::uniform_real_distribution<double> yPoint(ymin, ymax);
-  std::uniform_real_distribution<double> xLength(minLength, maxLength);
-  std::uniform_real_distribution<double> yLength(minLength, maxLength);
-
-  for (unsigned i = 0; i < numRectangles; i++) {
-    ll[0] = xPoint(generator);
-    ll[1] = yPoint(generator);
-    ur[0] = ll[0] + xLength(lengthGenerator);
-    ur[1] = ll[1] + yLength(lengthGenerator);
-
-    // If 'ur' is outside of the MBR, clip it.
-    ur[0] = ur[0] < xmax ? ur[0] : xmax;
-    ur[1] = ur[1] < ymax ? ur[1] : ymax;
-
-    Rectangle rectangle(ll, ur);
-    rectangles.emplace_back(rectangle);
+    Rectangle rect(lowerLeft, upperRight);
+    rectangles.push_back(rect);
   }
 
   return rectangles;
@@ -930,8 +890,11 @@ static bool is_already_loaded(std::map<std::string, uint64_t> &configU, Index *s
 
 template <typename T>
 static void
-runBench(PointGenerator<T> &pointGen, std::map<std::string, uint64_t> &configU, std::map<std::string, double> &configD,
-         std::map<std::string, std::string> &configS) {
+runBench(PointGenerator<T> &pointGen,
+         std::map<std::string, uint64_t> &configU,
+         std::map<std::string, double> &configD,
+         std::map<std::string, std::string> &configS
+) {
   std::cout << "Running benchmark." << std::endl;
 
   // Setup statistics
@@ -956,26 +919,31 @@ runBench(PointGenerator<T> &pointGen, std::map<std::string, uint64_t> &configU, 
   Index *spatialIndex;
 
   if (configU["tree"] == R_TREE) {
-    //spatialIndex = new rtree::RTree(configU["minfanout"], configU["maxfanout"]);
-    spatialIndex = new rtreedisk::RTreeDisk<3, 6>(configU["buffer_pool_memory"], configS["db_file_name"]);
+    spatialIndex = new rtreedisk::RTreeDisk<3, 6>(
+            configU["buffer_pool_memory"], configS["db_file_name"]
+    );
   } else if (configU["tree"] == R_PLUS_TREE) {
-    spatialIndex = new rplustreedisk::RPlusTreeDisk<5, 9>(configU["buffer_pool_memory"], configS["db_file_name"]);
-    //spatialIndex = new rplustree::RPlusTree(configU["minfanout"], configU["maxfanout"]);
+    spatialIndex = new rplustreedisk::RPlusTreeDisk<5, 9>(
+            configU["buffer_pool_memory"], configS["db_file_name"]
+    );
   } else if (configU["tree"] == R_STAR_TREE) {
-    //spatialIndex = new rstartree::RStarTree(configU["minfanout"], configU["maxfanout"]);
-    auto tree = new rstartreedisk::RStarTreeDisk<5, R_STAR_FANOUT>(configU["buffer_pool_memory"], configS["db_file_name"]);
+    auto tree = new rstartreedisk::RStarTreeDisk<5, R_STAR_FANOUT>(
+            configU["buffer_pool_memory"], configS["db_file_name"]
+    );
     bufferPool = &(tree->node_allocator_->buffer_pool_);
     spatialIndex = tree;
   } else if (configU["tree"] == NIR_TREE) {
-    //spatialIndex = new nirtree::NIRTree(configU["minfanout"], configU["maxfanout"]);
-    //spatialIndex = new nirtree::NIRTree(5,9);
-    auto tree = new nirtreedisk::NIRTreeDisk<5, NIR_FANOUT, nirtreedisk::ExperimentalStrategy>(configU["buffer_pool_memory"], configS["db_file_name"]);
+    auto tree = new nirtreedisk::NIRTreeDisk<5, NIR_FANOUT, nirtreedisk::ExperimentalStrategy>(
+            configU["buffer_pool_memory"], configS["db_file_name"]
+    );
     bufferPool = &(tree->node_allocator_->buffer_pool_);
     spatialIndex = tree;
   } else if (configU["tree"] == QUAD_TREE) {
     spatialIndex = new quadtree::QuadTree();
   } else if (configU["tree"] == REVISED_R_STAR_TREE) {
-    spatialIndex = new revisedrstartree::RevisedRStarTree(configU["minfanout"], configU["maxfanout"]);
+    spatialIndex = new revisedrstartree::RevisedRStarTree(
+            configU["minfanout"], configU["maxfanout"]
+    );
   } else {
     std::cout << "Unknown tree selected. Exiting." << std::endl;
     return;
@@ -984,7 +952,10 @@ runBench(PointGenerator<T> &pointGen, std::map<std::string, uint64_t> &configU, 
   // Initialize search rectangles
   std::vector<Rectangle> searchRectangles;
   if (configU["distribution"] == UNIFORM) {
-    searchRectangles = generateRectangles(configU["size"], configU["seed"], configU["rectanglescount"], configD["length_multiplier"]);
+    searchRectangles = generateRectangles(
+            configU["size"], configU["seed"],
+            configU["rectanglescount"], configD["length_multiplier"]
+    );
   } else if (configU["distribution"] == SKEW) {
     configU["rectanglescount"] = BitQuerySize;
     searchRectangles = generateBitRectangles();
@@ -1013,9 +984,9 @@ runBench(PointGenerator<T> &pointGen, std::map<std::string, uint64_t> &configU, 
       configU["num_elements"]
     );
   } else if (configU["distribution"] == POIS) {
-    searchRectangles = generatePoisRectangles(configU["rectanglescount"], pointGen.pointBuffer, configD["length_multiplier"]);
+    searchRectangles = generateRectanglesFromFile(configS["rects_file"]);
   } else if (configU["distribution"] == TWEETS) {
-    searchRectangles = generateTweetsRectangles(configU["rectanglescount"], configD["length_multiplier"]);
+    searchRectangles = generateRectanglesFromFile(configS["rects_file"]);
   } else {
     // Do nothing, rectangle searches are disabled for now...
   }
@@ -1080,8 +1051,9 @@ runBench(PointGenerator<T> &pointGen, std::map<std::string, uint64_t> &configU, 
   }
 
 	// Search for rectangles
-  if (configU["rectanglescount"] > 0){
+  if (!configS["rects_file"].empty()){
     unsigned rangeSearchChecksum = 0;
+
     std::cout << "Beginning search for " << searchRectangles.size() << " rectangles..." << std::endl;
     for (unsigned i = 0; i < searchRectangles.size(); ++i)
     {
@@ -1148,7 +1120,6 @@ runBench(PointGenerator<T> &pointGen, std::map<std::string, uint64_t> &configU, 
       bufferPool->resetStat();
     }
     std::cout << "Delete OK." << std::endl;
-
   } else {
     std::cout << "Test for points deletion is disabled" << std::endl; 
   }
