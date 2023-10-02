@@ -221,6 +221,7 @@ page *buffer_pool::obtain_clean_page() {
         freelist_.pop_front();
         page *raw_page_ptr = page_ptr.get();
         allocated_pages_.emplace_back( std::move(page_ptr) );
+        page_hits++;
         return raw_page_ptr;
     }
 
