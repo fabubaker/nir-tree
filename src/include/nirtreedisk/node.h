@@ -2595,16 +2595,17 @@ SplitResult BranchNode<min_branch_factor, max_branch_factor, strategy>::splitNod
       double right_intersection = branch_poly.computeIntersectionArea(right_mbb);
       assert(left_intersection > 0);
       assert(right_intersection > 0);
+
       if ( left_intersection > right_intersection){
-        assert(split.leftBranch.child == left_handle);
-        left_node->addBranchToNode(branch);
+        index = index + 1; 
         std::vector<Rectangle> intersection_rec = branch_poly.intersection(right_mbb);
         for (auto rec : intersection_rec){
           left_mbb_extra.push_back(rec);
         }
       } else {
-        assert(split.rightBranch.child == right_handle);
-        right_node->addBranchToNode(branch);
+        sibling_node->addBranchToNode(branch);
+        this->removeBranch(index); //update cur_offset_
+        // index isn't updated here as removeBranch() decrements cur_offset_
         std::vector<Rectangle> intersection_rec = branch_poly.intersection(left_mbb);
         for (auto rec : intersection_rec){
           right_mbb_extra.push_back(rec);
@@ -2629,8 +2630,8 @@ SplitResult BranchNode<min_branch_factor, max_branch_factor, strategy>::splitNod
   
   IsotheticPolygon left_polygon;
   IsotheticPolygon right_polygon;
-  Rectangle left_mbb = left_node->boundingBox();
-  Rectangle right_mbb = right_node->boundingBox();
+  Rectangle left_mbb = this->boundingBox();
+  Rectangle right_mbb = sibling_node->boundingBox();
   Rectangle left_mbb_updated;
   Rectangle right_mbb_updated;  
 
