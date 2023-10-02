@@ -31,6 +31,7 @@ void parameters(std::map<std::string, uint64_t> &configU, std::map<std::string, 
   std::cout << "  points to search = " << configU["num_points_to_search"] << std::endl;
   std::cout << "  points to delete = " << configU["num_points_to_delete"] << std::endl;
   std::cout << "  db file name = " << configS["db_file_name"] << std::endl;
+  std::cout << "  rectangles file name = " << configS["rects_file"] << std::endl;
   std::cout << "### ### ### ### ### ###" << std::endl << std::endl;
 }
 
