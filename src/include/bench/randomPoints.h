@@ -869,7 +869,7 @@ static bool is_already_loaded(std::map<std::string, uint64_t> &configU, Index *s
       return true;
     }
   } else if (configU["tree"] == R_STAR_TREE) {
-    auto tree = (rstartreedisk::RStarTreeDisk<5, R_STAR_FANOUT> *) spatial_index;
+    auto tree = (rstartreedisk::RStarTreeDisk<R_STAR_MIN_FANOUT, R_STAR_FANOUT> *) spatial_index;
     size_t existing_page_count = tree->node_allocator_->buffer_pool_.get_preexisting_page_count();
 
     if (existing_page_count > 0) {
@@ -927,7 +927,7 @@ runBench(PointGenerator<T> &pointGen,
             configU["buffer_pool_memory"], configS["db_file_name"]
     );
   } else if (configU["tree"] == R_STAR_TREE) {
-    auto tree = new rstartreedisk::RStarTreeDisk<5, R_STAR_FANOUT>(
+    auto tree = new rstartreedisk::RStarTreeDisk<R_STAR_MIN_FANOUT, R_STAR_FANOUT>(
             configU["buffer_pool_memory"], configS["db_file_name"]
     );
     bufferPool = &(tree->node_allocator_->buffer_pool_);
