@@ -166,6 +166,16 @@ class Statistics {
     unsigned outOfLineSearched;
 };
 
+void printFanoutHistogram(
+        std::vector<std::vector<unsigned long>> histogramFanoutAtLevel,
+        unsigned treeHeight
+);
+
+void printPolygonHistogram(
+        std::vector<std::vector<unsigned long>> histogramPolygonAtLevel,
+        unsigned treeHeight
+);
+
 #ifdef STAT
 	#include <iostream>
 
