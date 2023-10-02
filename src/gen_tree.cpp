@@ -113,6 +113,7 @@ void generate_tree(std::map<std::string, size_t> &configU, std::map<std::string,
 
     std::cout << "Buffer pool stats after sequential inserts: " << std::endl;
     bufferPool->stat();
+    bufferPool->resetStat();
   } else if (configU["tree"] == R_STAR_TREE) {
     rstartreedisk::RStarTreeDisk<5, R_STAR_FANOUT> *tree = new rstartreedisk::RStarTreeDisk<5, R_STAR_FANOUT>(
             configU["buffer_pool_memory"], backing_file
@@ -135,6 +136,7 @@ void generate_tree(std::map<std::string, size_t> &configU, std::map<std::string,
 
     std::cout << "Buffer pool stats after sequential inserts: " << std::endl;
     bufferPool->stat();
+    bufferPool->resetStat();
   } else {
     std::cout << "Only Supports NIR_Tree and R_STAR_TREE for gen_tree" << std::endl; 
     abort();
