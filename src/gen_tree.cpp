@@ -118,7 +118,7 @@ void generate_tree(std::map<std::string, size_t> &configU, std::map<std::string,
     bufferPool->stat();
     bufferPool->resetStat();
   } else if (configU["tree"] == R_STAR_TREE) {
-    rstartreedisk::RStarTreeDisk<5, R_STAR_FANOUT> *tree = new rstartreedisk::RStarTreeDisk<5, R_STAR_FANOUT>(
+    rstartreedisk::RStarTreeDisk<R_STAR_MIN_FANOUT, R_STAR_MAX_FANOUT> *tree = new rstartreedisk::RStarTreeDisk<R_STAR_MIN_FANOUT, R_STAR_MAX_FANOUT>(
             configU["buffer_pool_memory"], backing_file
     );
     spatialIndex = tree;
@@ -126,7 +126,7 @@ void generate_tree(std::map<std::string, size_t> &configU, std::map<std::string,
 
     std::cout << "Bulk Loading..." << std::endl;
     std::cout << "Creating tree with " << configU["buffer_pool_memory"] << "bytes" << std::endl;
-    bulk_load_tree(tree, configU, all_points.begin(), all_points.begin() + cut_off_bulk_load, R_STAR_FANOUT);
+    bulk_load_tree(tree, configU, all_points.begin(), all_points.begin() + cut_off_bulk_load, R_STAR_MAX_FANOUT);
 
     std::cout << "Buffer pool stats after bulk-loading: " << std::endl;
     bufferPool->stat();

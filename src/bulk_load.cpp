@@ -144,15 +144,15 @@ void fill_branch(
 
 template <>
 void fill_branch(
-    rstartreedisk::RStarTreeDisk<5, R_STAR_FANOUT> *treeRef,
-    pinned_node_ptr<rstartreedisk::BranchNode<5, R_STAR_FANOUT>> branch_node,
+    rstartreedisk::RStarTreeDisk<R_STAR_MIN_FANOUT, R_STAR_MAX_FANOUT> *treeRef,
+    pinned_node_ptr<rstartreedisk::BranchNode<R_STAR_MIN_FANOUT, R_STAR_MAX_FANOUT>> branch_node,
     tree_node_handle node_handle,
     std::vector<std::pair<Point, tree_node_handle>> &node_point_pairs,
     uint64_t &offset,
     unsigned branch_factor,
-    rstartreedisk::LeafNode<5, R_STAR_FANOUT> *leaf_type) {
-  using LN = rstartreedisk::LeafNode<5, R_STAR_FANOUT>;
-  using BN = rstartreedisk::BranchNode<5, R_STAR_FANOUT>;
+    rstartreedisk::LeafNode<R_STAR_MIN_FANOUT, R_STAR_MAX_FANOUT> *leaf_type) {
+  using LN = rstartreedisk::LeafNode<R_STAR_MIN_FANOUT, R_STAR_MAX_FANOUT>;
+  using BN = rstartreedisk::BranchNode<R_STAR_MIN_FANOUT, R_STAR_MAX_FANOUT>;
 
   std::vector<std::pair<Rectangle, tree_node_handle>> bb_and_handles;
   tree_node_allocator *allocator = treeRef->node_allocator_.get();
@@ -308,13 +308,13 @@ std::vector<tree_node_handle> str_packing_branch(
 
 template <>
 std::vector<tree_node_handle> str_packing_branch(
-    rstartreedisk::RStarTreeDisk<5, R_STAR_FANOUT> *tree,
+    rstartreedisk::RStarTreeDisk<R_STAR_MIN_FANOUT, R_STAR_MAX_FANOUT> *tree,
     std::vector<tree_node_handle> &child_nodes,
     unsigned branch_factor,
     unsigned cur_depth
 ) {
-  rstartreedisk::LeafNode<5, R_STAR_FANOUT> *targ = nullptr;
-  rstartreedisk::BranchNode<5, R_STAR_FANOUT> *targ2 = nullptr;
+  rstartreedisk::LeafNode<R_STAR_MIN_FANOUT, R_STAR_MAX_FANOUT> *targ = nullptr;
+  rstartreedisk::BranchNode<R_STAR_MIN_FANOUT, R_STAR_MAX_FANOUT> *targ2 = nullptr;
 
 
   return str_packing_branch(
@@ -403,13 +403,13 @@ std::vector<tree_node_handle> str_packing_leaf(
 
 template <>
 std::vector<tree_node_handle> str_packing_leaf(
-    rstartreedisk::RStarTreeDisk<5, R_STAR_FANOUT> *tree,
+    rstartreedisk::RStarTreeDisk<R_STAR_MIN_FANOUT, R_STAR_MAX_FANOUT> *tree,
     std::vector<Point>::iterator begin,
     std::vector<Point>::iterator end,
     unsigned branch_factor,
     unsigned cur_depth) {
-  rstartreedisk::LeafNode<5, R_STAR_FANOUT> *targ = nullptr;
-  rstartreedisk::BranchNode<5, R_STAR_FANOUT> *targ2 = nullptr;
+  rstartreedisk::LeafNode<R_STAR_MIN_FANOUT, R_STAR_MAX_FANOUT> *targ = nullptr;
+  rstartreedisk::BranchNode<R_STAR_MIN_FANOUT, R_STAR_MAX_FANOUT> *targ2 = nullptr;
 
   return str_packing_leaf(
     tree, begin, end, branch_factor,targ, targ2, cur_depth
@@ -623,14 +623,14 @@ std::pair<tree_node_handle, Rectangle> quad_tree_style_load(
 
 
 std::pair<tree_node_handle, Rectangle> quad_tree_style_load(
-  rstartreedisk::RStarTreeDisk<5, R_STAR_FANOUT> *tree,
+  rstartreedisk::RStarTreeDisk<R_STAR_MIN_FANOUT, R_STAR_MAX_FANOUT> *tree,
   std::vector<Point>::iterator start,
   std::vector<Point>::iterator stop,
   unsigned branch_factor,
   unsigned cur_level
 ) {
-  using LN = rstartreedisk::LeafNode<5, R_STAR_FANOUT>;
-  using BN = rstartreedisk::BranchNode<5, R_STAR_FANOUT>;
+  using LN = rstartreedisk::LeafNode<R_STAR_MIN_FANOUT, R_STAR_MAX_FANOUT>;
+  using BN = rstartreedisk::BranchNode<R_STAR_MIN_FANOUT, R_STAR_MAX_FANOUT>;
 
   uint64_t num_els = (stop - start);
   tree_node_allocator *allocator = tree->node_allocator_.get();
@@ -758,13 +758,13 @@ std::pair<double, uint64_t> find_best_cut(
 // 4.     compute cost_function(B0, B1)
 // 5. split the input set based on i which has the lowest cost
 void basic_split_leaf(
-        rstartreedisk::RStarTreeDisk<5, R_STAR_FANOUT> *tree,
+        rstartreedisk::RStarTreeDisk<R_STAR_MIN_FANOUT, R_STAR_MAX_FANOUT> *tree,
         std::vector<std::vector<Point>::iterator> begins,
         std::vector<std::vector<Point>::iterator> ends,
         unsigned branch_factor,
         unsigned height, 
         uint64_t M, 
-        pinned_node_ptr<rstartreedisk::LeafNode<5, R_STAR_FANOUT>> leaf_node)
+        pinned_node_ptr<rstartreedisk::LeafNode<R_STAR_MIN_FANOUT, R_STAR_MAX_FANOUT>> leaf_node)
 {
   // count is number of points in this range
   uint64_t count = ends[0] - begins[0];
@@ -880,16 +880,16 @@ void basic_split_leaf(
 }
 
 void basic_split_branch(
-        rstartreedisk::RStarTreeDisk<5, R_STAR_FANOUT> *tree,
+        rstartreedisk::RStarTreeDisk<R_STAR_MIN_FANOUT, R_STAR_MAX_FANOUT> *tree,
         std::vector<std::vector<Point>::iterator> begins,
         std::vector<std::vector<Point>::iterator> ends,
         unsigned branch_factor,
         unsigned height, 
         uint64_t M, 
-        pinned_node_ptr<rstartreedisk::BranchNode<5, R_STAR_FANOUT>> branch_node)
+        pinned_node_ptr<rstartreedisk::BranchNode<R_STAR_MIN_FANOUT, R_STAR_MAX_FANOUT>> branch_node)
 {
-  using LN = rstartreedisk::LeafNode<5, R_STAR_FANOUT>;
-  using BN = rstartreedisk::BranchNode<5, R_STAR_FANOUT>;
+  using LN = rstartreedisk::LeafNode<R_STAR_MIN_FANOUT, R_STAR_MAX_FANOUT>;
+  using BN = rstartreedisk::BranchNode<R_STAR_MIN_FANOUT, R_STAR_MAX_FANOUT>;
 
   // count is number of points in this range
   uint64_t count = ends[0] - begins[0]; 
@@ -1050,12 +1050,12 @@ void basic_split_branch(
 //    rectangles: (1) min coord (2) max coord (3) center 
 // 2. run basic_split to generate branch nodes and leaf nodes
 tree_node_handle tgs_load(
-        rstartreedisk::RStarTreeDisk<5, R_STAR_FANOUT> *tree,
+        rstartreedisk::RStarTreeDisk<R_STAR_MIN_FANOUT, R_STAR_MAX_FANOUT> *tree,
         std::vector<Point>::iterator begin,
         std::vector<Point>::iterator end,
         unsigned branch_factor
 ) {
-  using BN = rstartreedisk::BranchNode<5, R_STAR_FANOUT>;
+  using BN = rstartreedisk::BranchNode<R_STAR_MIN_FANOUT, R_STAR_MAX_FANOUT>;
 
   // TODO: The number of points may be small enough to fit into a single leaf node.
   //       We do not handle this case.
@@ -1172,7 +1172,7 @@ void bulk_load_tree(
 
 template <>
 void bulk_load_tree(
-    rstartreedisk::RStarTreeDisk<5, R_STAR_FANOUT> *tree,
+    rstartreedisk::RStarTreeDisk<R_STAR_MIN_FANOUT, R_STAR_MAX_FANOUT> *tree,
     std::map<std::string, size_t> &configU,
     std::vector<Point>::iterator begin,
     std::vector<Point>::iterator end,
@@ -1184,7 +1184,7 @@ void bulk_load_tree(
 
   std::cout << "Num els: " << num_els << std::endl;
   std::cout << "Max depth required: " << max_depth << std::endl;
-  std::cout << "Size of R* branch node: " << sizeof(rstartreedisk::BranchNode<5, R_STAR_FANOUT>) << std::endl;
+  std::cout << "Size of R* branch node: " << sizeof(rstartreedisk::BranchNode<R_STAR_MIN_FANOUT, R_STAR_MAX_FANOUT>) << std::endl;
 
   /* Start measuring bulk load time */
   std::chrono::high_resolution_clock::time_point begin_time = std::chrono::high_resolution_clock::now();
@@ -1273,7 +1273,7 @@ void sequential_insert_tree(
 
 template <>
 void sequential_insert_tree(
-    rstartreedisk::RStarTreeDisk<5, R_STAR_FANOUT> *tree,
+    rstartreedisk::RStarTreeDisk<R_STAR_MIN_FANOUT, R_STAR_MAX_FANOUT> *tree,
     std::map<std::string, size_t> &configU,
     std::vector<Point>::iterator begin,
     std::vector<Point>::iterator end,
