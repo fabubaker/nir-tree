@@ -398,34 +398,39 @@ public:
                   tree_node_handle selfHandle);
 
 
-#if 0
 template <class S = strategy>
   Partition partitionBranchNode(
+            NIRTreeDisk<min_branch_factor, max_branch_factor, strategy> *treeRef,
             typename std::enable_if<std::is_same<S, LineMinimizeDownsplits>::value, S>::type * = 0) {
     Partition defaultPartition;
 
-    tree_node_allocator *allocator = get_node_allocator(this->treeRef);
+    tree_node_allocator *allocator = get_node_allocator(treeRef);
     std::vector<Rectangle> all_branch_polys;
     for (unsigned i = 0; i < this->cur_offset_; i++) {
       Branch &b_i = entries.at(i);
-      all_branch_polys.push_back(b_i.get_summary_rectangle(allocator));
+      all_branch_polys.push_back(b_i.boundingBox);
     }
 
     unsigned cut_off = min_branch_factor;
     double best_candidate = 0.0;
     double min_cost = std::numeric_limits<double>::max();
     unsigned best_dimension = 0;
-    do {
+    // do {
       // D * ( M LOG M + M ) ~> O( D M LOG M )
       for (unsigned d = 0; d < dimensions; d++) {
-        std::sort(all_branch_polys.begin(), all_branch_polys.end(),
-                  [d](Rectangle &poly1, Rectangle &poly2) {
-                    return poly1.upperRight[d] <
-                           poly2.upperRight[d];
-                  });
+        std::sort(all_branch_polys.begin(), all_branch_polys.end(), [d](Rectangle &poly1, Rectangle &poly2) 
+                {
+                  if (poly1.upperRight[d] == poly2.upperRight[d]) {
+                    for (unsigned i = 0; i < dimensions; i++) {
+                      if (poly1.upperRight[i] == poly2.upperRight[i]) {continue;}
+                      return poly1.upperRight[i] < poly2.upperRight[i];
+                    }
+                  }
+                  return poly1.upperRight[d] < poly2.upperRight[d];
+                });
 
         std::vector<double> partition_candidates;
-
+        // consider all bound points 
         for (unsigned i = 0; i < all_branch_polys.size(); i++) {
           partition_candidates.push_back(all_branch_polys.at(i).lowerLeft[d]);
           partition_candidates.push_back(all_branch_polys.at(i).upperRight[d]);
@@ -443,20 +448,13 @@ template <class S = strategy>
           // Let's try and do the same
           for (unsigned j = 0; j < all_branch_polys.size(); j++) {
             Rectangle &poly_ref = all_branch_polys.at(j);
-            running_total += poly_ref.lowerLeft[d] +
-                             poly_ref.upperRight[d];
+            running_total += poly_ref.lowerLeft[d] + poly_ref.upperRight[d];
 
-            bool greater_than_left = poly_ref.lowerLeft[d] <
-                                     partition_candidate;
-            bool less_than_right = partition_candidate <
-                                   poly_ref.upperRight[d];
-            bool requires_split = greater_than_left and
-                                  less_than_right;
-
-            bool should_go_left = poly_ref.upperRight[d] <=
-                                  partition_candidate;
-            bool should_go_right = poly_ref.lowerLeft[d] >=
-                                   partition_candidate;
+            bool greater_than_left = poly_ref.lowerLeft[d] < partition_candidate;
+            bool less_than_right = partition_candidate < poly_ref.upperRight[d];
+            bool requires_split = greater_than_left and less_than_right;
+            bool should_go_left = poly_ref.upperRight[d] <= partition_candidate;
+            bool should_go_right = poly_ref.lowerLeft[d] >= partition_candidate;
 
             if (requires_split) {
               left_count++;
@@ -477,12 +475,11 @@ template <class S = strategy>
           }
         }
       }
-      if (cut_off == 1 and min_cost ==
-                               std::numeric_limits<double>::max()) {
+      if (/*ut_off == 1 and*/ min_cost == std::numeric_limits<double>::max()) {
         abort();
       }
-      cut_off = 1;
-    } while (min_cost == std::numeric_limits<double>::max());
+    //   cut_off = 1;
+    // } while (min_cost == std::numeric_limits<double>::max());
     // Degenerate case
     assert(min_cost < std::numeric_limits<double>::max());
 
@@ -494,16 +491,15 @@ template <class S = strategy>
 
 template <class S = strategy>
   Partition partitionBranchNode(
+            NIRTreeDisk<min_branch_factor, max_branch_factor, strategy> *treeRef,
             typename std::enable_if<std::is_same<S, LineMinimizeDistanceFromMean>::value,S>::type * = 0) {
     Partition defaultPartition;
 
-    tree_node_allocator *allocator = get_node_allocator(
-        this->treeRef);
+    tree_node_allocator *allocator = get_node_allocator(treeRef);
     std::vector<Rectangle> all_branch_polys;
     for (unsigned i = 0; i < this->cur_offset_; i++) {
       Branch &b_i = entries.at(i);
-      all_branch_polys.push_back(b_i.get_summary_rectangle(
-          allocator));
+      all_branch_polys.push_back(b_i.boundingBox);
     }
 
     double best_candidate = 0.0;
@@ -511,22 +507,15 @@ template <class S = strategy>
     unsigned best_dimension = 0;
     // D * ( M LOG M + M ) ~> O( D M LOG M )
     for (unsigned d = 0; d < dimensions; d++) {
-      std::sort(all_branch_polys.begin(), all_branch_polys.end(),
-                [d](Rectangle &poly1, Rectangle &poly2) {
-                  if (poly1.upperRight[d] ==
-                      poly2.upperRight[d]) {
-                    for (unsigned i = 0; i < dimensions;
-                         i++) {
-                      if (poly1.upperRight[i] ==
-                          poly2.upperRight[i]) {
-                        continue;
-                      }
-                      return poly1.upperRight[i] <
-                             poly2.upperRight[i];
+      std::sort(all_branch_polys.begin(), all_branch_polys.end(), [d](Rectangle &poly1, Rectangle &poly2) 
+                {
+                  if (poly1.upperRight[d] == poly2.upperRight[d]) {
+                    for (unsigned i = 0; i < dimensions; i++) {
+                      if (poly1.upperRight[i] == poly2.upperRight[i]) {continue;}
+                      return poly1.upperRight[i] < poly2.upperRight[i];
                     }
                   }
-                  return poly1.upperRight[d] <
-                         poly2.upperRight[d];
+                  return poly1.upperRight[d] < poly2.upperRight[d];
                 });
       for (unsigned i = 0; i < all_branch_polys.size(); i++) {
         double cost = 0;
@@ -535,38 +524,26 @@ template <class S = strategy>
         // be sure, even in the non F, C case.
         unsigned left_count = 0;
         unsigned right_count = 0;
-        double partition_candidate =
-            all_branch_polys.at(i).upperRight[d];
+        double partition_candidate = all_branch_polys.at(i).upperRight[d];
         double running_total = 0.0;
         // Existing metric wanted to avoid recursive splits
         // Let's try and do the same
         for (unsigned j = 0; j < all_branch_polys.size(); j++) {
           Rectangle &poly_ref = all_branch_polys.at(j);
-          running_total += poly_ref.lowerLeft[d] +
-                           poly_ref.upperRight[d];
+          running_total += poly_ref.lowerLeft[d] + poly_ref.upperRight[d];
 
-          bool greater_than_left = poly_ref.lowerLeft[d] <
-                                   partition_candidate;
-          bool less_than_right = partition_candidate <
-                                 poly_ref.upperRight[d];
-          bool requires_split = greater_than_left and
-                                less_than_right;
-
-          bool should_go_left = poly_ref.upperRight[d] <=
-                                partition_candidate;
-          bool should_go_right = poly_ref.lowerLeft[d] >=
-                                 partition_candidate;
-          bool is_zero_area =
-              poly_ref.lowerLeft[d] ==
-              poly_ref.upperRight[d];
+          bool greater_than_left = poly_ref.lowerLeft[d] < partition_candidate;
+          bool less_than_right = partition_candidate < poly_ref.upperRight[d];
+          bool requires_split = greater_than_left and less_than_right;
+          bool should_go_left = poly_ref.upperRight[d] <= partition_candidate;
+          bool should_go_right = poly_ref.lowerLeft[d] >= partition_candidate;
+          bool is_zero_area = (poly_ref.lowerLeft[d] == poly_ref.upperRight[d]);
 
           if (requires_split) {
             left_count++;
             right_count++;
             cost++;
-          } else if (is_zero_area and
-                     poly_ref.upperRight[d] ==
-                         partition_candidate) {
+          } else if (is_zero_area and poly_ref.upperRight[d] == partition_candidate) {
             // Partition on a zero-area thing, can
             // pick either side as convenient
             if (left_count <= right_count) {
@@ -585,10 +562,10 @@ template <class S = strategy>
 
         // Cost function 2
         // If the split will not overflow our children
-        if (left_count <= max_branch_factor and right_count <= max_branch_factor and
+        if (left_count <= max_branch_factor and 
+            right_count <= max_branch_factor and
             left_count > 0 and right_count > 0) {
-          double mean_d_pt = running_total /
-                             (2 * all_branch_polys.size());
+          double mean_d_pt = running_total / (2 * all_branch_polys.size());
           // Distance
           cost = (mean_d_pt - partition_candidate);
           cost = cost * cost;
@@ -605,32 +582,30 @@ template <class S = strategy>
 
     defaultPartition.dimension = best_dimension;
     defaultPartition.location = best_candidate;
-
+/*
     // Sort per the dimension we need
     std::sort(entries.begin(), entries.begin() + this->cur_offset_,
               [this, allocator, best_dimension](Branch &b1, Branch &b2) {
-                Rectangle poly1 = b1.get_summary_rectangle(
-                    allocator);
-                Rectangle poly2 = b2.get_summary_rectangle(
-                    allocator);
-                if (poly1.upperRight[best_dimension] ==
-                    poly2.upperRight[best_dimension]) {
+                Rectangle poly1 = b1.boundingBox;
+                Rectangle poly2 = b2.boundingBox;
+                if (poly1.upperRight[best_dimension] == poly2.upperRight[best_dimension]) {
                   for (unsigned i = 0; i < dimensions; i++) {
-                    if (poly1.upperRight[i] ==
-                        poly2.upperRight[i]) {
+                    if (poly1.upperRight[i] == poly2.upperRight[i]) {
                       continue;
                     }
-                    return poly1.upperRight[i] <
-                           poly2.upperRight[i];
+                    return poly1.upperRight[i] < poly2.upperRight[i];
                   }
                 }
                 return poly1.upperRight[best_dimension] <
                        poly2.upperRight[best_dimension];
               });
-
+*/
+    // the entries are already sorted based on partition, so we can 
+    // find the index of element > defaultPartition.location and split
+    // as [0, index] | [index, cur_offset_]
+    // is it more beneficial to sort it ? 
     return defaultPartition;
   }
-#endif 
 
 std::pair<bool, Partition> try_cut_geo_mean(std::vector<Rectangle> &all_branch_polys) {
     Partition defaultPartition;
