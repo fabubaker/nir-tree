@@ -76,15 +76,15 @@ void make_all_rects_disjoint(
 
 template <>
 void fill_branch(
-    nirtreedisk::NIRTreeDisk<5, NIR_FANOUT, nirtreedisk::ExperimentalStrategy> *treeRef,
-    pinned_node_ptr<nirtreedisk::BranchNode<5, NIR_FANOUT, nirtreedisk::ExperimentalStrategy>> branch_node,
+    nirtreedisk::NIRTreeDisk<5, NIR_FANOUT, nirtreedisk::LineMinimizeDownsplits> *treeRef,
+    pinned_node_ptr<nirtreedisk::BranchNode<5, NIR_FANOUT, nirtreedisk::LineMinimizeDownsplits>> branch_node,
     tree_node_handle node_handle,
     std::vector<std::pair<Point, tree_node_handle>> &node_point_pairs,
     uint64_t &offset,
     unsigned branch_factor,
-    nirtreedisk::LeafNode<5, NIR_FANOUT, nirtreedisk::ExperimentalStrategy> *leaf_type) {
-  using LN = nirtreedisk::LeafNode<5, NIR_FANOUT, nirtreedisk::ExperimentalStrategy>;
-  using BN = nirtreedisk::BranchNode<5, NIR_FANOUT, nirtreedisk::ExperimentalStrategy>;
+    nirtreedisk::LeafNode<5, NIR_FANOUT, nirtreedisk::LineMinimizeDownsplits> *leaf_type) {
+  using LN = nirtreedisk::LeafNode<5, NIR_FANOUT, nirtreedisk::LineMinimizeDownsplits>;
+  using BN = nirtreedisk::BranchNode<5, NIR_FANOUT, nirtreedisk::LineMinimizeDownsplits>;
 
   std::vector<std::pair<IsotheticPolygon, tree_node_handle>> fixed_bb_and_handles;
   tree_node_allocator *allocator = treeRef->node_allocator_.get();
@@ -294,12 +294,12 @@ bool point_comparator(const Point &lhs, const Point &rhs) {
 
 template <>
 std::vector<tree_node_handle> str_packing_branch(
-    nirtreedisk::NIRTreeDisk<5, NIR_FANOUT, nirtreedisk::ExperimentalStrategy> *tree,
+    nirtreedisk::NIRTreeDisk<5, NIR_FANOUT, nirtreedisk::LineMinimizeDownsplits> *tree,
     std::vector<tree_node_handle> &child_nodes,
     unsigned branch_factor,
     unsigned cur_depth) {
-  nirtreedisk::LeafNode<5, NIR_FANOUT, nirtreedisk::ExperimentalStrategy> *targ = nullptr;
-  nirtreedisk::BranchNode<5, NIR_FANOUT, nirtreedisk::ExperimentalStrategy> *targ2 = nullptr;
+  nirtreedisk::LeafNode<5, NIR_FANOUT, nirtreedisk::LineMinimizeDownsplits> *targ = nullptr;
+  nirtreedisk::BranchNode<5, NIR_FANOUT, nirtreedisk::LineMinimizeDownsplits> *targ2 = nullptr;
 
   return str_packing_branch(
     tree, child_nodes, branch_factor, targ,targ2, cur_depth
@@ -387,14 +387,13 @@ std::vector<tree_node_handle> str_packing_leaf(
 
 template <>
 std::vector<tree_node_handle> str_packing_leaf(
-    nirtreedisk::NIRTreeDisk<5, NIR_FANOUT, nirtreedisk::ExperimentalStrategy> *tree,
+    nirtreedisk::NIRTreeDisk<5, NIR_FANOUT, nirtreedisk::LineMinimizeDownsplits> *tree,
     std::vector<Point>::iterator begin,
     std::vector<Point>::iterator end,
     unsigned branch_factor,
     unsigned cur_depth) {
-  nirtreedisk::LeafNode<5, NIR_FANOUT, nirtreedisk::ExperimentalStrategy> *targ = nullptr;
-  nirtreedisk::BranchNode<5, NIR_FANOUT, nirtreedisk::ExperimentalStrategy>
-      *targ2 = nullptr;
+  nirtreedisk::LeafNode<5, NIR_FANOUT, nirtreedisk::LineMinimizeDownsplits> *targ = nullptr;
+  nirtreedisk::BranchNode<5, NIR_FANOUT, nirtreedisk::LineMinimizeDownsplits> *targ2 = nullptr;
 
   return str_packing_leaf(
     tree, begin, end, branch_factor,targ, targ2, cur_depth
@@ -464,12 +463,15 @@ std::vector<uint64_t> find_bounding_lines(
 }
 
 std::pair<tree_node_handle, Rectangle> quad_tree_style_load(
-  nirtreedisk::NIRTreeDisk<5, NIR_FANOUT, nirtreedisk::ExperimentalStrategy> *tree,
+  nirtreedisk::NIRTreeDisk<5, NIR_FANOUT, nirtreedisk::LineMinimizeDownsplits> *tree,
   std::vector<Point>::iterator start,
   std::vector<Point>::iterator stop,
   unsigned branch_factor,
   unsigned cur_level
 ) {
+  using LN = nirtreedisk::LeafNode<5, NIR_FANOUT, nirtreedisk::LineMinimizeDownsplits>;
+  using BN = nirtreedisk::BranchNode<5, NIR_FANOUT, nirtreedisk::LineMinimizeDownsplits>;
+  
   uint64_t num_els = (stop - start);
   tree_node_allocator *allocator = tree->node_allocator_.get();
   if (cur_level == 0) {
@@ -480,10 +482,8 @@ std::pair<tree_node_handle, Rectangle> quad_tree_style_load(
     assert(num_els <= branch_factor);
 
     num_els = (stop - start);
-    auto alloc_data =
-      allocator->create_new_tree_node<nirtreedisk::LeafNode<5, NIR_FANOUT, nirtreedisk::ExperimentalStrategy>>(
-                    NodeHandleType(LEAF_NODE));
-    new (&(*(alloc_data.first))) nirtreedisk::LeafNode<5, NIR_FANOUT, nirtreedisk::ExperimentalStrategy>();
+    auto alloc_data = allocator->create_new_tree_node<LN>(NodeHandleType(LEAF_NODE));
+    new (&(*(alloc_data.first))) LN();
 
     auto leaf_node = alloc_data.first;
     auto leaf_handle = alloc_data.second;
@@ -500,10 +500,8 @@ std::pair<tree_node_handle, Rectangle> quad_tree_style_load(
 
   // Return a tree node handle with pointers to all of its necessary
   // children.
-  auto alloc_data =
-          allocator->create_new_tree_node<nirtreedisk::BranchNode<5, NIR_FANOUT, nirtreedisk::ExperimentalStrategy>>(
-                  NodeHandleType(BRANCH_NODE));
-  new (&(*(alloc_data.first))) nirtreedisk::BranchNode<5, NIR_FANOUT, nirtreedisk::ExperimentalStrategy>();
+  auto alloc_data = allocator->create_new_tree_node<BN>(NodeHandleType(BRANCH_NODE));
+  new (&(*(alloc_data.first))) BN();
 
   auto branch_node = alloc_data.first;
   tree_node_handle branch_handle = alloc_data.second;
@@ -1131,7 +1129,7 @@ void testLevels(TR *tree, tree_node_handle root, unsigned root_level){
 
 template <>
 void bulk_load_tree(
-    nirtreedisk::NIRTreeDisk<5, NIR_FANOUT, nirtreedisk::ExperimentalStrategy> *tree,
+    nirtreedisk::NIRTreeDisk<5, NIR_FANOUT, nirtreedisk::LineMinimizeDownsplits> *tree,
     std::map<std::string, size_t> &configU,
     std::vector<Point>::iterator begin,
     std::vector<Point>::iterator end,
@@ -1148,7 +1146,7 @@ void bulk_load_tree(
   std::cout << "Num els: " << num_els << std::endl;
   std::cout << "Max depth required: " << max_depth << std::endl;
   std::cout << "Size of NIR branch node: " <<
-    sizeof(nirtreedisk::BranchNode<5, NIR_FANOUT, nirtreedisk::ExperimentalStrategy>) << std::endl;
+    sizeof(nirtreedisk::BranchNode<5, NIR_FANOUT, nirtreedisk::LineMinimizeDownsplits>) << std::endl;
   
   std::cout << "Bulk-loading NIRTree using Quad Tree Style Load..." << std::endl;
   std::chrono::high_resolution_clock::time_point begin_time = std::chrono::high_resolution_clock::now();
@@ -1240,7 +1238,7 @@ void bulk_load_tree(
 
 template <>
 void sequential_insert_tree(
-    nirtreedisk::NIRTreeDisk<5, NIR_FANOUT, nirtreedisk::ExperimentalStrategy> *tree,
+    nirtreedisk::NIRTreeDisk<5, NIR_FANOUT, nirtreedisk::LineMinimizeDownsplits> *tree,
     std::map<std::string, size_t> &configU,
     std::vector<Point>::iterator begin,
     std::vector<Point>::iterator end,
