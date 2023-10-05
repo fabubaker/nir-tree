@@ -91,6 +91,8 @@ struct BranchAtLevel {
   uint8_t level;
 };
 
+//typedef std::variant<Point, BranchAtLevel> ReinsertionEntry;
+
 // SplitResult object represents two newly created branches after 
 // splitting an overflowed Branch
 struct SplitResult {
