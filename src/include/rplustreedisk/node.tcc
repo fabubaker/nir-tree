@@ -468,8 +468,7 @@ SplitResult NODE_CLASS_TYPES::splitNode( Partition p ) {
 
     tree_node_allocator *allocator = get_node_allocator( treeRef );
     auto alloc_data = allocator->create_new_tree_node<NodeType>();
-    new (&(*(alloc_data.first))) NodeType( treeRef, alloc_data.second,
-            parent_ );
+    new (&(*(alloc_data.first))) NodeType( treeRef, alloc_data.second, parent_ );
     auto left_handle = alloc_data.second;
     auto left_node = alloc_data.first;
 

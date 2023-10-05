@@ -20,55 +20,48 @@
 
 namespace rplustreedisk
 {
-
 	// Forward ref
-    template <int min_branch_factor, int max_branch_factor>
-	class RPlusTreeDisk;
+  template <int min_branch_factor, int max_branch_factor> class RPlusTreeDisk;
 
-    template <int min_branch_factor, int max_branch_factor>
-    tree_node_allocator *get_node_allocator(
-            RPlusTreeDisk<min_branch_factor,max_branch_factor> *treeRef ) {
-        return &(treeRef->node_allocator_);
-    }
+  template <int min_branch_factor, int max_branch_factor>
+  tree_node_allocator *get_node_allocator(RPlusTreeDisk<min_branch_factor,max_branch_factor> *treeRef) {
+      return &(treeRef->node_allocator_);
+  }
 
-    template <int min_branch_factor, int max_branch_factor>
-    tree_node_handle get_root_handle(
-            RPlusTreeDisk<min_branch_factor,max_branch_factor> *treeRef ) {
-        return treeRef->root_;
-    }
+  template <int min_branch_factor, int max_branch_factor>
+  tree_node_handle get_root_handle(RPlusTreeDisk<min_branch_factor,max_branch_factor> *treeRef) {
+      return treeRef->root_;
+  }
 
-    struct Branch
-    {
+  struct Branch
+  {
+    Branch( tree_node_handle child, const Rectangle &boundingBox ) :
+        boundingBox( boundingBox ),
+        child( child )
+    {}
 
-        Branch( tree_node_handle child, const Rectangle &boundingBox ) :
-            boundingBox( boundingBox ), 
-            child( child )
-        {}
+    Branch &operator=( const Branch &other ) = default;
+    bool operator==( const Branch &other ) const = default;
 
-        Branch &operator=( const Branch &other ) = default;
-        bool operator==( const Branch &other ) const = default;
+    Rectangle boundingBox;
+    tree_node_handle child;
+  };
 
-        Rectangle boundingBox;
-        tree_node_handle child;
+  typedef std::variant<Point, Branch> NodeEntry;
 
-    };
-    typedef std::variant<Point, Branch> NodeEntry;
+  struct SplitResult
+  {
+      Branch leftBranch;
+      Branch rightBranch;
+  };
 
-    struct SplitResult
-    {
-        Branch leftBranch;
-        Branch rightBranch;
-    };
+  struct Partition
+  {
+      unsigned dimension;
+      double location;
+  };
 
-    struct Partition
-    {
-        unsigned dimension;
-        double location;
-    };
-
-
-    template <int min_branch_factor, int max_branch_factor>
-	class Node
+  template <int min_branch_factor, int max_branch_factor> class Node
 	{
 		private:
 			struct ReinsertionEntry
@@ -82,18 +75,14 @@ namespace rplustreedisk
 		public:
 			RPlusTreeDisk<min_branch_factor,max_branch_factor> *treeRef;
 
-            tree_node_handle self_handle_;
+      tree_node_handle self_handle_;
 			tree_node_handle parent_;
-            unsigned cur_offset_ = 0;
-            typename std::array<NodeEntry, max_branch_factor+1> entries;
+      unsigned cur_offset_ = 0;
+      typename std::array<NodeEntry, max_branch_factor + 1> entries;
 
 			// Constructors and destructors
-			Node(RPlusTreeDisk<min_branch_factor,max_branch_factor> *treeRef, tree_node_handle self_handle,
-                    tree_node_handle parent_handle) :
-                treeRef( treeRef ),
-                self_handle_( self_handle ),
-                parent_( parent_handle ),
-                cur_offset_( 0 ) {}
+			Node(tree_node_handle self_handle, tree_node_handle parent_handle):
+        treeRef(treeRef), self_handle_(self_handle), parent_(parent_handle), cur_offset_(0) {}
 
 			void deleteSubtrees();
 
@@ -126,9 +115,9 @@ namespace rplustreedisk
 			unsigned height();
 			void stat();
 
-            bool isLeaf() {
-                return cur_offset_ == 0 or std::holds_alternative<Point>( entries.at(0) );
-            }
-	};
+      bool isLeaf() {
+          return cur_offset_ == 0 or std::holds_alternative<Point>( entries.at(0) );
+      }
+  };
 #include "node.tcc"
 }
