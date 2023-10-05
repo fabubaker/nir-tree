@@ -1,11 +1,5 @@
-#include <rplustreedisk/node.h>
-#include <rplustreedisk/rplustreedisk.h>
-
-#define NODE_TEMPLATE_TYPES template <int min_branch_factor, int max_branch_factor>
-#define NODE_CLASS_TYPES Node<min_branch_factor,max_branch_factor>
-
-NODE_TEMPLATE_TYPES
-void NODE_CLASS_TYPES::deleteSubtrees() {
+template <int min_branch_factor, int max_branch_factor>
+void Node<min_branch_factor,max_branch_factor>::deleteSubtrees() {
     // N.B., does not actually delete anything
     // FIXME
     if( not isLeaf() ) {
@@ -17,8 +11,8 @@ void NODE_CLASS_TYPES::deleteSubtrees() {
     }
 }
 
-NODE_TEMPLATE_TYPES
-Rectangle NODE_CLASS_TYPES::boundingBox() {
+template <int min_branch_factor, int max_branch_factor>
+Rectangle Node<min_branch_factor,max_branch_factor>::boundingBox() {
     if( isLeaf() ) {
         if( cur_offset_ == 0 ) {
             return Rectangle::atInfinity;
@@ -38,8 +32,8 @@ Rectangle NODE_CLASS_TYPES::boundingBox() {
     return bb;
 }
 
-NODE_TEMPLATE_TYPES
-void NODE_CLASS_TYPES::updateBranch(
+template <int min_branch_factor, int max_branch_factor>
+void Node<min_branch_factor,max_branch_factor>::updateBranch(
     tree_node_handle child_handle,
     Rectangle &bounding_box
 ) {
@@ -54,8 +48,8 @@ void NODE_CLASS_TYPES::updateBranch(
     }
 }
 
-NODE_TEMPLATE_TYPES
-void NODE_CLASS_TYPES::removeBranch( tree_node_handle child_handle ) {
+template <int min_branch_factor, int max_branch_factor>
+void Node<min_branch_factor,max_branch_factor>::removeBranch( tree_node_handle child_handle ) {
     assert( not isLeaf() );
 
     for( unsigned i = 0; i < cur_offset_; i++ ) {
@@ -69,8 +63,8 @@ void NODE_CLASS_TYPES::removeBranch( tree_node_handle child_handle ) {
     assert( false );
 }
 
-NODE_TEMPLATE_TYPES
-void NODE_CLASS_TYPES::removePoint( Point &givenPoint ) {
+template <int min_branch_factor, int max_branch_factor>
+void Node<min_branch_factor,max_branch_factor>::removePoint( Point &givenPoint ) {
     assert( isLeaf() );
 
     for( unsigned i = 0; i < cur_offset_; i++ ) {
@@ -84,8 +78,8 @@ void NODE_CLASS_TYPES::removePoint( Point &givenPoint ) {
 }
 
 
-NODE_TEMPLATE_TYPES
-void NODE_CLASS_TYPES::exhaustiveSearch(
+template <int min_branch_factor, int max_branch_factor>
+void Node<min_branch_factor,max_branch_factor>::exhaustiveSearch(
     Point &requestedPoint,
     std::vector<Point> &accumulator
 ) {
@@ -109,8 +103,8 @@ void NODE_CLASS_TYPES::exhaustiveSearch(
     }
 }
 
-NODE_TEMPLATE_TYPES
-std::vector<Point> NODE_CLASS_TYPES::search(
+template <int min_branch_factor, int max_branch_factor>
+std::vector<Point> Node<min_branch_factor,max_branch_factor>::search(
     Point &requestedPoint
 ) {
     std::vector<Point> matchingPoints;
@@ -161,10 +155,8 @@ std::vector<Point> NODE_CLASS_TYPES::search(
     return matchingPoints;
 }
 
-NODE_TEMPLATE_TYPES
-std::vector<Point> NODE_CLASS_TYPES::search(
-    Rectangle &requestedRectangle
-) {
+template <int min_branch_factor, int max_branch_factor>
+std::vector<Point> Node<min_branch_factor,max_branch_factor>::search(Rectangle &requestedRectangle) {
     std::vector<Point> matchingPoints;
 
     // Initialize our context stack
@@ -214,8 +206,8 @@ std::vector<Point> NODE_CLASS_TYPES::search(
 // Always called on root, this = root
 // This top-to-bottom sweep is only for adjusting bounding boxes to contain the point and
 // choosing a particular leaf
-NODE_TEMPLATE_TYPES
-tree_node_handle NODE_CLASS_TYPES::chooseNode(Point givenPoint)
+template <int min_branch_factor, int max_branch_factor>
+tree_node_handle Node<min_branch_factor,max_branch_factor>::chooseNode(Point givenPoint)
 {
     // CL1 [Initialize]
     tree_node_handle current_handle = self_handle_;
@@ -255,8 +247,8 @@ tree_node_handle NODE_CLASS_TYPES::chooseNode(Point givenPoint)
     }
 }
 
-NODE_TEMPLATE_TYPES
-tree_node_handle NODE_CLASS_TYPES::findLeaf(
+template <int min_branch_factor, int max_branch_factor>
+tree_node_handle Node<min_branch_factor,max_branch_factor>::findLeaf(
     Point givenPoint
 ) {
 
@@ -299,8 +291,8 @@ tree_node_handle NODE_CLASS_TYPES::findLeaf(
     return tree_node_handle( nullptr );
 }
 
-NODE_TEMPLATE_TYPES
-Partition NODE_CLASS_TYPES::partitionNode()
+template <int min_branch_factor, int max_branch_factor>
+Partition Node<min_branch_factor,max_branch_factor>::partitionNode()
 {
     Partition defaultPartition;
     unsigned costMetric = std::numeric_limits<unsigned>::max();
@@ -462,9 +454,9 @@ Partition NODE_CLASS_TYPES::partitionNode()
 }
 
 // Splitting a node will remove it from its parent node and its memory will be freed
-NODE_TEMPLATE_TYPES
-SplitResult NODE_CLASS_TYPES::splitNode( Partition p ) {
-    using NodeType = NODE_CLASS_TYPES;
+template <int min_branch_factor, int max_branch_factor>
+SplitResult Node<min_branch_factor,max_branch_factor>::splitNode( Partition p ) {
+    using NodeType = Node<min_branch_factor,max_branch_factor>;
 
     tree_node_allocator *allocator = get_node_allocator( treeRef );
     auto alloc_data = allocator->create_new_tree_node<NodeType>();
@@ -544,8 +536,8 @@ SplitResult NODE_CLASS_TYPES::splitNode( Partition p ) {
 }
 
 // Splitting a node will remove it from its parent node and its memory will be freed
-NODE_TEMPLATE_TYPES
-SplitResult NODE_CLASS_TYPES::splitNode()
+template <int min_branch_factor, int max_branch_factor>
+SplitResult Node<min_branch_factor,max_branch_factor>::splitNode()
 {
     SplitResult returnSplit = splitNode( partitionNode() );
 
@@ -553,8 +545,8 @@ SplitResult NODE_CLASS_TYPES::splitNode()
 }
 
 // This bottom-to-top sweep is only for splitting bounding boxes as necessary
-NODE_TEMPLATE_TYPES
-SplitResult NODE_CLASS_TYPES::adjustTree()
+template <int min_branch_factor, int max_branch_factor>
+SplitResult Node<min_branch_factor,max_branch_factor>::adjustTree()
 {
     tree_node_handle current_handle = self_handle_;
     SplitResult propagationSplit = { 
@@ -620,9 +612,9 @@ SplitResult NODE_CLASS_TYPES::adjustTree()
 }
 
 // Always called on root, this = root
-NODE_TEMPLATE_TYPES
-tree_node_handle NODE_CLASS_TYPES::insert( Point givenPoint ) {
-    using NodeType = NODE_CLASS_TYPES;
+template <int min_branch_factor, int max_branch_factor>
+tree_node_handle Node<min_branch_factor,max_branch_factor>::insert( Point givenPoint ) {
+    using NodeType = Node<min_branch_factor,max_branch_factor>;
 
     // Find the appropriate position for the new point
     tree_node_handle adjustContext = chooseNode(givenPoint);
@@ -658,8 +650,8 @@ tree_node_handle NODE_CLASS_TYPES::insert( Point givenPoint ) {
 }
 
 // To be called on a leaf
-NODE_TEMPLATE_TYPES
-void NODE_CLASS_TYPES::condenseTree()
+template <int min_branch_factor, int max_branch_factor>
+void Node<min_branch_factor,max_branch_factor>::condenseTree()
 {
     tree_node_handle current_handle = self_handle_;
 
@@ -680,8 +672,8 @@ void NODE_CLASS_TYPES::condenseTree()
 }
 
 // Always called on root, this = root
-NODE_TEMPLATE_TYPES
-tree_node_handle NODE_CLASS_TYPES::remove( Point givenPoint ) {
+template <int min_branch_factor, int max_branch_factor>
+tree_node_handle Node<min_branch_factor,max_branch_factor>::remove( Point givenPoint ) {
     // D1 [Find node containing record]
 
     tree_node_handle leaf_handle = findLeaf(givenPoint);
@@ -712,8 +704,8 @@ tree_node_handle NODE_CLASS_TYPES::remove( Point givenPoint ) {
     return self_handle_;
 }
 
-NODE_TEMPLATE_TYPES
-unsigned NODE_CLASS_TYPES::checksum()
+template <int min_branch_factor, int max_branch_factor>
+unsigned Node<min_branch_factor,max_branch_factor>::checksum()
 {
     unsigned sum = 0;
 
@@ -737,8 +729,8 @@ unsigned NODE_CLASS_TYPES::checksum()
     return sum;
 }
 
-NODE_TEMPLATE_TYPES
-bool NODE_CLASS_TYPES::validate( tree_node_handle expectedParent, unsigned index )
+template <int min_branch_factor, int max_branch_factor>
+bool Node<min_branch_factor,max_branch_factor>::validate( tree_node_handle expectedParent, unsigned index )
 {
     if( parent_ != expectedParent or cur_offset_ > max_branch_factor ) {
         std::cout << "parent = " << parent_ << " expectedParent = " << expectedParent << std::endl;
@@ -776,8 +768,8 @@ bool NODE_CLASS_TYPES::validate( tree_node_handle expectedParent, unsigned index
     return valid;
 }
 
-NODE_TEMPLATE_TYPES
-void NODE_CLASS_TYPES::print( unsigned n ) {
+template <int min_branch_factor, int max_branch_factor>
+void Node<min_branch_factor,max_branch_factor>::print( unsigned n ) {
     std::string indendtation(n * 4, ' ');
     std::cout << indendtation << "Node " << self_handle_ << std::endl;
     std::cout << indendtation << "(" << std::endl;
@@ -799,8 +791,8 @@ void NODE_CLASS_TYPES::print( unsigned n ) {
     std::cout << std::endl << indendtation << ")" << std::endl;
 }
 
-NODE_TEMPLATE_TYPES
-void NODE_CLASS_TYPES::printTree( unsigned n )
+template <int min_branch_factor, int max_branch_factor>
+void Node<min_branch_factor,max_branch_factor>::printTree( unsigned n )
 {
     // Print this node first
     print( n );
@@ -820,8 +812,8 @@ void NODE_CLASS_TYPES::printTree( unsigned n )
 }
 
 //FIXME continue from here.
-NODE_TEMPLATE_TYPES
-unsigned NODE_CLASS_TYPES::height()
+template <int min_branch_factor, int max_branch_factor>
+unsigned Node<min_branch_factor,max_branch_factor>::height()
 {
     unsigned ret = 0;
     Node *node = this;
@@ -838,11 +830,11 @@ unsigned NODE_CLASS_TYPES::height()
     }
 }
 
-NODE_TEMPLATE_TYPES
-void NODE_CLASS_TYPES::stat()
+template <int min_branch_factor, int max_branch_factor>
+void Node<min_branch_factor,max_branch_factor>::stat()
 {
 #ifdef STAT
-    using NodeType = NODE_CLASS_TYPES;
+    using NodeType = Node<min_branch_factor,max_branch_factor>;
 
     // Initialize our context stack
     std::stack<tree_node_handle> context;
@@ -930,6 +922,3 @@ void NODE_CLASS_TYPES::stat()
     (void) 0;
 #endif
 }
-
-#undef NODE_TEMPLATE_TYPES
-#undef NODE_CLASS_TYPES
