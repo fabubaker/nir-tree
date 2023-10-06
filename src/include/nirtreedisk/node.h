@@ -398,14 +398,56 @@ public:
                   tree_node_handle selfHandle);
 
 
+
+/*
+LineMinimizeDownsplits strategy partitions an overfull Branch Node by looking 
+for a line at a dimension that minimizes downsplit and it also tries to minimize 
+imbalance between splitted nodes and distance to geo mean. The strategy considers 
+LowerLeft and UpperRight of mbbs of all branches at current Branch Node as 
+partition candidates. To determine if a partition is valid, we consider 
+max_branch_factor, min_branch_factor and imbalance_threshold. We go through 
+every candidate to find the valid partition which results into lowest downsplit. 
+*/
+/*
+partition strategy of branch node which looks for a partition that minimizes downsplits 
+1. get mbb(minimum bounding box) of all branches at current branch node in a vector
+2. for each dimension: 
+3.    consider both of LowerLeft and UpperRight of all mbbs as partition candidates
+4.    for each partition candidate:
+5.      count number of mbb falls entirely or partly on the left as `left_count`
+6.      count number of mbb falls entirely or partly on the right as `right_count`
+7.      count number of mbb requires split as `cost`
+8.      get `imbalance` as |left_count - right_count|
+9.      get the distance between partition candidate and geographical mean as `distance`
+10.     check if partition candidate is valid
+11.     get the partition with the lowest cost 
+12.     if there is tie on cost, break tie by having partition with the lowest imbalance
+13.     if there is tie on both cost and imbalance, break tie by lower distance
+*/
+/*
+Potential further optimizations:
+1. start with sorting the mbbs and eliminate some partition candidates based on order. 
+    For instance, bounds of the first 1/4 mbb doesn't need to be added to the 
+    partition_candidates vector. With sorted mbb, we can calculate left_count and 
+    right_count and cost for mbbs before index of partition_candidate. Maybe The 
+    runtime could be optimized to D * ( M LOG M + M ) ~> O( D M LOG M )
+2. For validity of partition, we have 3 checks: both of splitted nodes should meet 
+    requirements of max_branch_factor, min_branch_factor, and the entry count 
+    difference between splitted nodes is bounded. Currently, we have a static lower 
+    bound on imbalance of partition. The worst imbalance we allow is 25% - 75%
+    more analysis and optimizations can be made here to set a more dynamic lower bound 
+3. For selection of partition, we prioritize minimizing downward split, then 
+    minimizing imbalance, then minimizing distance to mean of all mbbs. We only 
+    consider less prioritized factors when there is tie. An optimization can be 
+    made to choose the partition which has the best combinations of all three factors 
+*/
+
 template <class S = strategy>
   Partition partitionBranchNode(
             NIRTreeDisk<min_branch_factor, max_branch_factor, strategy> *treeRef,
             typename std::enable_if<std::is_same<S, LineMinimizeDownsplits>::value, S>::type * = 0) 
   {
     Partition defaultPartition;
-
-    tree_node_allocator *allocator = get_node_allocator(treeRef);
     std::vector<Rectangle> all_branch_mbb;
     for (unsigned i = 0; i < this->cur_offset_; i++) {
       Branch &b_i = entries.at(i);
@@ -414,26 +456,14 @@ template <class S = strategy>
 
     double best_candidate = 0.0;
     unsigned best_dimension = 0;
-    unsigned cut_off = min_branch_factor;
     double min_cost = std::numeric_limits<double>::max();
-    unsigned cut_balance = std::numeric_limits<unsigned>::max();
+    unsigned cut_imbalance = std::numeric_limits<unsigned>::max();
     double cut_distance = std::numeric_limits<double>::max();
     
-    // D * ( M LOG M + M ) ~> O( D M LOG M )
+    // O(D * M^2)
     for (unsigned d = 0; d < dimensions; d++) {
-      std::sort(all_branch_mbb.begin(), all_branch_mbb.end(), [d](Rectangle &poly1, Rectangle &poly2) 
-              {if (poly1.upperRight[d] == poly2.upperRight[d]) {
-                  for (unsigned i = 0; i < dimensions; i++) {
-                    if (poly1.upperRight[i] == poly2.upperRight[i]) {continue;}
-                    return poly1.upperRight[i] < poly2.upperRight[i];
-                  }
-                }
-                return poly1.upperRight[d] < poly2.upperRight[d];
-              });
-      
-      // consider all bound points 
+      // consider all bound points (LowerLeft and UpperRight)
       std::vector<double> partition_candidates;
-      unsigned cut_off = min_branch_factor;
       double running_total = 0.0;
       for (unsigned i = 0; i < all_branch_mbb.size(); i++) {
         partition_candidates.push_back(all_branch_mbb.at(i).lowerLeft[d]);
@@ -443,7 +473,7 @@ template <class S = strategy>
       // distance to mean pt
       double mean_d_pt = running_total / (2 * all_branch_mbb.size());
       
-      // go through each split candidate
+      // consider each partition candidate
       for (double partition_candidate : partition_candidates) {
         // split count 
         double cost = 0;
@@ -451,53 +481,71 @@ template <class S = strategy>
         unsigned right_count = 0;
 
         for (unsigned j = 0; j < all_branch_mbb.size(); j++) {
-          Rectangle &poly_ref = all_branch_mbb.at(j);
-          bool greater_than_left = poly_ref.lowerLeft[d] < partition_candidate;
-          bool less_than_right = partition_candidate < poly_ref.upperRight[d];
+          Rectangle &branch_mbb = all_branch_mbb.at(j);
+          bool greater_than_left = branch_mbb.lowerLeft[d] < partition_candidate;
+          bool less_than_right = partition_candidate < branch_mbb.upperRight[d];
           bool requires_split = greater_than_left and less_than_right;
-          bool should_go_left = poly_ref.upperRight[d] <= partition_candidate;
-          bool should_go_right = poly_ref.lowerLeft[d] >= partition_candidate;
+          bool should_go_left = branch_mbb.upperRight[d] <= partition_candidate;
+          bool should_go_right = branch_mbb.lowerLeft[d] >= partition_candidate;
+          bool is_zero_area = (branch_mbb.lowerLeft[d] == branch_mbb.upperRight[d]);
 
           if (requires_split) {
             left_count++;
             right_count++;
             cost++;
+          } else if (is_zero_area and branch_mbb.upperRight[d] == partition_candidate) {
+            // Partition on a zero-area thing, can
+            // pick either side as convenient
+            if (left_count <= right_count) {
+              left_count++;
+            } else {
+              right_count++;
+            }
           } else if (should_go_left) {
-            // the zero area polys end up here too
             left_count++;
           } else if (should_go_right) {
             right_count++;
+          } else {
+            assert(false);
           }
+
         }
 
+        // imbalance indicates the absolute difference between entry count in two splitted nodes
         int diff = left_count - right_count;
-        unsigned balance = std::abs(diff);
+        unsigned imbalance = std::abs(diff);
+        // imbalance threshold for validity check
+        const double imbalance_threshold = 0.25 * (left_count + right_count);
+        // distance indicates the positive distance between partition and geo mean
         double distance = (mean_d_pt - partition_candidate);
         distance = distance * distance;
 
-        if (left_count <= max_branch_factor and left_count >= cut_off and 
-            right_count <= max_branch_factor and right_count >= cut_off and
-            balance < (left_count + right_count)/4
-            ){
-          // valid partition
-          //priority: downsplit > balance > mean distance 
+        // check if partition is valid
+        // 1. both contains no more than max_branch_factor
+        // 2. both contains no less than min_branch_factor
+        // 3. the imbalance between two nodes is less than 1/4 * total entries
+        if (left_count <= max_branch_factor and left_count >= min_branch_factor and 
+            right_count <= max_branch_factor and right_count >= min_branch_factor and
+            imbalance < imbalance_threshold)
+        {
+          // priority: downsplit > imbalance > mean distance 
           if (cost < min_cost) {
             best_candidate = partition_candidate;
             best_dimension = d;
             min_cost = cost;
-            cut_balance = balance;
+            cut_imbalance = imbalance;
             cut_distance = distance;
-          } else if (cost == min_cost and balance < cut_balance){
+          } else if (cost == min_cost and imbalance < cut_imbalance){
             best_candidate = partition_candidate;
             best_dimension = d;
             min_cost = cost;
-            cut_balance = balance;
+            cut_imbalance = imbalance;
             cut_distance = distance;
-          } else if (cost == min_cost and balance == cut_balance and distance < cut_distance){
+          } else if (cost == min_cost and imbalance == cut_imbalance and distance < cut_distance){
             best_candidate = partition_candidate;
             best_dimension = d;
             min_cost = cost;
-            cut_balance = balance;
+            cut_imbalance = imbalance;
             cut_distance = distance;
           }
 
@@ -506,8 +554,8 @@ template <class S = strategy>
     }
     if (min_cost == std::numeric_limits<double>::max()) {
       // [TODO]
-      // no valid split, should consider other split 
-      abort(); 
+      // no valid split, should consider other split strategy
+      abort();
     }
 
     defaultPartition.dimension = best_dimension;
@@ -516,66 +564,75 @@ template <class S = strategy>
     return defaultPartition;
   }
 
+/*
+LineMinimizeDistanceFromMean strategy partition an overfull Branch Node by looking for
+a line at a dimension that minimizes the distances to geo mean of all branches mbbs.
+This strategy considers LowerLeft and UpperRight of mbbs of all branches as partition
+candidates. To determine if a partition is valid, we consider max_branch_factor,
+min_branch_factor. We go through every candidate to find the valid partition which 
+has the lowest distance to geo mean. 
+*/
+/*
+1. get mbb(minimum bounding box) of all branches at current branch node into a vector
+2. for each dimension: 
+3.    consider both of LowerLeft and UpperRight of all mbbs as partition candidates
+4.    for each partition candidate:
+5.      count number of mbb falls entirely or partly on the left as `left_count`
+6.      count number of mbb falls entirely or partly on the right as `right_count`
+7.      get the distance between partition candidate and geographical mean as `distance`
+8.      check if partition candidate is valid
+9.      get the partition with the lowest value at distance 
+*/
 template <class S = strategy>
   Partition partitionBranchNode(
             NIRTreeDisk<min_branch_factor, max_branch_factor, strategy> *treeRef,
             typename std::enable_if<std::is_same<S, LineMinimizeDistanceFromMean>::value,S>::type * = 0) {
     Partition defaultPartition;
 
-    tree_node_allocator *allocator = get_node_allocator(treeRef);
-    std::vector<Rectangle> all_branch_polys;
+    std::vector<Rectangle> all_branch_mbb;
     for (unsigned i = 0; i < this->cur_offset_; i++) {
       Branch &b_i = entries.at(i);
-      all_branch_polys.push_back(b_i.boundingBox);
+      all_branch_mbb.push_back(b_i.boundingBox);
     }
 
     double best_candidate = 0.0;
     unsigned best_dimension = 0;
-    unsigned cut_off = min_branch_factor;
-    double min_cost = std::numeric_limits<double>::max();
+    double min_distance = std::numeric_limits<double>::max();
     
-    // D * ( M LOG M + M ) ~> O( D M LOG M )
+    // O(D * M^2)
     for (unsigned d = 0; d < dimensions; d++) {
-      std::sort(all_branch_polys.begin(), all_branch_polys.end(), [d](Rectangle &poly1, Rectangle &poly2) 
-                {
-                  if (poly1.upperRight[d] == poly2.upperRight[d]) {
-                    for (unsigned i = 0; i < dimensions; i++) {
-                      if (poly1.upperRight[i] == poly2.upperRight[i]) {continue;}
-                      return poly1.upperRight[i] < poly2.upperRight[i];
-                    }
-                  }
-                  return poly1.upperRight[d] < poly2.upperRight[d];
-                });
+      // consider all bound points (LowerLeft and UpperRight)
       std::vector<double> partition_candidates;
-      // consider all bound points 
-      for (unsigned i = 0; i < all_branch_polys.size(); i++) {
-        partition_candidates.push_back(Point::closest_smaller_point(all_branch_polys.at(i).lowerLeft)[d]);
-        partition_candidates.push_back(all_branch_polys.at(i).upperRight[d]);
+      double running_total = 0.0;
+      for (unsigned i = 0; i < all_branch_mbb.size(); i++) {
+        partition_candidates.push_back(all_branch_mbb.at(i).lowerLeft[d]);
+        partition_candidates.push_back(all_branch_mbb.at(i).upperRight[d]);
+        running_total += all_branch_mbb.at(i).lowerLeft[d] + all_branch_mbb.at(i).upperRight[d];
       }
+      // distance to mean pt
+      double mean_d_pt = running_total / (2 * all_branch_mbb.size());
 
-      // go through each split candidate
+      // consider each partition candidate
       for (double partition_candidate : partition_candidates) {
+        // split count
         double cost = 0;
         unsigned left_count = 0;
         unsigned right_count = 0;
-        double running_total = 0.0;
 
-        for (unsigned j = 0; j < all_branch_polys.size(); j++) {
-          Rectangle &poly_ref = all_branch_polys.at(j);
-          running_total += poly_ref.lowerLeft[d] + poly_ref.upperRight[d];
-
-          bool greater_than_left = poly_ref.lowerLeft[d] < partition_candidate;
-          bool less_than_right = partition_candidate < poly_ref.upperRight[d];
+        for (unsigned j = 0; j < all_branch_mbb.size(); j++) {
+          Rectangle &branch_mbb = all_branch_mbb.at(j);
+          bool greater_than_left = branch_mbb.lowerLeft[d] < partition_candidate;
+          bool less_than_right = partition_candidate < branch_mbb.upperRight[d];
           bool requires_split = greater_than_left and less_than_right;
-          bool should_go_left = poly_ref.upperRight[d] <= partition_candidate;
-          bool should_go_right = poly_ref.lowerLeft[d] >= partition_candidate;
-          bool is_zero_area = (poly_ref.lowerLeft[d] == poly_ref.upperRight[d]);
+          bool should_go_left = branch_mbb.upperRight[d] <= partition_candidate;
+          bool should_go_right = branch_mbb.lowerLeft[d] >= partition_candidate;
+          bool is_zero_area = (branch_mbb.lowerLeft[d] == branch_mbb.upperRight[d]);
 
           if (requires_split) {
             left_count++;
             right_count++;
             cost++;
-          } else if (is_zero_area and poly_ref.upperRight[d] == partition_candidate) {
+          } else if (is_zero_area and branch_mbb.upperRight[d] == partition_candidate) {
             // Partition on a zero-area thing, can
             // pick either side as convenient
             if (left_count <= right_count) {
@@ -592,26 +649,25 @@ template <class S = strategy>
           }
         }
 
-        // Cost function 2
+        // distance indicates the positive distance between partition and geo mean
+        double distance = (mean_d_pt - partition_candidate);
+        distance = distance * distance;
+
         // If the split will not overflow our children
         if (left_count <= max_branch_factor and right_count <= max_branch_factor and
-            left_count >= cut_off and right_count >= cut_off)
+            left_count >= min_branch_factor and right_count >= min_branch_factor)
         {
-          double mean_d_pt = running_total / (2 * all_branch_polys.size());
-          // Distance
-          cost = (mean_d_pt - partition_candidate);
-          cost = cost * cost;
           // choose partition candidate which has the smallest distance to mean
-          if (cost < min_cost) {
+          if (distance < min_distance) {
             best_candidate = partition_candidate;
             best_dimension = d;
-            min_cost = cost;
+            min_distance = distance;
           }
         }
       }
     }
 
-    assert(min_cost < std::numeric_limits<double>::max());
+    assert(min_distance < std::numeric_limits<double>::max());
 
     defaultPartition.dimension = best_dimension;
     defaultPartition.location = best_candidate;
@@ -708,19 +764,8 @@ Partition partitionBranchNode(
 
     // If that didn't work, we gotta try something else.
     for (unsigned d = 0; d < dimensions; d++) {
-      std::sort(all_branch_polys.begin(), all_branch_polys.end(),
-                [d](Rectangle &poly1, Rectangle &poly2) {
-                  if (poly1.upperRight[d] ==
-                      poly2.upperRight[d]) {
-                    for (unsigned i = 0; i < dimensions; i++) {
-                      if (poly1.upperRight[i] == poly2.upperRight[i]) {
-                        continue;
-                      }
-                      return poly1.upperRight[i] < poly2.upperRight[i];
-                    }
-                  }
-                  return poly1.upperRight[d] < poly2.upperRight[d];
-                });
+      std::sort(all_branch_polys.begin(), all_branch_polys.end(), 
+                [d](Rectangle &poly1, Rectangle &poly2) { return poly1.isUpperRightLower(poly2, d); });
     }
 
     double best_candidate = 0.0;
@@ -728,23 +773,8 @@ Partition partitionBranchNode(
     unsigned best_dimension = 0;
     // D * ( M LOG M + M ) ~> O( D M LOG M )
     for (unsigned d = 0; d < dimensions; d++) {
-      std::sort(all_branch_polys.begin(), all_branch_polys.end(),
-                [d](Rectangle &poly1, Rectangle &poly2) {
-                  if (poly1.upperRight[d] ==
-                      poly2.upperRight[d]) {
-                    for (unsigned i = 0; i < dimensions;
-                         i++) {
-                      if (poly1.upperRight[i] ==
-                          poly2.upperRight[i]) {
-                        continue;
-                      }
-                      return poly1.upperRight[i] <
-                             poly2.upperRight[i];
-                    }
-                  }
-                  return poly1.upperRight[d] <
-                         poly2.upperRight[d];
-                });
+      std::sort(all_branch_polys.begin(), all_branch_polys.end(), 
+                [d](Rectangle &poly1, Rectangle &poly2) { return poly1.isUpperRightLower(poly2, d); });
       for (unsigned i = 0; i < all_branch_polys.size(); i++) {
         double cost = 0;
         // starts at 1 cause {i} goes left

@@ -532,6 +532,19 @@ bool Rectangle::containsRectangle( const Rectangle &givenRectangle ) const
         containsPoint(included_point);
 }
 
+bool Rectangle::isUpperRightLower(const Rectangle &otherRectangle, const unsigned dim) const
+{
+	if (this->upperRight[dim] == otherRectangle.upperRight[dim]) {
+		for (unsigned i = 0; i < dimensions; i++) {
+			if (this->upperRight[i] == otherRectangle.upperRight[i]) {
+				continue;
+			}
+			return this->upperRight[i] < otherRectangle.upperRight[i];
+		}
+	}
+    return this->upperRight[dim] < otherRectangle.upperRight[dim];
+}
+
 Point Rectangle::centrePoint() const
 {
 	return (lowerLeft + upperRight) / 2.0;
