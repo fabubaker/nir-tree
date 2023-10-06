@@ -532,7 +532,7 @@ bool Rectangle::containsRectangle( const Rectangle &givenRectangle ) const
         containsPoint(included_point);
 }
 
-bool Rectangle::isUpperRightLower(const Rectangle &otherRectangle, const unsigned dim) const
+bool Rectangle::isUpperRightSmaller(const Rectangle &otherRectangle, const unsigned dim) const
 {
 	if (this->upperRight[dim] == otherRectangle.upperRight[dim]) {
 		for (unsigned i = 0; i < dimensions; i++) {

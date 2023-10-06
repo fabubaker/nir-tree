@@ -766,7 +766,7 @@ Partition partitionBranchNode(
     // If that didn't work, we gotta try something else.
     for (unsigned d = 0; d < dimensions; d++) {
       std::sort(all_branch_polys.begin(), all_branch_polys.end(), 
-                [d](Rectangle &poly1, Rectangle &poly2) { return poly1.isUpperRightLower(poly2, d); });
+                [d](Rectangle &poly1, Rectangle &poly2) { return poly1.isUpperRightSmaller(poly2, d); });
     }
 
     double best_candidate = 0.0;
@@ -775,7 +775,7 @@ Partition partitionBranchNode(
     // D * ( M LOG M + M ) ~> O( D M LOG M )
     for (unsigned d = 0; d < dimensions; d++) {
       std::sort(all_branch_polys.begin(), all_branch_polys.end(), 
-                [d](Rectangle &poly1, Rectangle &poly2) { return poly1.isUpperRightLower(poly2, d); });
+                [d](Rectangle &poly1, Rectangle &poly2) { return poly1.isUpperRightSmaller(poly2, d); });
       for (unsigned i = 0; i < all_branch_polys.size(); i++) {
         double cost = 0;
         // starts at 1 cause {i} goes left
