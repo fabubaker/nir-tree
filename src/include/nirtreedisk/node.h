@@ -401,22 +401,23 @@ public:
 
 /*
 LineMinimizeDownsplits strategy partitions an overfull Branch Node by looking 
-for a line at a dimension that minimizes downsplit and it also tries to minimize 
-imbalance between splitted nodes and distance to geo mean. The strategy considers 
-LowerLeft and UpperRight of mbbs of all branches at current Branch Node as 
-partition candidates. To determine if a partition is valid, we consider 
-max_branch_factor, min_branch_factor and imbalance_threshold. We go through 
-every candidate to find the valid partition which results into lowest downsplit. 
+for a line at a dimension that minimizes downsplit. It also tries to minimize
+imbalance between split nodes as well as the distance from the geometric mean.
+The strategy considers LowerLeft and UpperRight points of mbbs of all branches
+at the current Branch Node as partition candidates. To determine if a partition
+is valid, we consider max_branch_factor, min_branch_factor and imbalance_threshold.
+We go through every candidate to find a valid partition which results in the least
+number of downsplits.
 */
 /*
-partition strategy of branch node which looks for a partition that minimizes downsplits 
+Partition strategy of branch node which looks for a partition that minimizes downsplits:
 1. get mbb(minimum bounding box) of all branches at current branch node in a vector
 2. for each dimension: 
-3.    consider both of LowerLeft and UpperRight of all mbbs as partition candidates
+3.    consider both LowerLeft and UpperRight points of all mbbs as partition candidates
 4.    for each partition candidate:
-5.      count number of mbb falls entirely or partly on the left as `left_count`
-6.      count number of mbb falls entirely or partly on the right as `right_count`
-7.      count number of mbb requires split as `cost`
+5.      count number of mbbs that falls entirely or partly on the left as `left_count`
+6.      count number of mbbs that falls entirely or partly on the right as `right_count`
+7.      count number of mbbs that needs to be split as `cost`
 8.      get `imbalance` as |left_count - right_count|
 9.      get the distance between partition candidate and geographical mean as `distance`
 10.     check if partition candidate is valid
@@ -426,20 +427,20 @@ partition strategy of branch node which looks for a partition that minimizes dow
 */
 /*
 Potential further optimizations:
-1. start with sorting the mbbs and eliminate some partition candidates based on order. 
+1. Start with sorting the mbbs and eliminate some partition candidates based on order.
     For instance, bounds of the first 1/4 mbb doesn't need to be added to the 
     partition_candidates vector. With sorted mbb, we can calculate left_count and 
     right_count and cost for mbbs before index of partition_candidate. Maybe The 
     runtime could be optimized to D * ( M LOG M + M ) ~> O( D M LOG M )
-2. For validity of partition, we have 3 checks: both of splitted nodes should meet 
+2. To validate a partition, we have 3 checks: both split nodes should meet
     requirements of max_branch_factor, min_branch_factor, and the entry count 
-    difference between splitted nodes is bounded. Currently, we have a static lower 
-    bound on imbalance of partition. The worst imbalance we allow is 25% - 75%
-    more analysis and optimizations can be made here to set a more dynamic lower bound 
+    difference between split nodes is bounded. Currently, we have a static lower
+    bound on imbalance of partition. The worst imbalance we allow is 25% - 75%.
+    More analysis and optimizations can be made here to set a more dynamic lower bound.
 3. For selection of partition, we prioritize minimizing downward split, then 
     minimizing imbalance, then minimizing distance to mean of all mbbs. We only 
-    consider less prioritized factors when there is tie. An optimization can be 
-    made to choose the partition which has the best combinations of all three factors 
+    consider lower prioritized factors when there is tie. An optimization can be
+    made to choose the partition which has the best combinations of all three factors.
 */
 
 template <class S = strategy>
@@ -565,7 +566,7 @@ template <class S = strategy>
   }
 
 /*
-LineMinimizeDistanceFromMean strategy partition an overfull Branch Node by looking for
+The LineMinimizeDistanceFromMean strategy partitions an overfull Branch Node by looking for
 a line at a dimension that minimizes the distances to geo mean of all branches mbbs.
 This strategy considers LowerLeft and UpperRight of mbbs of all branches as partition
 candidates. To determine if a partition is valid, we consider max_branch_factor,
@@ -575,7 +576,7 @@ has the lowest distance to geo mean.
 /*
 1. get mbb(minimum bounding box) of all branches at current branch node into a vector
 2. for each dimension: 
-3.    consider both of LowerLeft and UpperRight of all mbbs as partition candidates
+3.    consider both LowerLeft and UpperRight points of all mbbs as partition candidates
 4.    for each partition candidate:
 5.      count number of mbb falls entirely or partly on the left as `left_count`
 6.      count number of mbb falls entirely or partly on the right as `right_count`
