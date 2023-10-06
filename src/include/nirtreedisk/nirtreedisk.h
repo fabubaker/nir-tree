@@ -49,6 +49,9 @@ public:
   std::vector<bool> hasReinsertedOnLevel;
   std::map<tree_node_handle, IsotheticPolygon> polygons;
   BranchPartitionStrategy strategy;
+  std::vector<Branch> Q1;
+  std::vector<Point> Q2;
+  unsigned reinsertionAttempt; 
 
   // Constructors and destructors
   NIRTreeDisk(size_t memory_budget, std::string backing_file, BranchPartitionStrategy partition_strategy) : 
@@ -58,8 +61,8 @@ public:
 
     size_t existing_page_count = node_allocator_->buffer_pool_.get_preexisting_page_count();
 
-    hasReinsertedOnLevel = {false};    
-    
+    hasReinsertedOnLevel = {false};
+    reinsertionAttempt = 0;
     // If this is a fresh tree, we need a root
     // Update: We disable this for bulk-loading since the root node
     // will be created anyways.
@@ -202,7 +205,7 @@ void NIRTreeDisk<min_branch_factor, max_branch_factor>::insert(Point givenPoint)
     root = root_node->insert(this, root, givenPoint, hasReinsertedOnLevel);
   } else {
     auto root_node = get_branch_node(root, true);
-    std::variant<BranchAtLevel, Point> entry = givenPoint;
+    std::variant<Branch, Point> entry = givenPoint;
     root = root_node->insert(this, root, entry, hasReinsertedOnLevel);
   }
 }

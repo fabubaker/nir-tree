@@ -45,6 +45,8 @@
 #define DEBUG_TESTLEVELS 0
 #define IGNORE_REINSERTION 1
 
+#define REINSERTION_LIMIT 5
+
 namespace nirtreedisk {
 
 template <int min_branch_factor, int max_branch_factor>
@@ -91,7 +93,6 @@ struct BranchAtLevel {
   uint8_t level;
 };
 
-//typedef std::variant<Point, BranchAtLevel> ReinsertionEntry;
 
 // SplitResult object represents two newly created branches after 
 // splitting an overflowed Branch
@@ -299,13 +300,13 @@ public:
   void deleteSubtrees(NIRTreeDisk<min_branch_factor, max_branch_factor> *treeRef);
 
   // Data structure interface functions: 
-  // insert a Point/BranchAtLevel where selfHandle is root 
-  //      BranchAtLevel is not considered for now 
+  // insert a Point/Branch where selfHandle is root 
   tree_node_handle insert(
         NIRTreeDisk<min_branch_factor, max_branch_factor> *treeRef,
         tree_node_handle selfHandle,
-        std::variant<BranchAtLevel, Point> &nodeEntry, 
-        std::vector<bool> &hasReinsertedOnLevel);
+        std::variant<Branch, Point> &nodeEntry, 
+        std::vector<bool> &hasReinsertedOnLevel,
+        bool isReinsertion = false);
   // [FIXME]
   void reInsert(std::vector<bool> &hasReinsertedOnLevel);
   // remove a point from tree where selfHandle is root 
@@ -356,7 +357,7 @@ public:
           NIRTreeDisk<min_branch_factor, max_branch_factor> *treeRef,
           tree_node_handle selfHandle,
           std::stack<tree_node_handle> &parentHandles,
-          BranchAtLevel &branchLevel);
+          Branch &branch);
   // findLeaf: returns the LeafNode which contains the point or nullptr if none node contains it 
   tree_node_handle findLeaf(
           NIRTreeDisk<min_branch_factor, max_branch_factor> *treeRef,
@@ -1801,7 +1802,7 @@ BranchNode<min_branch_factor, max_branch_factor>::chooseNodeBranch(
           NIRTreeDisk<min_branch_factor, max_branch_factor> *treeRef,
           tree_node_handle selfHandle,
           std::stack<tree_node_handle> &parentHandles,
-          BranchAtLevel &branchLevel) 
+          Branch &branch) 
 {
   
   // CL1 [Initialize]
@@ -2595,10 +2596,13 @@ SplitResult BranchNode<min_branch_factor, max_branch_factor>::splitNode(
         assert(child_updated.child == branch.child);
         assert(child_sibling.child.get_type() == LEAF_NODE);
 
-        // check if child_node is empty after downward split
-        if (child_node->cur_offset_ > 0) {
+        // check if child_node satisfies min_branch_factor after downward split
+        if (child_node->cur_offset_ >= min_branch_factor) {
           this->updateBranch(child_updated);
           index = index + 1;
+        } else if (child_node->cur_offset_ > 0) {
+          // the splitted branch doesn't meet min_branch_factor
+          // it will be reinserted 
         } else {
           this->removeAndFreeBranch(treeRef, branch.child); //update cur_offset_
         }
@@ -2751,8 +2755,9 @@ template <int min_branch_factor, int max_branch_factor>
 tree_node_handle BranchNode<min_branch_factor, max_branch_factor>::insert(
         NIRTreeDisk<min_branch_factor, max_branch_factor> *treeRef,
         tree_node_handle selfHandle,
-        std::variant<BranchAtLevel, Point> &nodeEntry, 
-        std::vector<bool> &hasReinsertedOnLevel)
+        std::variant<Branch, Point> &nodeEntry, 
+        std::vector<bool> &hasReinsertedOnLevel,
+        bool isReinsertion)
 {
 #if DEBUG_TEST
   testDisjoint(treeRef, treeRef->root,"before insertion");
@@ -2779,7 +2784,7 @@ tree_node_handle BranchNode<min_branch_factor, max_branch_factor>::insert(
     current_handle = chooseNodeBranch(treeRef, 
                                      selfHandle, 
                                      parentHandles, 
-                                     std::get<BranchAtLevel>(nodeEntry));
+                                     std::get<Branch>(nodeEntry));
 #endif
   }
 
@@ -2811,8 +2816,7 @@ tree_node_handle BranchNode<min_branch_factor, max_branch_factor>::insert(
     assert(current_handle.get_type() == BRANCH_NODE);
     auto current_node = treeRef->get_branch_node(current_handle);
 
-    BranchAtLevel &sub_bl = std::get<BranchAtLevel>(nodeEntry);
-    Branch &sub_branch = sub_bl.branch; 
+    Branch &sub_branch = std::get<Branch>(nodeEntry);
     IsotheticPolygon insertion_polygon  = find_polygon(treeRef, sub_branch); 
     
     // Before I add this node in, I need to fragment everyone else
@@ -2892,7 +2896,50 @@ tree_node_handle BranchNode<min_branch_factor, max_branch_factor>::insert(
 #if DEBUG_TEST
   testLevels(treeRef, ret_handle);
 #endif
-  return ret_handle;
+
+
+  if( isReinsertion ){
+    return ret_handle;
+  } 
+  
+  while (!treeRef->Q1.empty() or !treeRef->Q2.empty()){
+    // increment reinsertionAttempt 
+    treeRef->reinsertionAttempt++;
+    // make a copy of Q1 and Q2
+    std::vector<Branch> BranchesQ = treeRef->Q1;
+    std::vector<Point> PointsQ = treeRef->Q2;
+    
+    // work on branches 
+    if (! BranchesQ.empty()){
+      // sort branch vector based on level in descending order
+      std::sort(BranchesQ.begin(), BranchesQ.end(), 
+            [](Branch &l, Branch &r) { return l.child.get_level() > r.child.get_level(); }); 
+      for (Branch &b : BranchesQ) {
+        //std::fill(treeRef->hasReinsertedOnLevel.begin(), treeRef->hasReinsertedOnLevel.end(), false);
+        std::variant<Branch, Point> entry = b; 
+        bool is_reinsertion = true;
+        auto root_node = treeRef->get_branch_node(treeRef->root);
+        root_node->insert(treeRef, treeRef->root, entry, hasReinsertionOnLevel, is_reinsertion);
+      }
+    }
+    // work on points
+    if (! Points.empty()) {
+      for (Point &p : PointsQ) {
+        //std::fill(treeRef->hasReinsertedOnLevel.begin(), treeRef->hasReinsertedOnLevel.end(), false);
+        std::variant<Branch, Point> entry = p; 
+        bool is_reinsertion = true;
+        auto root_node = treeRef->get_branch_node(treeRef->root);
+        root_node->insert(treeRef, treeRef->root, entry, hasReinsertionOnLevel, is_reinsertion);      
+      }
+    }
+  }
+
+  // reset variable
+  treeRef->reinsertionAttempt = 0;
+  assert(treeRef->Q1.empty());
+  assert(treeRef->Q2.empty());
+  // caution: root may be updated after reinsertion 
+  return treeRef->root;
 }
 
 // Always called on root, this = root
