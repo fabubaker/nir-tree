@@ -47,22 +47,19 @@
 
 namespace nirtreedisk {
 
-// Different strategies for partitioning BranchNode during splitNode
-struct BranchPartitionStrategy {};
-struct LineMinimizeDownsplits : BranchPartitionStrategy {};
-struct LineMinimizeDistanceFromMean : BranchPartitionStrategy {};
-struct ExperimentalStrategy : BranchPartitionStrategy {};
-
-template <int min_branch_factor, int max_branch_factor, class strategy>
+template <int min_branch_factor, int max_branch_factor>
 class NIRTreeDisk;
 
-template <int min_branch_factor, int max_branch_factor, class strategy>
-requires(std::derived_from<strategy, BranchPartitionStrategy>)
-tree_node_allocator *get_node_allocator(NIRTreeDisk<min_branch_factor, max_branch_factor, strategy> *treeRef) {
+template <int min_branch_factor, int max_branch_factor>
+tree_node_allocator *get_node_allocator(NIRTreeDisk<min_branch_factor, max_branch_factor> *treeRef) {
   return treeRef->node_allocator_.get();
 }
-
-
+// Enumeration of Branch Partition Strategy
+enum BranchPartitionStrategy {
+  LINEMINIMIZEDOWNSPLITS,
+  LINEMINIMIZEDISTANCEFROMMEAN,
+  EXPERIMENTALSTRATEGY
+};
 // Branch object contains child and boundingBox where child is the 
 // tree_node_handler which points to the disk page, and boundingBox 
 // is the MBB of this branch's polygon. child is also the key of this 
@@ -110,25 +107,25 @@ struct Partition {
 };
 
 // Helper functions for polygon
-template <int min_branch_factor, int max_branch_factor, class strategy>
+template <int min_branch_factor, int max_branch_factor>
 IsotheticPolygon find_polygon(
-        NIRTreeDisk<min_branch_factor, max_branch_factor, strategy> *treeRef,
+        NIRTreeDisk<min_branch_factor, max_branch_factor> *treeRef,
         tree_node_handle node_handle,
         Rectangle rectangle); 
 
-template <int min_branch_factor, int max_branch_factor, class strategy>
+template <int min_branch_factor, int max_branch_factor>
 IsotheticPolygon find_polygon(
-        NIRTreeDisk<min_branch_factor, max_branch_factor, strategy> *treeRef,
+        NIRTreeDisk<min_branch_factor, max_branch_factor> *treeRef,
         Branch branch);
 
-template <int min_branch_factor, int max_branch_factor, class strategy>
+template <int min_branch_factor, int max_branch_factor>
 void remove_polygon(
-        NIRTreeDisk<min_branch_factor, max_branch_factor, strategy> *treeRef,
+        NIRTreeDisk<min_branch_factor, max_branch_factor> *treeRef,
         tree_node_handle node_handle);
 
-template <int min_branch_factor, int max_branch_factor, class strategy>
+template <int min_branch_factor, int max_branch_factor>
 void update_polygon(
-        NIRTreeDisk<min_branch_factor, max_branch_factor, strategy> *treeRef,
+        NIRTreeDisk<min_branch_factor, max_branch_factor> *treeRef,
         tree_node_handle node_handle,
         IsotheticPolygon &polygon_to_write);
 
@@ -137,36 +134,36 @@ std::pair<double, std::vector<IsotheticPolygon::OptimalExpansion>>
 computeExpansionArea(const IsotheticPolygon &this_poly, const IsotheticPolygon &other_poly);
 
 // Helper functions for debugging:
-template <int min_branch_factor, int max_branch_factor, class strategy>
+template <int min_branch_factor, int max_branch_factor>
 void testDisjoint(
-        NIRTreeDisk<min_branch_factor, max_branch_factor, strategy> *treeRef,
+        NIRTreeDisk<min_branch_factor, max_branch_factor> *treeRef,
         tree_node_handle root,
         std::string msg="");
-template <int min_branch_factor, int max_branch_factor, class strategy>
+template <int min_branch_factor, int max_branch_factor>
 void testCount(
-        NIRTreeDisk<min_branch_factor, max_branch_factor, strategy> *treeRef,
+        NIRTreeDisk<min_branch_factor, max_branch_factor> *treeRef,
         tree_node_handle root,
         std::string msg="");
-template <int min_branch_factor, int max_branch_factor, class strategy>
+template <int min_branch_factor, int max_branch_factor>
 void testContainPoints(
-        NIRTreeDisk<min_branch_factor, max_branch_factor, strategy> *treeRef,
+        NIRTreeDisk<min_branch_factor, max_branch_factor> *treeRef,
         tree_node_handle root,
         std::string msg="");
-template <int min_branch_factor, int max_branch_factor, class strategy>
+template <int min_branch_factor, int max_branch_factor>
 void testLevels(
-        NIRTreeDisk<min_branch_factor, max_branch_factor, strategy> *treeRef, 
+        NIRTreeDisk<min_branch_factor, max_branch_factor> *treeRef, 
         tree_node_handle root);  
 
 // Helper function for finding a path from root to leaf node (both are inclusive)
-template <int min_branch_factor, int max_branch_factor, class strategy>
+template <int min_branch_factor, int max_branch_factor>
 bool find_path_to_leaf_helper(
-        NIRTreeDisk<min_branch_factor, max_branch_factor, strategy> *treeRef,
+        NIRTreeDisk<min_branch_factor, max_branch_factor> *treeRef,
         tree_node_handle start_handle,
         tree_node_handle leaf_handle,
         std::stack<tree_node_handle> &path_to_leaf);
-template <int min_branch_factor, int max_branch_factor, class strategy>
+template <int min_branch_factor, int max_branch_factor>
 std::stack<tree_node_handle> find_path_to_leaf(
-        NIRTreeDisk<min_branch_factor, max_branch_factor, strategy> *treeRef,
+        NIRTreeDisk<min_branch_factor, max_branch_factor> *treeRef,
         tree_node_handle start_handle,
         tree_node_handle leaf_handle);
 
@@ -179,20 +176,21 @@ std::pair<SplitResult, tree_node_handle> adjust_tree_bottom_half(
         std::stack<tree_node_handle> &parentHandles,
         std::vector<bool> &hasReinsertedOnLevel,
         int max_branch_factor);
-template <int min_branch_factor, int max_branch_factor, class strategy>
+template <int min_branch_factor, int max_branch_factor>
 SplitResult adjustTreeSub(
-        NIRTreeDisk<min_branch_factor, max_branch_factor, strategy> *treeRef,
+        NIRTreeDisk<min_branch_factor, max_branch_factor> *treeRef,
         tree_node_handle start_handle, 
         std::stack<tree_node_handle> &parentHandles,
         std::vector<bool> &hasReinsertedOnLevel);
-
+template <int min_branch_factor, int max_branch_factor>
+std::pair<bool, Partition> try_cut_geo_mean(
+        std::vector<Rectangle> &all_branch_polys);
 // LeafNode object contains array of Points with name of entries   
 // cur_offset_ specifis the current count of Points in array entries
   // [TODO]
   // reinsert()
   // validate()
-template <int min_branch_factor, int max_branch_factor, class strategy>
-requires(std::derived_from<strategy, BranchPartitionStrategy>)
+template <int min_branch_factor, int max_branch_factor>
 class LeafNode {
 public:
   // members: 
@@ -201,14 +199,14 @@ public:
   unsigned cur_offset_;
 
   LeafNode(): cur_offset_(0) {
-    static_assert(sizeof(LeafNode<min_branch_factor, max_branch_factor, strategy>) <= PAGE_DATA_SIZE);
+    static_assert(sizeof(LeafNode<min_branch_factor, max_branch_factor>) <= PAGE_DATA_SIZE);
   }
   void deleteSubtrees();
 
   // Data structure interface functions : 
   // Insert a Point on treeRef where selfHandle is the handle of *this node 
   tree_node_handle insert(
-          NIRTreeDisk<min_branch_factor, max_branch_factor, strategy> *treeRef,
+          NIRTreeDisk<min_branch_factor, max_branch_factor> *treeRef,
           tree_node_handle selfHandle,
           Point givenPoint, 
           std::vector<bool> &hasReinsertedOnLevel);
@@ -216,7 +214,7 @@ public:
   void reInsert(std::vector<bool> &hasReinsertedOnLevel);
   // Remove a Point on treeRef where selfHandle is the handle of *this node 
   tree_node_handle remove(
-          NIRTreeDisk<min_branch_factor, max_branch_factor, strategy> *treeRef,
+          NIRTreeDisk<min_branch_factor, max_branch_factor> *treeRef,
           tree_node_handle selfHandle,
           Point givenPoint);
 
@@ -232,7 +230,7 @@ public:
   tree_node_handle chooseNode(tree_node_handle selfHandle, Point givenPoint);
   // findLeaf: returns itself if it contains givenPoint or nullptr if not 
   tree_node_handle findLeaf(
-          NIRTreeDisk<min_branch_factor, max_branch_factor, strategy> *treeRef,
+          NIRTreeDisk<min_branch_factor, max_branch_factor> *treeRef,
           tree_node_handle selfHandle,
           Point givenPoint);
   // Entry function for partitionLeafNode()
@@ -243,13 +241,13 @@ public:
   Partition partitionLeafNode();
   // Entry function for splitNode()
   SplitResult splitNode(
-          NIRTreeDisk<min_branch_factor, max_branch_factor, strategy> *treeRef,
+          NIRTreeDisk<min_branch_factor, max_branch_factor> *treeRef,
           tree_node_handle current_handle,
           tree_node_handle parent_handle);
   // splitNode: splits Leafnode with current_handle into two LeafNode objects 
   // according to partition p
   SplitResult splitNode(
-          NIRTreeDisk<min_branch_factor, max_branch_factor, strategy> *treeRef,
+          NIRTreeDisk<min_branch_factor, max_branch_factor> *treeRef,
           tree_node_handle current_handle,
           tree_node_handle parent_handle,
           Partition p, 
@@ -257,7 +255,7 @@ public:
 
   // this is called by BranchNode::remove() to shorten a tree
   void condenseTree(
-          NIRTreeDisk<min_branch_factor, max_branch_factor, strategy> *treeRef,
+          NIRTreeDisk<min_branch_factor, max_branch_factor> *treeRef,
           tree_node_handle selfHandle,
           std::stack<tree_node_handle> &parentHandles);
 
@@ -283,8 +281,7 @@ public:
   // reinsert()  
   // validate()
   // bounding_box_validate()
-template <int min_branch_factor, int max_branch_factor, class strategy>
-requires(std::derived_from<strategy, BranchPartitionStrategy>)
+template <int min_branch_factor, int max_branch_factor>
 class BranchNode {
 public:
   // members: 
@@ -294,15 +291,15 @@ public:
 
   // Constructors and destructors
   BranchNode(): cur_offset_(0) {
-  static_assert(sizeof(BranchNode<min_branch_factor, max_branch_factor, strategy>) <= PAGE_DATA_SIZE);
+  static_assert(sizeof(BranchNode<min_branch_factor, max_branch_factor>) <= PAGE_DATA_SIZE);
   }
-  void deleteSubtrees(NIRTreeDisk<min_branch_factor, max_branch_factor, strategy> *treeRef);
+  void deleteSubtrees(NIRTreeDisk<min_branch_factor, max_branch_factor> *treeRef);
 
   // Data structure interface functions: 
   // insert a Point/BranchAtLevel where selfHandle is root 
   //      BranchAtLevel is not considered for now 
   tree_node_handle insert(
-        NIRTreeDisk<min_branch_factor, max_branch_factor, strategy> *treeRef,
+        NIRTreeDisk<min_branch_factor, max_branch_factor> *treeRef,
         tree_node_handle selfHandle,
         std::variant<BranchAtLevel, Point> &nodeEntry, 
         std::vector<bool> &hasReinsertedOnLevel);
@@ -310,7 +307,7 @@ public:
   void reInsert(std::vector<bool> &hasReinsertedOnLevel);
   // remove a point from tree where selfHandle is root 
   tree_node_handle remove(
-        NIRTreeDisk<min_branch_factor, max_branch_factor, strategy> *treeRef,
+        NIRTreeDisk<min_branch_factor, max_branch_factor> *treeRef,
         tree_node_handle selfHandle,
         Point givenPoint);
   
@@ -337,44 +334,51 @@ public:
   // removeBranch: remove branch from BranchNode and free the memory associated with Branch
   // as well as removing polygon associated with this node from map 
   void removeAndFreeBranch(
-          NIRTreeDisk<min_branch_factor, max_branch_factor, strategy> *treeRef,
+          NIRTreeDisk<min_branch_factor, max_branch_factor> *treeRef,
           const tree_node_handle entry);
   // choose a LeafNode for adding a point 
   // expansion and clipping of polygon are also done here 
   tree_node_handle chooseNodePoint(
-          NIRTreeDisk<min_branch_factor, max_branch_factor, strategy> *treeRef,
+          NIRTreeDisk<min_branch_factor, max_branch_factor> *treeRef,
           tree_node_handle selfHandle,
           std::stack<tree_node_handle> &parentHandles,
           Point &point);
   // [REINSERTION]
   tree_node_handle chooseNodeBranch(
-          NIRTreeDisk<min_branch_factor, max_branch_factor, strategy> *treeRef,
+          NIRTreeDisk<min_branch_factor, max_branch_factor> *treeRef,
           tree_node_handle selfHandle,
           std::stack<tree_node_handle> &parentHandles,
           BranchAtLevel &branchLevel);
   // findLeaf: returns the LeafNode which contains the point or nullptr if none node contains it 
   tree_node_handle findLeaf(
-          NIRTreeDisk<min_branch_factor, max_branch_factor, strategy> *treeRef,
+          NIRTreeDisk<min_branch_factor, max_branch_factor> *treeRef,
           tree_node_handle selfHandle,
           std::stack<tree_node_handle> &parentHandles,
           Point givenPoint);
   // entry function for partitionPartitionNode()
-  Partition partitionNode(NIRTreeDisk<min_branch_factor, max_branch_factor, strategy> *treeRef);
-
+  Partition partitionNode(
+          NIRTreeDisk<min_branch_factor, max_branch_factor> *treeRef);
+  // [TODO] partitionBranchNode:  
+  Partition partitionLineMinimizeDownsplits(
+          NIRTreeDisk<min_branch_factor, max_branch_factor> *treeRef);
+  Partition partitionLineMinimizeDistanceFromMean(
+          NIRTreeDisk<min_branch_factor, max_branch_factor> *treeRef);
+  Partition partitionExperimentalStrategy(
+          NIRTreeDisk<min_branch_factor, max_branch_factor> *treeRef);
   // clip polygon if it overlaps with its siblings and ignore polygon 
   // assocaited with handle_to_skip
   void make_disjoint_from_children(
-          NIRTreeDisk<min_branch_factor, max_branch_factor, strategy> *treeRef,
+          NIRTreeDisk<min_branch_factor, max_branch_factor> *treeRef,
           tree_node_handle handle_to_skip,
           IsotheticPolygon &polygon);
   // entry function for splitNode()
   SplitResult splitNode(
-          NIRTreeDisk<min_branch_factor, max_branch_factor, strategy> *treeRef,
+          NIRTreeDisk<min_branch_factor, max_branch_factor> *treeRef,
           tree_node_handle current_handle,
           tree_node_handle parent_handle);
   // splitNode: splits BranchNode with current_handle into two BranchNode object according to p 
   SplitResult splitNode(
-          NIRTreeDisk<min_branch_factor, max_branch_factor, strategy> *treeRef,
+          NIRTreeDisk<min_branch_factor, max_branch_factor> *treeRef,
           tree_node_handle current_handle,
           tree_node_handle parent_handle,
           Partition p, 
@@ -384,519 +388,30 @@ public:
   // boundingBox() returns a MBB of all branches on BranchNode
   Rectangle boundingBox();
   // checksum: return sum of all points for each dimension of all subtrees 
-  unsigned checksum(NIRTreeDisk<min_branch_factor, max_branch_factor, strategy> *treeRef);
+  unsigned checksum(NIRTreeDisk<min_branch_factor, max_branch_factor> *treeRef);
   // [FIXME]
   bool validate(tree_node_handle expectedParent, unsigned index);
   // [FIXME]
   std::vector<Point> bounding_box_validate();
-  void print(NIRTreeDisk<min_branch_factor, max_branch_factor, strategy> *treeRef,
+  void print(NIRTreeDisk<min_branch_factor, max_branch_factor> *treeRef,
             tree_node_handle current_handle, tree_node_handle parent_handle, unsigned n = 0);
-  void printTree(NIRTreeDisk<min_branch_factor, max_branch_factor, strategy> *treeRef,
+  void printTree(NIRTreeDisk<min_branch_factor, max_branch_factor> *treeRef,
             tree_node_handle current_handle, tree_node_handle parent_handle, unsigned n = 0);
   // height: returns the height of subtree where LeafNode has height 1 
-  unsigned height(NIRTreeDisk<min_branch_factor, max_branch_factor, strategy> *treeRef,
+  unsigned height(NIRTreeDisk<min_branch_factor, max_branch_factor> *treeRef,
                   tree_node_handle selfHandle);
-
-
-
-/*
-LineMinimizeDownsplits strategy partitions an overfull Branch Node by looking 
-for a line at a dimension that minimizes downsplit. It also tries to minimize
-imbalance between split nodes as well as the distance from the geometric mean.
-The strategy considers LowerLeft and UpperRight points of mbbs of all branches
-at the current Branch Node as partition candidates. To determine if a partition
-is valid, we consider max_branch_factor, min_branch_factor and imbalance_threshold.
-We go through every candidate to find a valid partition which results in the least
-number of downsplits.
-*/
-/*
-Partition strategy of branch node which looks for a partition that minimizes downsplits:
-1. get mbb(minimum bounding box) of all branches at current branch node in a vector
-2. for each dimension: 
-3.    consider both LowerLeft and UpperRight points of all mbbs as partition candidates
-4.    for each partition candidate:
-5.      count number of mbbs that falls entirely or partly on the left as `left_count`
-6.      count number of mbbs that falls entirely or partly on the right as `right_count`
-7.      count number of mbbs that needs to be split as `cost`
-8.      get `imbalance` as |left_count - right_count|
-9.      get the distance between partition candidate and geographical mean as `distance`
-10.     check if partition candidate is valid
-11.     get the partition with the lowest cost 
-12.     if there is tie on cost, break tie by having partition with the lowest imbalance
-13.     if there is tie on both cost and imbalance, break tie by lower distance
-*/
-/*
-Potential further optimizations:
-1. Start with sorting the mbbs and eliminate some partition candidates based on order.
-    For instance, bounds of the first 1/4 mbb doesn't need to be added to the 
-    partition_candidates vector. With sorted mbb, we can calculate left_count and 
-    right_count and cost for mbbs before index of partition_candidate. Maybe The 
-    runtime could be optimized to D * ( M LOG M + M ) ~> O( D M LOG M )
-2. To validate a partition, we have 3 checks: both split nodes should meet
-    requirements of max_branch_factor, min_branch_factor, and the entry count 
-    difference between split nodes is bounded. Currently, we have a static lower
-    bound on imbalance of partition. The worst imbalance we allow is 25% - 75%.
-    More analysis and optimizations can be made here to set a more dynamic lower bound.
-3. For selection of partition, we prioritize minimizing downward split, then 
-    minimizing imbalance, then minimizing distance to mean of all mbbs. We only 
-    consider lower prioritized factors when there is tie. An optimization can be
-    made to choose the partition which has the best combinations of all three factors.
-*/
-
-template <class S = strategy>
-  Partition partitionBranchNode(
-            NIRTreeDisk<min_branch_factor, max_branch_factor, strategy> *treeRef,
-            typename std::enable_if<std::is_same<S, LineMinimizeDownsplits>::value, S>::type * = 0) 
-  {
-    Partition defaultPartition;
-    std::vector<Rectangle> all_branch_mbb;
-    for (unsigned i = 0; i < this->cur_offset_; i++) {
-      Branch &b_i = entries.at(i);
-      all_branch_mbb.push_back(b_i.boundingBox);
-    }
-
-    double best_candidate = 0.0;
-    unsigned best_dimension = 0;
-    double min_cost = std::numeric_limits<double>::max();
-    unsigned cut_imbalance = std::numeric_limits<unsigned>::max();
-    double cut_distance = std::numeric_limits<double>::max();
-    
-    // O(D * M^2)
-    for (unsigned d = 0; d < dimensions; d++) {
-      // consider all bound points (LowerLeft and UpperRight)
-      std::vector<double> partition_candidates;
-      double running_total = 0.0;
-      for (unsigned i = 0; i < all_branch_mbb.size(); i++) {
-        partition_candidates.push_back(all_branch_mbb.at(i).lowerLeft[d]);
-        partition_candidates.push_back(all_branch_mbb.at(i).upperRight[d]);
-        running_total += all_branch_mbb.at(i).lowerLeft[d] + all_branch_mbb.at(i).upperRight[d];
-      }
-      // distance to mean pt
-      double mean_d_pt = running_total / (2 * all_branch_mbb.size());
-      
-      // consider each partition candidate
-      for (double partition_candidate : partition_candidates) {
-        // split count 
-        double cost = 0;
-        unsigned left_count = 0;
-        unsigned right_count = 0;
-
-        for (unsigned j = 0; j < all_branch_mbb.size(); j++) {
-          Rectangle &branch_mbb = all_branch_mbb.at(j);
-          bool greater_than_left = branch_mbb.lowerLeft[d] < partition_candidate;
-          bool less_than_right = partition_candidate < branch_mbb.upperRight[d];
-          bool requires_split = greater_than_left and less_than_right;
-          bool should_go_left = branch_mbb.upperRight[d] <= partition_candidate;
-          bool should_go_right = branch_mbb.lowerLeft[d] >= partition_candidate;
-          bool is_zero_area = (branch_mbb.lowerLeft[d] == branch_mbb.upperRight[d]);
-
-          if (requires_split) {
-            left_count++;
-            right_count++;
-            cost++;
-          } else if (is_zero_area and branch_mbb.upperRight[d] == partition_candidate) {
-            // Partition on a zero-area thing, can
-            // pick either side as convenient
-            if (left_count <= right_count) {
-              left_count++;
-            } else {
-              right_count++;
-            }
-          } else if (should_go_left) {
-            left_count++;
-          } else if (should_go_right) {
-            right_count++;
-          } else {
-            assert(false);
-          }
-
-        }
-
-        // imbalance indicates the absolute difference between entry count in two splitted nodes
-        int diff = left_count - right_count;
-        unsigned imbalance = std::abs(diff);
-        // imbalance threshold for validity check
-        const double imbalance_threshold = 0.25 * (left_count + right_count);
-        // distance indicates the positive distance between partition and geo mean
-        double distance = (mean_d_pt - partition_candidate);
-        distance = distance * distance;
-
-        // check if partition is valid
-        // 1. both contains no more than max_branch_factor
-        // 2. both contains no less than min_branch_factor
-        // 3. the imbalance between two nodes is less than 1/4 * total entries
-        if (left_count <= max_branch_factor and left_count >= min_branch_factor and 
-            right_count <= max_branch_factor and right_count >= min_branch_factor and
-            imbalance < imbalance_threshold)
-        {
-          // priority: downsplit > imbalance > mean distance 
-          if (cost < min_cost) {
-            best_candidate = partition_candidate;
-            best_dimension = d;
-            min_cost = cost;
-            cut_imbalance = imbalance;
-            cut_distance = distance;
-          } else if (cost == min_cost and imbalance < cut_imbalance){
-            best_candidate = partition_candidate;
-            best_dimension = d;
-            min_cost = cost;
-            cut_imbalance = imbalance;
-            cut_distance = distance;
-          } else if (cost == min_cost and imbalance == cut_imbalance and distance < cut_distance){
-            best_candidate = partition_candidate;
-            best_dimension = d;
-            min_cost = cost;
-            cut_imbalance = imbalance;
-            cut_distance = distance;
-          }
-
-        }
-      }
-    }
-    if (min_cost == std::numeric_limits<double>::max()) {
-      // [TODO]
-      // no valid split, should consider other split strategy
-      abort();
-    }
-
-    defaultPartition.dimension = best_dimension;
-    defaultPartition.location = best_candidate;
-
-    return defaultPartition;
-  }
-
-/*
-The LineMinimizeDistanceFromMean strategy partitions an overfull Branch Node by looking for
-a line at a dimension that minimizes the distances to geo mean of all branches mbbs.
-This strategy considers LowerLeft and UpperRight of mbbs of all branches as partition
-candidates. To determine if a partition is valid, we consider max_branch_factor,
-min_branch_factor. We go through every candidate to find the valid partition which 
-has the lowest distance to geo mean. 
-*/
-/*
-1. get mbb(minimum bounding box) of all branches at current branch node into a vector
-2. for each dimension: 
-3.    consider both LowerLeft and UpperRight points of all mbbs as partition candidates
-4.    for each partition candidate:
-5.      count number of mbb falls entirely or partly on the left as `left_count`
-6.      count number of mbb falls entirely or partly on the right as `right_count`
-7.      get the distance between partition candidate and geographical mean as `distance`
-8.      check if partition candidate is valid
-9.      get the partition with the lowest value at distance 
-*/
-template <class S = strategy>
-  Partition partitionBranchNode(
-            NIRTreeDisk<min_branch_factor, max_branch_factor, strategy> *treeRef,
-            typename std::enable_if<std::is_same<S, LineMinimizeDistanceFromMean>::value,S>::type * = 0) {
-    Partition defaultPartition;
-
-    std::vector<Rectangle> all_branch_mbb;
-    for (unsigned i = 0; i < this->cur_offset_; i++) {
-      Branch &b_i = entries.at(i);
-      all_branch_mbb.push_back(b_i.boundingBox);
-    }
-
-    double best_candidate = 0.0;
-    unsigned best_dimension = 0;
-    double min_distance = std::numeric_limits<double>::max();
-    
-    // O(D * M^2)
-    for (unsigned d = 0; d < dimensions; d++) {
-      // consider all bound points (LowerLeft and UpperRight)
-      std::vector<double> partition_candidates;
-      double running_total = 0.0;
-      for (unsigned i = 0; i < all_branch_mbb.size(); i++) {
-        partition_candidates.push_back(all_branch_mbb.at(i).lowerLeft[d]);
-        partition_candidates.push_back(all_branch_mbb.at(i).upperRight[d]);
-        running_total += all_branch_mbb.at(i).lowerLeft[d] + all_branch_mbb.at(i).upperRight[d];
-      }
-      // distance to mean pt
-      double mean_d_pt = running_total / (2 * all_branch_mbb.size());
-
-      // consider each partition candidate
-      for (double partition_candidate : partition_candidates) {
-        // split count
-        double cost = 0;
-        unsigned left_count = 0;
-        unsigned right_count = 0;
-
-        for (unsigned j = 0; j < all_branch_mbb.size(); j++) {
-          Rectangle &branch_mbb = all_branch_mbb.at(j);
-          bool greater_than_left = branch_mbb.lowerLeft[d] < partition_candidate;
-          bool less_than_right = partition_candidate < branch_mbb.upperRight[d];
-          bool requires_split = greater_than_left and less_than_right;
-          bool should_go_left = branch_mbb.upperRight[d] <= partition_candidate;
-          bool should_go_right = branch_mbb.lowerLeft[d] >= partition_candidate;
-          bool is_zero_area = (branch_mbb.lowerLeft[d] == branch_mbb.upperRight[d]);
-
-          if (requires_split) {
-            left_count++;
-            right_count++;
-            cost++;
-          } else if (is_zero_area and branch_mbb.upperRight[d] == partition_candidate) {
-            // Partition on a zero-area thing, can
-            // pick either side as convenient
-            if (left_count <= right_count) {
-              left_count++;
-            } else {
-              right_count++;
-            }
-          } else if (should_go_left) {
-            left_count++;
-          } else if (should_go_right) {
-            right_count++;
-          } else {
-            assert(false);
-          }
-        }
-
-        // distance indicates the positive distance between partition and geo mean
-        double distance = (mean_d_pt - partition_candidate);
-        distance = distance * distance;
-
-        // If the split will not overflow our children
-        if (left_count <= max_branch_factor and right_count <= max_branch_factor and
-            left_count >= min_branch_factor and right_count >= min_branch_factor)
-        {
-          // choose partition candidate which has the smallest distance to mean
-          if (distance < min_distance) {
-            best_candidate = partition_candidate;
-            best_dimension = d;
-            min_distance = distance;
-          }
-        }
-      }
-    }
-
-    assert(min_distance < std::numeric_limits<double>::max());
-
-    defaultPartition.dimension = best_dimension;
-    defaultPartition.location = best_candidate;
-
-    return defaultPartition;
-  }
-
-std::pair<bool, Partition> try_cut_geo_mean(std::vector<Rectangle> &all_branch_polys) {
-    Partition defaultPartition;
-    Point mean_point = Point::atOrigin;
-
-    double mass = 0.0;
-    for (auto &branch_bounding_box : all_branch_polys) {
-      mean_point += branch_bounding_box.lowerLeft;
-      mean_point += branch_bounding_box.upperRight;
-      mass += 2.0;
-    }
-
-    mean_point /= mass;
-
-    unsigned best_cost =
-        std::numeric_limits<unsigned>::max();
-
-    // Need to determine left and right count
-
-    for (unsigned d = 0; d < dimensions; d++) {
-      // Is this a valid split?
-      double location = mean_point[d];
-      unsigned cost = 0;
-      unsigned left_count = 0;
-      unsigned right_count = 0;
-      for (auto &branch_bounding_box : all_branch_polys) {
-        bool greater_than_left = branch_bounding_box.lowerLeft[d] <
-                                 location;
-        bool less_than_right = location <
-                               branch_bounding_box.upperRight[d];
-        bool requires_split = greater_than_left and
-                              less_than_right;
-
-        bool should_go_left = branch_bounding_box.upperRight[d] <= location;
-        bool should_go_right = branch_bounding_box.lowerLeft[d] >= location;
-        assert(not(should_go_left and should_go_right));
-
-        if (requires_split) {
-          left_count++;
-          right_count++;
-          cost++;
-        } else if (should_go_left) {
-          left_count++;
-        } else if (should_go_right) {
-          right_count++;
-        } else {
-          assert(false);
-        }
-      }
-
-      if (left_count > 0 and right_count > 0 and
-          left_count <= max_branch_factor and
-          right_count <= max_branch_factor) {
-        if (cost < best_cost) {
-          best_cost = cost;
-          defaultPartition.location = mean_point[d];
-          defaultPartition.dimension = d;
-        }
-      }
-    }
-
-    if (best_cost < std::numeric_limits<unsigned>::max()) {
-      return std::make_pair(true, defaultPartition);
-    }
-    return std::make_pair(false, defaultPartition);
-  }
-
-template <class S = strategy>
-Partition partitionBranchNode(
-          NIRTreeDisk<min_branch_factor, max_branch_factor, strategy> *treeRef,
-          typename std::enable_if<std::is_same<S, ExperimentalStrategy>::value,S>::type * = 0) {
-    Partition defaultPartition;
-
-    tree_node_allocator *allocator = get_node_allocator(treeRef);
-    std::vector<Rectangle> all_branch_polys;
-    for (unsigned i = 0; i < this->cur_offset_; i++) {
-      Branch &b_i = entries.at(i);
-      IsotheticPolygon b_poly = find_polygon(treeRef, b_i);
-      all_branch_polys.push_back(b_poly.boundingBox);
-    }
-
-    auto geo_cut = try_cut_geo_mean(all_branch_polys);
-    if (geo_cut.first) {
-      return geo_cut.second;
-    }
-    // Can we cut along the geometric mean in any dimension
-    // without overflowing our children?
-
-    // If that didn't work, we gotta try something else.
-    for (unsigned d = 0; d < dimensions; d++) {
-      std::sort(all_branch_polys.begin(), all_branch_polys.end(), 
-                [d](Rectangle &poly1, Rectangle &poly2) { return poly1.isUpperRightSmaller(poly2, d); });
-    }
-
-    double best_candidate = 0.0;
-    double min_cost = std::numeric_limits<double>::max();
-    unsigned best_dimension = 0;
-    // D * ( M LOG M + M ) ~> O( D M LOG M )
-    for (unsigned d = 0; d < dimensions; d++) {
-      std::sort(all_branch_polys.begin(), all_branch_polys.end(), 
-                [d](Rectangle &poly1, Rectangle &poly2) { return poly1.isUpperRightSmaller(poly2, d); });
-      for (unsigned i = 0; i < all_branch_polys.size(); i++) {
-        double cost = 0;
-        // starts at 1 cause {i} goes left
-        // Technically we should also walk the bottom bounds to
-        // be sure, even in the non F, C case.
-        unsigned left_count = 0;
-        unsigned right_count = 0;
-        double partition_candidate =
-            all_branch_polys.at(i).upperRight[d];
-        double running_total = 0.0;
-        // Existing metric wanted to avoid recursive splits
-        // Let's try and do the same
-        for (unsigned j = 0; j < all_branch_polys.size(); j++) {
-          Rectangle &poly_ref = all_branch_polys.at(j);
-          running_total += poly_ref.lowerLeft[d] +
-                           poly_ref.upperRight[d];
-
-          bool greater_than_left = poly_ref.lowerLeft[d] <
-                                   partition_candidate;
-          bool less_than_right = partition_candidate <
-                                 poly_ref.upperRight[d];
-          bool requires_split = greater_than_left and
-                                less_than_right;
-
-          bool should_go_left = poly_ref.upperRight[d] <= partition_candidate;
-          bool should_go_right = poly_ref.lowerLeft[d] >= partition_candidate;
-          assert(not(should_go_left and
-                     should_go_right));
-          bool is_zero_area =
-              poly_ref.lowerLeft[d] ==
-              poly_ref.upperRight[d];
-
-          if (requires_split) {
-            //std::cout << "SIMUL: entry requires split." << std::endl;
-            left_count++;
-            right_count++;
-            cost++;
-          } else if (is_zero_area and
-                     poly_ref.upperRight[d] ==
-                         partition_candidate) {
-            assert(false);
-            // Partition on a zero-area thing, can
-            // pick either side as convenient
-            if (left_count <= right_count) {
-              //std::cout << "SIMUL: entry contest, goes left." << std::endl;
-              left_count++;
-            } else {
-              //std::cout << "SIMUL: entry contest, goes right." << std::endl;
-              right_count++;
-            }
-          } else if (should_go_left) {
-            //std::cout << "SIMUL: entry goes left." << std::endl;
-            left_count++;
-          } else if (should_go_right) {
-            //std::cout << "SIMUL: entry goes right." << std::endl;
-            right_count++;
-          } else {
-            assert(false);
-          }
-        }
-
-        // Cost function 2
-        // If the split will not overflow our children
-        if (left_count <= max_branch_factor and right_count <= max_branch_factor and
-            left_count > 0 and right_count > 0) {
-          double mean_d_pt = running_total /
-                             (2 * all_branch_polys.size());
-          // Distance
-          cost = (mean_d_pt - partition_candidate);
-          cost = cost * cost;
-          if (cost < min_cost) {
-            best_candidate = partition_candidate;
-            best_dimension = d;
-            min_cost = cost;
-            //std::cout << "Best Candidate LC: " <<
-            //    left_count << " and RC: " <<
-            //    right_count << std::endl;
-          }
-        }
-      }
-    }
-    // Degenerate case
-    assert(min_cost < std::numeric_limits<double>::max());
-
-    defaultPartition.dimension = best_dimension;
-    defaultPartition.location = best_candidate;
-
-    // Sort per the dimension we need
-    std::sort(entries.begin(), entries.begin() + this->cur_offset_,
-              [this, allocator, best_dimension](Branch &b1, Branch &b2) {
-                Rectangle poly1 = b1.boundingBox;
-                Rectangle poly2 = b2.boundingBox;
-                if (poly1.upperRight[best_dimension] ==
-                    poly2.upperRight[best_dimension]) {
-                  for (unsigned i = 0; i < dimensions; i++) {
-                    if (poly1.upperRight[i] ==
-                        poly2.upperRight[i]) {
-                      continue;
-                    }
-                    return poly1.upperRight[i] <
-                           poly2.upperRight[i];
-                  }
-                }
-                return poly1.upperRight[best_dimension] <
-                       poly2.upperRight[best_dimension];
-              });
-
-    return defaultPartition;
-}
 
 };
 
 
 // root is freed separately, no work to do 
-template <int min_branch_factor, int max_branch_factor, class strategy>
-void LeafNode<min_branch_factor, max_branch_factor, strategy>::deleteSubtrees() {
+template <int min_branch_factor, int max_branch_factor>
+void LeafNode<min_branch_factor, max_branch_factor>::deleteSubtrees() {
   return;
 }
 
-template <int min_branch_factor, int max_branch_factor, class strategy>
-Rectangle LeafNode<min_branch_factor, max_branch_factor, strategy>::boundingBox() {
+template <int min_branch_factor, int max_branch_factor>
+Rectangle LeafNode<min_branch_factor, max_branch_factor>::boundingBox() {
   assert(this->cur_offset_ > 0);
   Point &p = entries.at(0);
   Rectangle bb(p, Point::closest_larger_point(p));
@@ -906,8 +421,8 @@ Rectangle LeafNode<min_branch_factor, max_branch_factor, strategy>::boundingBox(
   return bb;
 }
 
-template <int min_branch_factor, int max_branch_factor, class strategy>
-void LeafNode<min_branch_factor, max_branch_factor, strategy>::removePoint( const Point &point) {
+template <int min_branch_factor, int max_branch_factor>
+void LeafNode<min_branch_factor, max_branch_factor>::removePoint( const Point &point) {
   // Locate the child
   unsigned childIndex = 0;
   while( entries.at(childIndex) != point and childIndex < this->cur_offset_ ){
@@ -919,8 +434,8 @@ void LeafNode<min_branch_factor, max_branch_factor, strategy>::removePoint( cons
   this->removePoint(childIndex);
 }
 
-template <int min_branch_factor, int max_branch_factor, class strategy>
-void LeafNode<min_branch_factor, max_branch_factor, strategy>::removePoint( unsigned index ) {
+template <int min_branch_factor, int max_branch_factor>
+void LeafNode<min_branch_factor, max_branch_factor>::removePoint( unsigned index ) {
   assert(index < this->cur_offset_);
 
   // Replace this index with whatever is in the last position
@@ -964,16 +479,16 @@ void shrink(IsotheticPolygon &polygon, iter begin, iter end, tree_node_allocator
 }
 
 // Always called on root, this = root and this is the only node in tree 
-template <int min_branch_factor, int max_branch_factor, class strategy>
-tree_node_handle LeafNode<min_branch_factor, max_branch_factor, strategy>::chooseNode(
+template <int min_branch_factor, int max_branch_factor>
+tree_node_handle LeafNode<min_branch_factor, max_branch_factor>::chooseNode(
         tree_node_handle selfHandle,
         Point givenPoint) {
   return selfHandle;
 }
 
-template <int min_branch_factor, int max_branch_factor, class strategy>
-tree_node_handle LeafNode<min_branch_factor, max_branch_factor, strategy>::findLeaf(
-        NIRTreeDisk<min_branch_factor, max_branch_factor, strategy> *treeRef,
+template <int min_branch_factor, int max_branch_factor>
+tree_node_handle LeafNode<min_branch_factor, max_branch_factor>::findLeaf(
+        NIRTreeDisk<min_branch_factor, max_branch_factor> *treeRef,
         tree_node_handle selfHandle,
         Point givenPoint) {
   // Check each entry to see if it matches point
@@ -989,8 +504,8 @@ tree_node_handle LeafNode<min_branch_factor, max_branch_factor, strategy>::findL
 // Returns the best dimension and location to partition on a LeafNode 
 //    best partition dimension is the dimension with the highest variance 
 //    best partition location is the average of all points on the best dimension
-template <int min_branch_factor, int max_branch_factor, class strategy>
-Partition LeafNode<min_branch_factor, max_branch_factor, strategy>::partitionLeafNode() {
+template <int min_branch_factor, int max_branch_factor>
+Partition LeafNode<min_branch_factor, max_branch_factor>::partitionLeafNode() {
   Partition defaultPartition;
   double totalMass = 0.0;
   Point variance = Point::atOrigin;
@@ -1023,8 +538,8 @@ Partition LeafNode<min_branch_factor, max_branch_factor, strategy>::partitionLea
   return defaultPartition;
 }
 
-template <int min_branch_factor, int max_branch_factor, class strategy>
-Partition LeafNode<min_branch_factor, max_branch_factor, strategy>::partitionNode() {
+template <int min_branch_factor, int max_branch_factor>
+Partition LeafNode<min_branch_factor, max_branch_factor>::partitionNode() {
   return partitionLeafNode();
 }
 
@@ -1032,9 +547,9 @@ Partition LeafNode<min_branch_factor, max_branch_factor, strategy>::partitionNod
 // The old one is freed in adjust_tree_bottom_half using removeBranch
 // If we downsplit, then we won't call adjustTree for that split so we
 // need to delete the node ourselves.
-template <int min_branch_factor, int max_branch_factor, class strategy>
-SplitResult LeafNode<min_branch_factor, max_branch_factor, strategy>::splitNode(
-              NIRTreeDisk<min_branch_factor, max_branch_factor, strategy> *treeRef,
+template <int min_branch_factor, int max_branch_factor>
+SplitResult LeafNode<min_branch_factor, max_branch_factor>::splitNode(
+              NIRTreeDisk<min_branch_factor, max_branch_factor> *treeRef,
               tree_node_handle current_handle,
               tree_node_handle parent_handle,
               Partition p, 
@@ -1048,12 +563,12 @@ SplitResult LeafNode<min_branch_factor, max_branch_factor, strategy>::splitNode(
   assert(current_level == 0);
 
   // Allocate a leaf node for the new splitted sibling node
-  auto alloc_data = allocator->create_new_tree_node<LeafNode<min_branch_factor, max_branch_factor, strategy>>(
+  auto alloc_data = allocator->create_new_tree_node<LeafNode<min_branch_factor, max_branch_factor>>(
                     NodeHandleType(LEAF_NODE));
   tree_node_handle sibling_handle = alloc_data.second;
   sibling_handle.set_level(current_level);
   auto sibling_node = alloc_data.first; // take pin
-  new (&(*sibling_node)) LeafNode<min_branch_factor, max_branch_factor, strategy>();
+  new (&(*sibling_node)) LeafNode<min_branch_factor, max_branch_factor>();
   assert(sibling_handle.get_type() == LEAF_NODE);
   
   IsotheticPolygon polygon_before_split = find_polygon(treeRef, current_handle, this->boundingBox());
@@ -1132,17 +647,17 @@ SplitResult LeafNode<min_branch_factor, max_branch_factor, strategy>::splitNode(
   return split;
 }
 
-template <int min_branch_factor, int max_branch_factor, class strategy>
-SplitResult LeafNode<min_branch_factor, max_branch_factor, strategy>::splitNode(
-              NIRTreeDisk<min_branch_factor, max_branch_factor, strategy> *treeRef,
+template <int min_branch_factor, int max_branch_factor>
+SplitResult LeafNode<min_branch_factor, max_branch_factor>::splitNode(
+              NIRTreeDisk<min_branch_factor, max_branch_factor> *treeRef,
               tree_node_handle current_handle,
               tree_node_handle parent_handle) {
   SplitResult returnSplit = splitNode(treeRef, current_handle, parent_handle, partitionNode(), false);
   return returnSplit;
 }
 
-template <int min_branch_factor, int max_branch_factor, class strategy>
-void LeafNode<min_branch_factor, max_branch_factor, strategy>::reInsert(std::vector<bool> &hasReinsertedOnLevel) {
+template <int min_branch_factor, int max_branch_factor>
+void LeafNode<min_branch_factor, max_branch_factor>::reInsert(std::vector<bool> &hasReinsertedOnLevel) {
 #if 0
   // Taken from R*
   hasReinsertedOnLevel.at(level_) = true;
@@ -1200,10 +715,10 @@ void LeafNode<min_branch_factor, max_branch_factor, strategy>::reInsert(std::vec
 }
 
 // [UNUSED]
-template <int min_branch_factor, int max_branch_factor, class strategy>
+template <int min_branch_factor, int max_branch_factor>
 IsotheticPolygon get_polygon_path_constraints(
         tree_node_handle start_handle,
-        NIRTreeDisk<min_branch_factor, max_branch_factor, strategy> *treeRef)
+        NIRTreeDisk<min_branch_factor, max_branch_factor> *treeRef)
 {
 #if 0
   tree_node_allocator *allocator = get_node_allocator(treeRef);
@@ -1246,9 +761,9 @@ IsotheticPolygon get_polygon_path_constraints(
   abort();
 }
 
-template <int min_branch_factor, int max_branch_factor, class strategy>
+template <int min_branch_factor, int max_branch_factor>
 void update_polygon(
-        NIRTreeDisk<min_branch_factor, max_branch_factor, strategy> *treeRef,
+        NIRTreeDisk<min_branch_factor, max_branch_factor> *treeRef,
         tree_node_handle node_handle,
         IsotheticPolygon &polygon_to_write)
 {
@@ -1266,8 +781,8 @@ void update_polygon(
 
 
 
-template <int min_branch_factor, int max_branch_factor, class strategy>
-void BranchNode<min_branch_factor, max_branch_factor, strategy>::reInsert(std::vector<bool> &hasReinsertedOnLevel) {
+template <int min_branch_factor, int max_branch_factor>
+void BranchNode<min_branch_factor, max_branch_factor>::reInsert(std::vector<bool> &hasReinsertedOnLevel) {
 #if 0
   // Taken from R*
   hasReinsertedOnLevel.at(level_) = true;
@@ -1408,10 +923,10 @@ std::pair<SplitResult, tree_node_handle> adjust_tree_bottom_half(
 }
 
 // [UNUSED]
-template <int min_branch_factor, int max_branch_factor, class strategy>
+template <int min_branch_factor, int max_branch_factor>
 void fix_up_path_polys(
         tree_node_handle start_handle,
-        NIRTreeDisk<min_branch_factor, max_branch_factor, strategy> *treeRef)
+        NIRTreeDisk<min_branch_factor, max_branch_factor> *treeRef)
 {
 #if 0
   tree_node_handle current_handle = start_handle;
@@ -1455,11 +970,11 @@ void fix_up_path_polys(
   abort();
 }
 
-template <int min_branch_factor, int max_branch_factor, class strategy>
+template <int min_branch_factor, int max_branch_factor>
 void cut_out_branch_region_in_path(
         tree_node_handle start_handle,
         IsotheticPolygon &region_to_cut_out,
-        NIRTreeDisk<min_branch_factor, max_branch_factor, strategy> *treeRef)
+        NIRTreeDisk<min_branch_factor, max_branch_factor> *treeRef)
 {
 #if 0
   tree_node_handle current_handle = start_handle;
@@ -1500,9 +1015,9 @@ void cut_out_branch_region_in_path(
   abort();
 }
 
-template <int min_branch_factor, int max_branch_factor, class strategy>
+template <int min_branch_factor, int max_branch_factor>
 SplitResult adjustTreeSub(
-        NIRTreeDisk<min_branch_factor, max_branch_factor, strategy> *treeRef,
+        NIRTreeDisk<min_branch_factor, max_branch_factor> *treeRef,
         tree_node_handle start_handle, 
         std::stack<tree_node_handle> &parentHandles,
         std::vector<bool> &hasReinsertedOnLevel)
@@ -1580,9 +1095,9 @@ SplitResult adjustTreeSub(
 
 // This always get called on the root node. So if it got called on us,
 // that's because we are the only node in the whole tree.
-template <int min_branch_factor, int max_branch_factor, class strategy>
-tree_node_handle LeafNode<min_branch_factor, max_branch_factor, strategy>::insert(
-        NIRTreeDisk<min_branch_factor, max_branch_factor, strategy> *treeRef,
+template <int min_branch_factor, int max_branch_factor>
+tree_node_handle LeafNode<min_branch_factor, max_branch_factor>::insert(
+        NIRTreeDisk<min_branch_factor, max_branch_factor> *treeRef,
         tree_node_handle selfHandle,
         Point givenPoint,
         std::vector<bool> &hasReinsertedOnLevel)
@@ -1601,9 +1116,9 @@ tree_node_handle LeafNode<min_branch_factor, max_branch_factor, strategy>::inser
   if (finalSplit.leftBranch.child != nullptr and finalSplit.rightBranch.child != nullptr) {
     uint16_t current_root_level = selfHandle.get_level();
     tree_node_allocator *allocator = get_node_allocator(treeRef);
-    auto alloc_data = allocator->create_new_tree_node<BranchNode<min_branch_factor, max_branch_factor, strategy>>(
+    auto alloc_data = allocator->create_new_tree_node<BranchNode<min_branch_factor, max_branch_factor>>(
                       NodeHandleType(BRANCH_NODE));
-    new (&(*alloc_data.first)) BranchNode<min_branch_factor, max_branch_factor, strategy>();
+    new (&(*alloc_data.first)) BranchNode<min_branch_factor, max_branch_factor>();
     auto new_root_handle = alloc_data.second;
     // grow the level for new root
     new_root_handle.set_level(current_root_level + 1);
@@ -1626,7 +1141,7 @@ tree_node_handle LeafNode<min_branch_factor, max_branch_factor, strategy>::inser
   
     // free the Leaf Node and remove the associated polygon from map 
     assert(selfHandle.get_type() == LEAF_NODE);
-    allocator->free(selfHandle, sizeof(LeafNode<min_branch_factor, max_branch_factor, strategy>));
+    allocator->free(selfHandle, sizeof(LeafNode<min_branch_factor, max_branch_factor>));
     remove_polygon(treeRef, selfHandle);
 
     // Fix the reinserted length
@@ -1640,9 +1155,9 @@ tree_node_handle LeafNode<min_branch_factor, max_branch_factor, strategy>::inser
 }
 
 // This is called on a Leaf Node to shorten the height of tree
-template <int min_branch_factor, int max_branch_factor, class strategy>
-void LeafNode<min_branch_factor, max_branch_factor, strategy>::condenseTree(
-        NIRTreeDisk<min_branch_factor, max_branch_factor, strategy> *treeRef,
+template <int min_branch_factor, int max_branch_factor>
+void LeafNode<min_branch_factor, max_branch_factor>::condenseTree(
+        NIRTreeDisk<min_branch_factor, max_branch_factor> *treeRef,
         tree_node_handle selfHandle,
         std::stack<tree_node_handle> &parentHandles) {
   // Quick return as the current Leaf Node is not empty 
@@ -1678,9 +1193,9 @@ void LeafNode<min_branch_factor, max_branch_factor, strategy>::condenseTree(
 }
 
 // Always called on root, this = root
-template <int min_branch_factor, int max_branch_factor, class strategy>
-tree_node_handle LeafNode<min_branch_factor, max_branch_factor, strategy>::remove(
-        NIRTreeDisk<min_branch_factor, max_branch_factor, strategy> *treeRef,
+template <int min_branch_factor, int max_branch_factor>
+tree_node_handle LeafNode<min_branch_factor, max_branch_factor>::remove(
+        NIRTreeDisk<min_branch_factor, max_branch_factor> *treeRef,
         tree_node_handle selfHandle,
         Point givenPoint) 
 {
@@ -1688,8 +1203,8 @@ tree_node_handle LeafNode<min_branch_factor, max_branch_factor, strategy>::remov
   return selfHandle;
 }
 
-template <int min_branch_factor, int max_branch_factor, class strategy>
-unsigned LeafNode<min_branch_factor, max_branch_factor, strategy>::checksum() {
+template <int min_branch_factor, int max_branch_factor>
+unsigned LeafNode<min_branch_factor, max_branch_factor>::checksum() {
   unsigned sum = 0;
 
   for (unsigned i = 0; i < this->cur_offset_; i++) {
@@ -1701,8 +1216,8 @@ unsigned LeafNode<min_branch_factor, max_branch_factor, strategy>::checksum() {
   return sum;
 }
 
-template <int min_branch_factor, int max_branch_factor, class strategy>
-std::vector<Point> LeafNode<min_branch_factor, max_branch_factor, strategy>::bounding_box_validate() {
+template <int min_branch_factor, int max_branch_factor>
+std::vector<Point> LeafNode<min_branch_factor, max_branch_factor>::bounding_box_validate() {
   std::vector<Point> my_points;
   for (unsigned i = 0; i < this->cur_offset_; i++) {
     my_points.push_back(entries.at(i));
@@ -1710,8 +1225,8 @@ std::vector<Point> LeafNode<min_branch_factor, max_branch_factor, strategy>::bou
   return my_points;
 }
 
-template <int min_branch_factor, int max_branch_factor, class strategy>
-bool LeafNode<min_branch_factor, max_branch_factor, strategy>::validate(tree_node_handle expectedParent, unsigned index) {
+template <int min_branch_factor, int max_branch_factor>
+bool LeafNode<min_branch_factor, max_branch_factor>::validate(tree_node_handle expectedParent, unsigned index) {
 #if 0
   if (expectedParent != nullptr and (this->parent != expectedParent ||
                                      this->cur_offset_ > max_branch_factor)) {
@@ -1760,8 +1275,8 @@ bool LeafNode<min_branch_factor, max_branch_factor, strategy>::validate(tree_nod
   abort();
 }
 
-template <int min_branch_factor, int max_branch_factor, class strategy>
-void LeafNode<min_branch_factor, max_branch_factor, strategy>::print(tree_node_handle current_handle,
+template <int min_branch_factor, int max_branch_factor>
+void LeafNode<min_branch_factor, max_branch_factor>::print(tree_node_handle current_handle,
                                                                      tree_node_handle parent_handle,
                                                                      unsigned n) {
   std::string indentation(n * 4, ' ');
@@ -1775,8 +1290,8 @@ void LeafNode<min_branch_factor, max_branch_factor, strategy>::print(tree_node_h
   std::cout << std::endl;
 }
 
-template <int min_branch_factor, int max_branch_factor, class strategy>
-void LeafNode<min_branch_factor, max_branch_factor, strategy>::printTree(tree_node_handle current_handle,
+template <int min_branch_factor, int max_branch_factor>
+void LeafNode<min_branch_factor, max_branch_factor>::printTree(tree_node_handle current_handle,
                                                                          tree_node_handle parent_handle, 
                                                                          unsigned n) {
   // Print this node first
@@ -1784,14 +1299,14 @@ void LeafNode<min_branch_factor, max_branch_factor, strategy>::printTree(tree_no
   std::cout << std::endl;
 }
 
-template <int min_branch_factor, int max_branch_factor, class strategy>
-unsigned LeafNode<min_branch_factor, max_branch_factor, strategy>::height() {
+template <int min_branch_factor, int max_branch_factor>
+unsigned LeafNode<min_branch_factor, max_branch_factor>::height() {
   return 1;
 }
 
-template <int min_branch_factor, int max_branch_factor, class strategy>
-void BranchNode<min_branch_factor, max_branch_factor, strategy>::deleteSubtrees(
-        NIRTreeDisk<min_branch_factor, max_branch_factor, strategy> *treeRef) {
+template <int min_branch_factor, int max_branch_factor>
+void BranchNode<min_branch_factor, max_branch_factor>::deleteSubtrees(
+        NIRTreeDisk<min_branch_factor, max_branch_factor> *treeRef) {
   tree_node_allocator *allocator = get_node_allocator(treeRef);
   for (unsigned i = 0; i < this->cur_offset_; i++) {
     Branch &b = entries.at(i);
@@ -1800,13 +1315,13 @@ void BranchNode<min_branch_factor, max_branch_factor, strategy>::deleteSubtrees(
     if (child_handle.get_type() == LEAF_NODE) {
       allocator->free(
               child_handle,
-              sizeof(LeafNode<min_branch_factor, max_branch_factor, strategy>));
+              sizeof(LeafNode<min_branch_factor, max_branch_factor>));
     } else if (child_handle.get_type() == BRANCH_NODE) {
       auto child = treeRef->get_branch_node(child_handle);
       child->deleteSubtrees(treeRef);
       allocator->free(
               child_handle,
-              sizeof(BranchNode<min_branch_factor, max_branch_factor, strategy>));
+              sizeof(BranchNode<min_branch_factor, max_branch_factor>));
     }
     // remove polygon from map
     remove_polygon(treeRef, child_handle);
@@ -1814,8 +1329,8 @@ void BranchNode<min_branch_factor, max_branch_factor, strategy>::deleteSubtrees(
   }
 }
 
-template <int min_branch_factor, int max_branch_factor, class strategy>
-Rectangle BranchNode<min_branch_factor, max_branch_factor, strategy>::boundingBox() {
+template <int min_branch_factor, int max_branch_factor>
+Rectangle BranchNode<min_branch_factor, max_branch_factor>::boundingBox() {
   assert(cur_offset_ > 0);
   Rectangle boundingBox = entries.at(0).boundingBox;
 
@@ -1829,9 +1344,9 @@ Rectangle BranchNode<min_branch_factor, max_branch_factor, strategy>::boundingBo
 
 // Removes a child logical pointer from a this->parent node, freeing that
 // child's memory and the memory of the associated polygon 
-template <int min_branch_factor, int max_branch_factor, class strategy>
-void BranchNode<min_branch_factor, max_branch_factor, strategy>::removeAndFreeBranch(
-          NIRTreeDisk<min_branch_factor, max_branch_factor, strategy> *treeRef,
+template <int min_branch_factor, int max_branch_factor>
+void BranchNode<min_branch_factor, max_branch_factor>::removeAndFreeBranch(
+          NIRTreeDisk<min_branch_factor, max_branch_factor> *treeRef,
           const tree_node_handle entry)
 {
   // Locate the child
@@ -1846,9 +1361,9 @@ void BranchNode<min_branch_factor, max_branch_factor, strategy>::removeAndFreeBr
   tree_node_allocator *allocator = get_node_allocator(treeRef);
   Branch &b = entries.at(childIndex);
   if (b.child.get_type() == LEAF_NODE) {
-    allocator->free(b.child, sizeof(LeafNode<min_branch_factor, max_branch_factor, strategy>));
+    allocator->free(b.child, sizeof(LeafNode<min_branch_factor, max_branch_factor>));
   } else if (b.child.get_type() == BRANCH_NODE) {
-    allocator->free(b.child, sizeof(BranchNode<min_branch_factor, max_branch_factor, strategy>));
+    allocator->free(b.child, sizeof(BranchNode<min_branch_factor, max_branch_factor>));
   }
 
   // remove the polygon from map 
@@ -1858,8 +1373,8 @@ void BranchNode<min_branch_factor, max_branch_factor, strategy>::removeAndFreeBr
   this->removeBranch(childIndex);
 }
 
-template <int min_branch_factor, int max_branch_factor, class strategy>
-void BranchNode<min_branch_factor, max_branch_factor, strategy>::removeBranch(unsigned index)
+template <int min_branch_factor, int max_branch_factor>
+void BranchNode<min_branch_factor, max_branch_factor>::removeBranch(unsigned index)
 {
   assert(index < this->cur_offset_);
   
@@ -1870,8 +1385,8 @@ void BranchNode<min_branch_factor, max_branch_factor, strategy>::removeBranch(un
   this->cur_offset_--;
 }
 
-template <int min_branch_factor, int max_branch_factor, class strategy>
-void BranchNode<min_branch_factor, max_branch_factor, strategy>::updateBranch(const Branch &entry) {
+template <int min_branch_factor, int max_branch_factor>
+void BranchNode<min_branch_factor, max_branch_factor>::updateBranch(const Branch &entry) {
   // Locate the child
   unsigned childIndex = 0;
   tree_node_handle entry_handle = entry.child;
@@ -1885,8 +1400,8 @@ void BranchNode<min_branch_factor, max_branch_factor, strategy>::updateBranch(co
 };
 
 // [UNUSED]
-template <int min_branch_factor, int max_branch_factor, class strategy, typename functor>
-void is_vertical_stripe(NIRTreeDisk<min_branch_factor, max_branch_factor, strategy> *treeRef, tree_node_handle root, functor &f) {
+template <int min_branch_factor, int max_branch_factor, typename functor>
+void is_vertical_stripe(NIRTreeDisk<min_branch_factor, max_branch_factor> *treeRef, tree_node_handle root, functor &f) {
   std::stack<tree_node_handle> context;
   context.push(root);
   tree_node_handle currentContext;
@@ -1907,8 +1422,8 @@ void is_vertical_stripe(NIRTreeDisk<min_branch_factor, max_branch_factor, strate
 }
 
 
-template <int min_branch_factor, int max_branch_factor, class strategy, typename functor>
-void treeWalker(NIRTreeDisk<min_branch_factor, max_branch_factor, strategy> *treeRef, tree_node_handle root, functor &f) {
+template <int min_branch_factor, int max_branch_factor, typename functor>
+void treeWalker(NIRTreeDisk<min_branch_factor, max_branch_factor> *treeRef, tree_node_handle root, functor &f) {
   std::stack<tree_node_handle> context;
   context.push(root);
   tree_node_handle currentContext;
@@ -1940,11 +1455,11 @@ void treeWalker(NIRTreeDisk<min_branch_factor, max_branch_factor, strategy> *tre
 //    rectangle_search_branch_node()
 // not used:
 //    parent_handle_point_search 
-template <int min_branch_factor, int max_branch_factor, class strategy>
-void point_search_leaf_node(LeafNode<min_branch_factor, max_branch_factor, strategy> &node,
+template <int min_branch_factor, int max_branch_factor>
+void point_search_leaf_node(LeafNode<min_branch_factor, max_branch_factor> &node,
                             Point &requestedPoint,
                             std::vector<Point> &accumulator,
-                            NIRTreeDisk<min_branch_factor, max_branch_factor, strategy> *treeRef)
+                            NIRTreeDisk<min_branch_factor, max_branch_factor> *treeRef)
 {
   unsigned intersection_count = 0;
 
@@ -1960,11 +1475,11 @@ void point_search_leaf_node(LeafNode<min_branch_factor, max_branch_factor, strat
   treeRef->stats.recordIntersectionCount(intersection_count);
 }
 
-template <int min_branch_factor, int max_branch_factor, class strategy>
-void point_search_branch_node(BranchNode<min_branch_factor, max_branch_factor, strategy> &node,
+template <int min_branch_factor, int max_branch_factor>
+void point_search_branch_node(BranchNode<min_branch_factor, max_branch_factor> &node,
                               Point &requestedPoint,
                               std::stack<tree_node_handle> &context,
-                              NIRTreeDisk<min_branch_factor, max_branch_factor, strategy> *treeRef)
+                              NIRTreeDisk<min_branch_factor, max_branch_factor> *treeRef)
 {
   unsigned matching_branch_counter = 0;
   unsigned intersection_count = 0;
@@ -1998,9 +1513,9 @@ void point_search_branch_node(BranchNode<min_branch_factor, max_branch_factor, s
 }
 
 
-template <int min_branch_factor, int max_branch_factor, class strategy>
+template <int min_branch_factor, int max_branch_factor>
 std::vector<Point> point_search(tree_node_handle start_point, Point &requestedPoint,
-        NIRTreeDisk<min_branch_factor, max_branch_factor, strategy> *treeRef) {
+        NIRTreeDisk<min_branch_factor, max_branch_factor> *treeRef) {
   std::vector<Point> accumulator;
   std::stack<tree_node_handle> context;
   context.push(start_point);
@@ -2031,11 +1546,11 @@ std::vector<Point> point_search(tree_node_handle start_point, Point &requestedPo
   return accumulator;
 }
 
-template <int min_branch_factor, int max_branch_factor, class strategy>
+template <int min_branch_factor, int max_branch_factor>
 tree_node_handle parent_handle_point_search(
         tree_node_handle start_point,
         Point &requestedPoint,
-        NIRTreeDisk<min_branch_factor, max_branch_factor, strategy> *treeRef,
+        NIRTreeDisk<min_branch_factor, max_branch_factor> *treeRef,
         tree_node_handle child_to_stop_at) {
 #if 0
   std::stack<tree_node_handle> context;
@@ -2067,11 +1582,11 @@ tree_node_handle parent_handle_point_search(
   abort();
 }
 
-template <int min_branch_factor, int max_branch_factor, class strategy>
-void rectangle_search_leaf_node(LeafNode<min_branch_factor, max_branch_factor, strategy> &node,
+template <int min_branch_factor, int max_branch_factor>
+void rectangle_search_leaf_node(LeafNode<min_branch_factor, max_branch_factor> &node,
                                 Rectangle &requestedRectangle,
                                 std::vector<Point> &accumulator,
-                                NIRTreeDisk<min_branch_factor, max_branch_factor, strategy> *treeRef)
+                                NIRTreeDisk<min_branch_factor, max_branch_factor> *treeRef)
 {
   unsigned intersection_count = 0;
 
@@ -2086,11 +1601,11 @@ void rectangle_search_leaf_node(LeafNode<min_branch_factor, max_branch_factor, s
   treeRef->stats.recordIntersectionCount(intersection_count);
 }
 
-template <int min_branch_factor, int max_branch_factor, class strategy>
-void rectangle_search_branch_node(BranchNode<min_branch_factor, max_branch_factor, strategy> &node,
+template <int min_branch_factor, int max_branch_factor>
+void rectangle_search_branch_node(BranchNode<min_branch_factor, max_branch_factor> &node,
                                   Rectangle &requestedRectangle,
                                   std::stack<tree_node_handle> &context,
-                                  NIRTreeDisk<min_branch_factor, max_branch_factor, strategy> *treeRef)
+                                  NIRTreeDisk<min_branch_factor, max_branch_factor> *treeRef)
 {
   unsigned intersection_count = 0;
 
@@ -2118,11 +1633,11 @@ void rectangle_search_branch_node(BranchNode<min_branch_factor, max_branch_facto
   treeRef->stats.recordIntersectionCount(intersection_count);
 }
 
-template <int min_branch_factor, int max_branch_factor, class strategy>
+template <int min_branch_factor, int max_branch_factor>
 std::vector<Point> rectangle_search(
         tree_node_handle start_point,
         Rectangle &requestedRectangle,
-        NIRTreeDisk<min_branch_factor, max_branch_factor, strategy> *treeRef,
+        NIRTreeDisk<min_branch_factor, max_branch_factor> *treeRef,
         bool should_track_search = true)
 {
   std::vector<Point> accumulator;
@@ -2167,10 +1682,10 @@ std::vector<Point> rectangle_search(
 // This top-to-bottom sweep is only for adjusting bounding boxes to contain the point and
 // choosing a particular leaf. It also push all of LeafNode's ancestors to stack of parenHandles
 // from root to parent with parent on top.
-template <int min_branch_factor, int max_branch_factor, class strategy>
+template <int min_branch_factor, int max_branch_factor>
 tree_node_handle
-BranchNode<min_branch_factor, max_branch_factor, strategy>::chooseNodePoint(
-          NIRTreeDisk<min_branch_factor, max_branch_factor, strategy> *treeRef,
+BranchNode<min_branch_factor, max_branch_factor>::chooseNodePoint(
+          NIRTreeDisk<min_branch_factor, max_branch_factor> *treeRef,
           tree_node_handle selfHandle,
           std::stack<tree_node_handle> &parentHandles,
           Point &point) {
@@ -2277,10 +1792,10 @@ BranchNode<min_branch_factor, max_branch_factor, strategy>::chooseNodePoint(
 // It also push all of LeafNode's ancestors to stack of parenHandles from root to parent 
 // with parent on top.
 // [REINSERTION]
-template <int min_branch_factor, int max_branch_factor, class strategy>
+template <int min_branch_factor, int max_branch_factor>
 tree_node_handle
-BranchNode<min_branch_factor, max_branch_factor, strategy>::chooseNodeBranch(
-          NIRTreeDisk<min_branch_factor, max_branch_factor, strategy> *treeRef,
+BranchNode<min_branch_factor, max_branch_factor>::chooseNodeBranch(
+          NIRTreeDisk<min_branch_factor, max_branch_factor> *treeRef,
           tree_node_handle selfHandle,
           std::stack<tree_node_handle> &parentHandles,
           BranchAtLevel &branchLevel) 
@@ -2435,9 +1950,9 @@ BranchNode<min_branch_factor, max_branch_factor, strategy>::chooseNodeBranch(
 // Find which Leaf Node contains the Point or nullptr if none 
 // It also push all of LeafNode's ancestors to stack of parenHandles
 // from root to parent with parent on top.
-template <int min_branch_factor, int max_branch_factor, class strategy>
-tree_node_handle BranchNode<min_branch_factor, max_branch_factor, strategy>::findLeaf(
-     NIRTreeDisk<min_branch_factor, max_branch_factor, strategy> *treeRef,
+template <int min_branch_factor, int max_branch_factor>
+tree_node_handle BranchNode<min_branch_factor, max_branch_factor>::findLeaf(
+     NIRTreeDisk<min_branch_factor, max_branch_factor> *treeRef,
      tree_node_handle selfHandle,
      std::stack<tree_node_handle> &parentHandles,
      Point givenPoint) {
@@ -2494,16 +2009,494 @@ tree_node_handle BranchNode<min_branch_factor, max_branch_factor, strategy>::fin
 
   return tree_node_handle(nullptr);
 }
+/*
+LineMinimizeDownsplits strategy partitions an overfull Branch Node by looking 
+for a line at a dimension that minimizes downsplit. It also tries to minimize
+imbalance between split nodes as well as the distance from the geometric mean.
+The strategy considers LowerLeft and UpperRight points of mbbs of all branches
+at the current Branch Node as partition candidates. To determine if a partition
+is valid, we consider max_branch_factor, min_branch_factor and imbalance_threshold.
+We go through every candidate to find a valid partition which results in the least
+number of downsplits.
+*/
+/*
+Partition strategy of branch node which looks for a partition that minimizes downsplits:
+1. get mbb(minimum bounding box) of all branches at current branch node in a vector
+2. for each dimension: 
+3.    consider both LowerLeft and UpperRight points of all mbbs as partition candidates
+4.    for each partition candidate:
+5.      count number of mbbs that falls entirely or partly on the left as `left_count`
+6.      count number of mbbs that falls entirely or partly on the right as `right_count`
+7.      count number of mbbs that needs to be split as `cost`
+8.      get `imbalance` as |left_count - right_count|
+9.      get the distance between partition candidate and geographical mean as `distance`
+10.     check if partition candidate is valid
+11.     get the partition with the lowest cost 
+12.     if there is tie on cost, break tie by having partition with the lowest imbalance
+13.     if there is tie on both cost and imbalance, break tie by lower distance
+*/
+/*
+Potential further optimizations:
+1. Start with sorting the mbbs and eliminate some partition candidates based on order.
+    For instance, bounds of the first 1/4 mbb doesn't need to be added to the 
+    partition_candidates vector. With sorted mbb, we can calculate left_count and 
+    right_count and cost for mbbs before index of partition_candidate. Maybe The 
+    runtime could be optimized to D * ( M LOG M + M ) ~> O( D M LOG M )
+2. To validate a partition, we have 3 checks: both split nodes should meet
+    requirements of max_branch_factor, min_branch_factor, and the entry count 
+    difference between split nodes is bounded. Currently, we have a static lower
+    bound on imbalance of partition. The worst imbalance we allow is 25% - 75%.
+    More analysis and optimizations can be made here to set a more dynamic lower bound.
+3. For selection of partition, we prioritize minimizing downward split, then 
+    minimizing imbalance, then minimizing distance to mean of all mbbs. We only 
+    consider lower prioritized factors when there is tie. An optimization can be
+    made to choose the partition which has the best combinations of all three factors.
+*/
+template <int min_branch_factor, int max_branch_factor>
+Partition BranchNode<min_branch_factor, max_branch_factor>::partitionLineMinimizeDownsplits(
+        NIRTreeDisk<min_branch_factor, max_branch_factor> *treeRef){
+  Partition defaultPartition;
+  std::vector<Rectangle> all_branch_mbb;
+  for (unsigned i = 0; i < this->cur_offset_; i++) {
+    Branch &b_i = entries.at(i);
+    all_branch_mbb.push_back(b_i.boundingBox);
+  }
 
-template <int min_branch_factor, int max_branch_factor, class strategy>
-Partition BranchNode<min_branch_factor, max_branch_factor, strategy>::partitionNode(NIRTreeDisk<min_branch_factor, max_branch_factor, strategy> *treeRef) {
-  return partitionBranchNode(treeRef);
+  double best_candidate = 0.0;
+  unsigned best_dimension = 0;
+  double min_cost = std::numeric_limits<double>::max();
+  unsigned cut_imbalance = std::numeric_limits<unsigned>::max();
+  double cut_distance = std::numeric_limits<double>::max();
+  
+  // O(D * M^2)
+  for (unsigned d = 0; d < dimensions; d++) {
+    // consider all bound points (LowerLeft and UpperRight)
+    std::vector<double> partition_candidates;
+    double running_total = 0.0;
+    for (unsigned i = 0; i < all_branch_mbb.size(); i++) {
+      partition_candidates.push_back(all_branch_mbb.at(i).lowerLeft[d]);
+      partition_candidates.push_back(all_branch_mbb.at(i).upperRight[d]);
+      running_total += all_branch_mbb.at(i).lowerLeft[d] + all_branch_mbb.at(i).upperRight[d];
+    }
+    // distance to mean pt
+    double mean_d_pt = running_total / (2 * all_branch_mbb.size());
+    
+    // consider each partition candidate
+    for (double partition_candidate : partition_candidates) {
+      // split count 
+      double cost = 0;
+      unsigned left_count = 0;
+      unsigned right_count = 0;
+
+      for (unsigned j = 0; j < all_branch_mbb.size(); j++) {
+        Rectangle &branch_mbb = all_branch_mbb.at(j);
+        bool greater_than_left = branch_mbb.lowerLeft[d] < partition_candidate;
+        bool less_than_right = partition_candidate < branch_mbb.upperRight[d];
+        bool requires_split = greater_than_left and less_than_right;
+        bool should_go_left = branch_mbb.upperRight[d] <= partition_candidate;
+        bool should_go_right = branch_mbb.lowerLeft[d] >= partition_candidate;
+        bool is_zero_area = (branch_mbb.lowerLeft[d] == branch_mbb.upperRight[d]);
+
+        if (requires_split) {
+          left_count++;
+          right_count++;
+          cost++;
+        } else if (is_zero_area and branch_mbb.upperRight[d] == partition_candidate) {
+          // Partition on a zero-area thing, can
+          // pick either side as convenient
+          if (left_count <= right_count) {
+            left_count++;
+          } else {
+            right_count++;
+          }
+        } else if (should_go_left) {
+          left_count++;
+        } else if (should_go_right) {
+          right_count++;
+        } else {
+          assert(false);
+        }
+
+      }
+
+      // imbalance indicates the absolute difference between entry count in two splitted nodes
+      int diff = left_count - right_count;
+      unsigned imbalance = std::abs(diff);
+      // imbalance threshold for validity check
+      const double imbalance_threshold = 0.25 * (left_count + right_count);
+      // distance indicates the positive distance between partition and geo mean
+      double distance = (mean_d_pt - partition_candidate);
+      distance = distance * distance;
+
+      // check if partition is valid
+      // 1. both contains no more than max_branch_factor
+      // 2. both contains no less than min_branch_factor
+      // 3. the imbalance between two nodes is less than 1/4 * total entries
+      if (left_count <= max_branch_factor and left_count >= min_branch_factor and 
+          right_count <= max_branch_factor and right_count >= min_branch_factor and
+          imbalance < imbalance_threshold)
+      {
+        // priority: downsplit > imbalance > mean distance 
+        if (cost < min_cost) {
+          best_candidate = partition_candidate;
+          best_dimension = d;
+          min_cost = cost;
+          cut_imbalance = imbalance;
+          cut_distance = distance;
+        } else if (cost == min_cost and imbalance < cut_imbalance){
+          best_candidate = partition_candidate;
+          best_dimension = d;
+          min_cost = cost;
+          cut_imbalance = imbalance;
+          cut_distance = distance;
+        } else if (cost == min_cost and imbalance == cut_imbalance and distance < cut_distance){
+          best_candidate = partition_candidate;
+          best_dimension = d;
+          min_cost = cost;
+          cut_imbalance = imbalance;
+          cut_distance = distance;
+        }
+
+      }
+    }
+  }
+  if (min_cost == std::numeric_limits<double>::max()) {
+    // [TODO]
+    // no valid split, should consider other split strategy
+    abort();
+  }
+
+  defaultPartition.dimension = best_dimension;
+  defaultPartition.location = best_candidate;
+
+  return defaultPartition;
+
+}
+
+/*
+The LineMinimizeDistanceFromMean strategy partitions an overfull Branch Node by looking for
+a line at a dimension that minimizes the distances to geo mean of all branches mbbs.
+This strategy considers LowerLeft and UpperRight of mbbs of all branches as partition
+candidates. To determine if a partition is valid, we consider max_branch_factor,
+min_branch_factor. We go through every candidate to find the valid partition which 
+has the lowest distance to geo mean. 
+*/
+/*
+1. get mbb(minimum bounding box) of all branches at current branch node into a vector
+2. for each dimension: 
+3.    consider both LowerLeft and UpperRight points of all mbbs as partition candidates
+4.    for each partition candidate:
+5.      count number of mbb falls entirely or partly on the left as `left_count`
+6.      count number of mbb falls entirely or partly on the right as `right_count`
+7.      get the distance between partition candidate and geographical mean as `distance`
+8.      check if partition candidate is valid
+9.      get the partition with the lowest value at distance 
+*/
+template <int min_branch_factor, int max_branch_factor>
+Partition BranchNode<min_branch_factor, max_branch_factor>::partitionLineMinimizeDistanceFromMean(
+        NIRTreeDisk<min_branch_factor, max_branch_factor> *treeRef){
+  Partition defaultPartition;
+
+  std::vector<Rectangle> all_branch_mbb;
+  for (unsigned i = 0; i < this->cur_offset_; i++) {
+    Branch &b_i = entries.at(i);
+    all_branch_mbb.push_back(b_i.boundingBox);
+  }
+
+  double best_candidate = 0.0;
+  unsigned best_dimension = 0;
+  double min_distance = std::numeric_limits<double>::max();
+  
+  // O(D * M^2)
+  for (unsigned d = 0; d < dimensions; d++) {
+    // consider all bound points (LowerLeft and UpperRight)
+    std::vector<double> partition_candidates;
+    double running_total = 0.0;
+    for (unsigned i = 0; i < all_branch_mbb.size(); i++) {
+      partition_candidates.push_back(all_branch_mbb.at(i).lowerLeft[d]);
+      partition_candidates.push_back(all_branch_mbb.at(i).upperRight[d]);
+      running_total += all_branch_mbb.at(i).lowerLeft[d] + all_branch_mbb.at(i).upperRight[d];
+    }
+    // distance to mean pt
+    double mean_d_pt = running_total / (2 * all_branch_mbb.size());
+
+    // consider each partition candidate
+    for (double partition_candidate : partition_candidates) {
+      // split count
+      double cost = 0;
+      unsigned left_count = 0;
+      unsigned right_count = 0;
+
+      for (unsigned j = 0; j < all_branch_mbb.size(); j++) {
+        Rectangle &branch_mbb = all_branch_mbb.at(j);
+        bool greater_than_left = branch_mbb.lowerLeft[d] < partition_candidate;
+        bool less_than_right = partition_candidate < branch_mbb.upperRight[d];
+        bool requires_split = greater_than_left and less_than_right;
+        bool should_go_left = branch_mbb.upperRight[d] <= partition_candidate;
+        bool should_go_right = branch_mbb.lowerLeft[d] >= partition_candidate;
+        bool is_zero_area = (branch_mbb.lowerLeft[d] == branch_mbb.upperRight[d]);
+
+        if (requires_split) {
+          left_count++;
+          right_count++;
+          cost++;
+        } else if (is_zero_area and branch_mbb.upperRight[d] == partition_candidate) {
+          // Partition on a zero-area thing, can
+          // pick either side as convenient
+          if (left_count <= right_count) {
+            left_count++;
+          } else {
+            right_count++;
+          }
+        } else if (should_go_left) {
+          left_count++;
+        } else if (should_go_right) {
+          right_count++;
+        } else {
+          assert(false);
+        }
+      }
+
+      // distance indicates the positive distance between partition and geo mean
+      double distance = (mean_d_pt - partition_candidate);
+      distance = distance * distance;
+
+      // If the split will not overflow our children
+      if (left_count <= max_branch_factor and right_count <= max_branch_factor and
+          left_count >= min_branch_factor and right_count >= min_branch_factor)
+      {
+        // choose partition candidate which has the smallest distance to mean
+        if (distance < min_distance) {
+          best_candidate = partition_candidate;
+          best_dimension = d;
+          min_distance = distance;
+        }
+      }
+    }
+  }
+
+  assert(min_distance < std::numeric_limits<double>::max());
+
+  defaultPartition.dimension = best_dimension;
+  defaultPartition.location = best_candidate;
+
+  return defaultPartition;
+
+}
+
+template <int min_branch_factor, int max_branch_factor>
+std::pair<bool, Partition> try_cut_geo_mean(std::vector<Rectangle> &all_branch_polys) {
+    Partition defaultPartition;
+    Point mean_point = Point::atOrigin;
+
+    double mass = 0.0;
+    for (auto &branch_bounding_box : all_branch_polys) {
+      mean_point += branch_bounding_box.lowerLeft;
+      mean_point += branch_bounding_box.upperRight;
+      mass += 2.0;
+    }
+
+    mean_point /= mass;
+
+    unsigned best_cost =
+        std::numeric_limits<unsigned>::max();
+
+    // Need to determine left and right count
+
+    for (unsigned d = 0; d < dimensions; d++) {
+      // Is this a valid split?
+      double location = mean_point[d];
+      unsigned cost = 0;
+      unsigned left_count = 0;
+      unsigned right_count = 0;
+      for (auto &branch_bounding_box : all_branch_polys) {
+        bool greater_than_left = branch_bounding_box.lowerLeft[d] <
+                                 location;
+        bool less_than_right = location <
+                               branch_bounding_box.upperRight[d];
+        bool requires_split = greater_than_left and
+                              less_than_right;
+
+        bool should_go_left = branch_bounding_box.upperRight[d] <= location;
+        bool should_go_right = branch_bounding_box.lowerLeft[d] >= location;
+        assert(not(should_go_left and should_go_right));
+
+        if (requires_split) {
+          left_count++;
+          right_count++;
+          cost++;
+        } else if (should_go_left) {
+          left_count++;
+        } else if (should_go_right) {
+          right_count++;
+        } else {
+          assert(false);
+        }
+      }
+
+      if (left_count > 0 and right_count > 0 and
+          left_count <= max_branch_factor and
+          right_count <= max_branch_factor) {
+        if (cost < best_cost) {
+          best_cost = cost;
+          defaultPartition.location = mean_point[d];
+          defaultPartition.dimension = d;
+        }
+      }
+    }
+
+    if (best_cost < std::numeric_limits<unsigned>::max()) {
+      return std::make_pair(true, defaultPartition);
+    }
+    return std::make_pair(false, defaultPartition);
+  }
+
+template <int min_branch_factor, int max_branch_factor>
+Partition BranchNode<min_branch_factor, max_branch_factor>::partitionExperimentalStrategy(
+        NIRTreeDisk<min_branch_factor, max_branch_factor> *treeRef){
+ Partition defaultPartition;
+
+  std::vector<Rectangle> all_branch_polys;
+  for (unsigned i = 0; i < this->cur_offset_; i++) {
+    Branch &b_i = entries.at(i);
+    IsotheticPolygon b_poly = find_polygon(treeRef, b_i);
+    all_branch_polys.push_back(b_poly.boundingBox);
+  }
+
+  auto geo_cut = try_cut_geo_mean<min_branch_factor, max_branch_factor>(all_branch_polys);
+  if (geo_cut.first) {
+    return geo_cut.second;
+  }
+  // Can we cut along the geometric mean in any dimension
+  // without overflowing our children?
+
+  // If that didn't work, we gotta try something else.
+  for (unsigned d = 0; d < dimensions; d++) {
+    std::sort(all_branch_polys.begin(), all_branch_polys.end(), 
+              [d](Rectangle &poly1, Rectangle &poly2) { return poly1.isUpperRightSmaller(poly2, d); });
+  }
+
+  double best_candidate = 0.0;
+  double min_cost = std::numeric_limits<double>::max();
+  unsigned best_dimension = 0;
+  // D * ( M LOG M + M ) ~> O( D M LOG M )
+  for (unsigned d = 0; d < dimensions; d++) {
+    std::sort(all_branch_polys.begin(), all_branch_polys.end(), 
+              [d](Rectangle &poly1, Rectangle &poly2) { return poly1.isUpperRightSmaller(poly2, d); });
+    for (unsigned i = 0; i < all_branch_polys.size(); i++) {
+      double cost = 0;
+      // starts at 1 cause {i} goes left
+      // Technically we should also walk the bottom bounds to
+      // be sure, even in the non F, C case.
+      unsigned left_count = 0;
+      unsigned right_count = 0;
+      double partition_candidate =
+          all_branch_polys.at(i).upperRight[d];
+      double running_total = 0.0;
+      // Existing metric wanted to avoid recursive splits
+      // Let's try and do the same
+      for (unsigned j = 0; j < all_branch_polys.size(); j++) {
+        Rectangle &poly_ref = all_branch_polys.at(j);
+        running_total += poly_ref.lowerLeft[d] +
+                          poly_ref.upperRight[d];
+
+        bool greater_than_left = poly_ref.lowerLeft[d] <
+                                  partition_candidate;
+        bool less_than_right = partition_candidate <
+                                poly_ref.upperRight[d];
+        bool requires_split = greater_than_left and
+                              less_than_right;
+
+        bool should_go_left = poly_ref.upperRight[d] <= partition_candidate;
+        bool should_go_right = poly_ref.lowerLeft[d] >= partition_candidate;
+        assert(not(should_go_left and
+                    should_go_right));
+        bool is_zero_area =
+            poly_ref.lowerLeft[d] ==
+            poly_ref.upperRight[d];
+
+        if (requires_split) {
+          //std::cout << "SIMUL: entry requires split." << std::endl;
+          left_count++;
+          right_count++;
+          cost++;
+        } else if (is_zero_area and
+                    poly_ref.upperRight[d] ==
+                        partition_candidate) {
+          assert(false);
+          // Partition on a zero-area thing, can
+          // pick either side as convenient
+          if (left_count <= right_count) {
+            //std::cout << "SIMUL: entry contest, goes left." << std::endl;
+            left_count++;
+          } else {
+            //std::cout << "SIMUL: entry contest, goes right." << std::endl;
+            right_count++;
+          }
+        } else if (should_go_left) {
+          //std::cout << "SIMUL: entry goes left." << std::endl;
+          left_count++;
+        } else if (should_go_right) {
+          //std::cout << "SIMUL: entry goes right." << std::endl;
+          right_count++;
+        } else {
+          assert(false);
+        }
+      }
+
+      // Cost function 2
+      // If the split will not overflow our children
+      if (left_count <= max_branch_factor and right_count <= max_branch_factor and
+          left_count > 0 and right_count > 0) {
+        double mean_d_pt = running_total /
+                            (2 * all_branch_polys.size());
+        // Distance
+        cost = (mean_d_pt - partition_candidate);
+        cost = cost * cost;
+        if (cost < min_cost) {
+          best_candidate = partition_candidate;
+          best_dimension = d;
+          min_cost = cost;
+          //std::cout << "Best Candidate LC: " <<
+          //    left_count << " and RC: " <<
+          //    right_count << std::endl;
+        }
+      }
+    }
+  }
+  // Degenerate case
+  assert(min_cost < std::numeric_limits<double>::max());
+
+  defaultPartition.dimension = best_dimension;
+  defaultPartition.location = best_candidate;
+
+  return defaultPartition;
+
 }
 
 
-template <int min_branch_factor, int max_branch_factor, class strategy>
-void BranchNode<min_branch_factor, max_branch_factor, strategy>::make_disjoint_from_children(
-          NIRTreeDisk<min_branch_factor, max_branch_factor, strategy> *treeRef,
+template <int min_branch_factor, int max_branch_factor>
+Partition BranchNode<min_branch_factor, max_branch_factor>::partitionNode(NIRTreeDisk<min_branch_factor, max_branch_factor> *treeRef) {
+  switch (treeRef->strategy) {
+    case LINEMINIMIZEDOWNSPLITS:
+      return partitionLineMinimizeDownsplits(treeRef);
+      break;
+    case LINEMINIMIZEDISTANCEFROMMEAN:
+      return partitionLineMinimizeDistanceFromMean(treeRef);
+      break;
+    case EXPERIMENTALSTRATEGY:
+      return partitionExperimentalStrategy(treeRef);
+      break;
+    default:
+      return partitionLineMinimizeDownsplits(treeRef);
+      break;
+  }
+}
+
+
+template <int min_branch_factor, int max_branch_factor>
+void BranchNode<min_branch_factor, max_branch_factor>::make_disjoint_from_children(
+          NIRTreeDisk<min_branch_factor, max_branch_factor> *treeRef,
           tree_node_handle handle_to_skip,
           IsotheticPolygon &polygon) {
   assert(polygon.basicRectangles.size() > 0);
@@ -2529,9 +2522,9 @@ void BranchNode<min_branch_factor, max_branch_factor, strategy>::make_disjoint_f
 // We create one new node as sibling_node and reuse the current node
 // current node is treated as left_node which is the left of partition and 
 // sibling node is treated as right_node which is the right of partition
-template <int min_branch_factor, int max_branch_factor, class strategy>
-SplitResult BranchNode<min_branch_factor, max_branch_factor, strategy>::splitNode(
-          NIRTreeDisk<min_branch_factor, max_branch_factor, strategy> *treeRef,
+template <int min_branch_factor, int max_branch_factor>
+SplitResult BranchNode<min_branch_factor, max_branch_factor>::splitNode(
+          NIRTreeDisk<min_branch_factor, max_branch_factor> *treeRef,
           tree_node_handle current_handle,
           tree_node_handle parent_handle,
           Partition p, 
@@ -2545,12 +2538,12 @@ SplitResult BranchNode<min_branch_factor, max_branch_factor, strategy>::splitNod
   assert(current_level > 0);
   
   // Allocate a branch node for new sibling node
-  auto alloc_data = allocator->create_new_tree_node<BranchNode<min_branch_factor, max_branch_factor, strategy>>(
+  auto alloc_data = allocator->create_new_tree_node<BranchNode<min_branch_factor, max_branch_factor>>(
                   NodeHandleType(BRANCH_NODE));
   tree_node_handle sibling_handle = alloc_data.second;
   sibling_handle.set_level(current_level);
   auto sibling_node = alloc_data.first; // take pin
-  new (&(*sibling_node)) BranchNode<min_branch_factor, max_branch_factor, strategy>();
+  new (&(*sibling_node)) BranchNode<min_branch_factor, max_branch_factor>();
   
   // Save polygon of current branch node before split 
   IsotheticPolygon polygon_before_split = find_polygon(treeRef, current_handle, this->boundingBox()); 
@@ -2612,7 +2605,7 @@ SplitResult BranchNode<min_branch_factor, max_branch_factor, strategy>::splitNod
         if (child_sibling_node->cur_offset_ > 0){
           sibling_node->addBranchToNode(child_sibling);
         } else {
-          allocator->free(child_sibling.child, sizeof(LeafNode<min_branch_factor, max_branch_factor, strategy>));
+          allocator->free(child_sibling.child, sizeof(LeafNode<min_branch_factor, max_branch_factor>));
         }
       } else {
         auto child_node = treeRef->get_branch_node(branch.child);
@@ -2635,7 +2628,7 @@ SplitResult BranchNode<min_branch_factor, max_branch_factor, strategy>::splitNod
         if (child_sibling_node->cur_offset_ > 0){
           sibling_node->addBranchToNode(child_sibling);
         } else {
-          allocator->free(child_sibling.child, sizeof(BranchNode<min_branch_factor, max_branch_factor, strategy>));
+          allocator->free(child_sibling.child, sizeof(BranchNode<min_branch_factor, max_branch_factor>));
         }
       }
 
@@ -2740,9 +2733,9 @@ SplitResult BranchNode<min_branch_factor, max_branch_factor, strategy>::splitNod
 }
 
 
-template <int min_branch_factor, int max_branch_factor, class strategy>
-SplitResult BranchNode<min_branch_factor, max_branch_factor, strategy>::splitNode(
-                        NIRTreeDisk<min_branch_factor, max_branch_factor, strategy> *treeRef,
+template <int min_branch_factor, int max_branch_factor>
+SplitResult BranchNode<min_branch_factor, max_branch_factor>::splitNode(
+                        NIRTreeDisk<min_branch_factor, max_branch_factor> *treeRef,
                         tree_node_handle current_handle,
                         tree_node_handle parent_handle) {
   SplitResult returnSplit = splitNode(treeRef, current_handle, parent_handle, partitionNode(treeRef), false);
@@ -2751,9 +2744,9 @@ SplitResult BranchNode<min_branch_factor, max_branch_factor, strategy>::splitNod
 
 
 // insert() is always called on root node 
-template <int min_branch_factor, int max_branch_factor, class strategy>
-tree_node_handle BranchNode<min_branch_factor, max_branch_factor, strategy>::insert(
-        NIRTreeDisk<min_branch_factor, max_branch_factor, strategy> *treeRef,
+template <int min_branch_factor, int max_branch_factor>
+tree_node_handle BranchNode<min_branch_factor, max_branch_factor>::insert(
+        NIRTreeDisk<min_branch_factor, max_branch_factor> *treeRef,
         tree_node_handle selfHandle,
         std::variant<BranchAtLevel, Point> &nodeEntry, 
         std::vector<bool> &hasReinsertedOnLevel)
@@ -2860,9 +2853,9 @@ tree_node_handle BranchNode<min_branch_factor, max_branch_factor, strategy>::ins
     uint16_t current_root_level = selfHandle.get_level();
 
     // Allocate new root
-    auto alloc_data = allocator->create_new_tree_node<BranchNode<min_branch_factor, max_branch_factor, strategy>>(
+    auto alloc_data = allocator->create_new_tree_node<BranchNode<min_branch_factor, max_branch_factor>>(
                     NodeHandleType(BRANCH_NODE));
-    new (&(*alloc_data.first)) BranchNode<min_branch_factor, max_branch_factor, strategy>();
+    new (&(*alloc_data.first)) BranchNode<min_branch_factor, max_branch_factor>();
     auto new_root_handle = alloc_data.second;
     // grow the level for new root
     new_root_handle.set_level(current_root_level + 1);
@@ -2876,7 +2869,7 @@ tree_node_handle BranchNode<min_branch_factor, max_branch_factor, strategy>::ins
     treeRef->root = new_root_handle;
 
     assert(selfHandle.get_type() == BRANCH_NODE);
-    allocator->free(selfHandle, sizeof(BranchNode<min_branch_factor, max_branch_factor, strategy>));
+    allocator->free(selfHandle, sizeof(BranchNode<min_branch_factor, max_branch_factor>));
     remove_polygon(treeRef, selfHandle);
     selfHandle = tree_node_handle(nullptr);
 
@@ -2905,9 +2898,9 @@ tree_node_handle BranchNode<min_branch_factor, max_branch_factor, strategy>::ins
 }
 
 // Always called on root, this = root
-template <int min_branch_factor, int max_branch_factor, class strategy>
-tree_node_handle BranchNode<min_branch_factor, max_branch_factor, strategy>::remove(        
-        NIRTreeDisk<min_branch_factor, max_branch_factor, strategy> *treeRef,
+template <int min_branch_factor, int max_branch_factor>
+tree_node_handle BranchNode<min_branch_factor, max_branch_factor>::remove(        
+        NIRTreeDisk<min_branch_factor, max_branch_factor> *treeRef,
         tree_node_handle selfHandle,
         Point givenPoint) {
 
@@ -2935,7 +2928,7 @@ tree_node_handle BranchNode<min_branch_factor, max_branch_factor, strategy>::rem
     tree_node_handle new_root_handle = entries.at(0).child;
     tree_node_allocator *allocator = get_node_allocator(treeRef);
     assert(selfHandle.get_type() == BRANCH_NODE);
-    allocator->free(selfHandle, sizeof(BranchNode<min_branch_factor, max_branch_factor, strategy>));
+    allocator->free(selfHandle, sizeof(BranchNode<min_branch_factor, max_branch_factor>));
     
     // remove the polygon associated with old root from map 
     remove_polygon(treeRef, selfHandle);
@@ -2946,9 +2939,9 @@ tree_node_handle BranchNode<min_branch_factor, max_branch_factor, strategy>::rem
   return selfHandle;
 }
 
-template <int min_branch_factor, int max_branch_factor, class strategy>
-unsigned BranchNode<min_branch_factor, max_branch_factor, strategy>::checksum(
-        NIRTreeDisk<min_branch_factor, max_branch_factor, strategy> *treeRef) {
+template <int min_branch_factor, int max_branch_factor>
+unsigned BranchNode<min_branch_factor, max_branch_factor>::checksum(
+        NIRTreeDisk<min_branch_factor, max_branch_factor> *treeRef) {
   unsigned sum = 0;
 
   for (unsigned i = 0; i < this->cur_offset_; i++) {
@@ -2966,8 +2959,8 @@ unsigned BranchNode<min_branch_factor, max_branch_factor, strategy>::checksum(
   return sum;
 }
 
-template <int min_branch_factor, int max_branch_factor, class strategy>
-std::vector<Point> BranchNode<min_branch_factor, max_branch_factor, strategy>::bounding_box_validate() {
+template <int min_branch_factor, int max_branch_factor>
+std::vector<Point> BranchNode<min_branch_factor, max_branch_factor>::bounding_box_validate() {
 #if 0
   tree_node_allocator *allocator = get_node_allocator(this->treeRef);
   std::vector<Point> all_child_points;
@@ -3018,8 +3011,8 @@ std::vector<Point> BranchNode<min_branch_factor, max_branch_factor, strategy>::b
   abort();
 }
 
-template <int min_branch_factor, int max_branch_factor, class strategy>
-bool BranchNode<min_branch_factor, max_branch_factor, strategy>::validate(tree_node_handle expectedParent, unsigned index) {
+template <int min_branch_factor, int max_branch_factor>
+bool BranchNode<min_branch_factor, max_branch_factor>::validate(tree_node_handle expectedParent, unsigned index) {
 #if 0
   tree_node_allocator *allocator = get_node_allocator(this->treeRef);
 
@@ -3105,8 +3098,8 @@ bool BranchNode<min_branch_factor, max_branch_factor, strategy>::validate(tree_n
   abort();
 }
 
-template <int min_branch_factor, int max_branch_factor, class strategy>
-void BranchNode<min_branch_factor, max_branch_factor, strategy>::print(NIRTreeDisk<min_branch_factor, max_branch_factor, strategy> *treeRef,
+template <int min_branch_factor, int max_branch_factor>
+void BranchNode<min_branch_factor, max_branch_factor>::print(NIRTreeDisk<min_branch_factor, max_branch_factor> *treeRef,
                                                                        tree_node_handle current_handle,
                                                                        tree_node_handle parent_handle, 
                                                                        unsigned n) {
@@ -3127,8 +3120,8 @@ void BranchNode<min_branch_factor, max_branch_factor, strategy>::print(NIRTreeDi
 }
 
 // if parent_handle == nullptr, then we know the current node is root 
-template <int min_branch_factor, int max_branch_factor, class strategy>
-void BranchNode<min_branch_factor, max_branch_factor, strategy>::printTree(NIRTreeDisk<min_branch_factor, max_branch_factor, strategy> *treeRef,
+template <int min_branch_factor, int max_branch_factor>
+void BranchNode<min_branch_factor, max_branch_factor>::printTree(NIRTreeDisk<min_branch_factor, max_branch_factor> *treeRef,
                                                                            tree_node_handle current_handle,
                                                                            tree_node_handle parent_handle, 
                                                                            unsigned n) {
@@ -3154,9 +3147,9 @@ void BranchNode<min_branch_factor, max_branch_factor, strategy>::printTree(NIRTr
   std::cout << std::endl;
 }
 
-template <int min_branch_factor, int max_branch_factor, class strategy>
-unsigned BranchNode<min_branch_factor, max_branch_factor, strategy>::height(
-                    NIRTreeDisk<min_branch_factor, max_branch_factor, strategy> *treeRef,
+template <int min_branch_factor, int max_branch_factor>
+unsigned BranchNode<min_branch_factor, max_branch_factor>::height(
+                    NIRTreeDisk<min_branch_factor, max_branch_factor> *treeRef,
                     tree_node_handle selfHandle) {
   unsigned ret = 0;
   tree_node_handle current_handle = selfHandle;
@@ -3172,10 +3165,10 @@ unsigned BranchNode<min_branch_factor, max_branch_factor, strategy>::height(
   }
 }
 
-// called by NIRTreeDisk<min_branch_factor, max_branch_factor, strategy>::stat()
+// called by NIRTreeDisk<min_branch_factor, max_branch_factor>::stat()
 // it is always called on root node
-template <int min_branch_factor, int max_branch_factor, class strategy>
-void stat_node(tree_node_handle root_handle, NIRTreeDisk<min_branch_factor, max_branch_factor, strategy> *treeRef) {
+template <int min_branch_factor, int max_branch_factor>
+void stat_node(tree_node_handle root_handle, NIRTreeDisk<min_branch_factor, max_branch_factor> *treeRef) {
   std::stack<tree_node_handle> context;
 
   // Initialize our context stack
@@ -3238,7 +3231,7 @@ void stat_node(tree_node_handle root_handle, NIRTreeDisk<min_branch_factor, max_
       }
 
       histogramFanoutAtLevel.at(lvl).at(fanout)++;
-      memoryFootprint += sizeof(LeafNode<min_branch_factor, max_branch_factor, strategy>);
+      memoryFootprint += sizeof(LeafNode<min_branch_factor, max_branch_factor>);
       deadSpace += (sizeof(Point) * (max_branch_factor - current_node->cur_offset_));
       totalLeaves++;
     } else if (currentContext.get_type() == BRANCH_NODE) {
@@ -3251,7 +3244,7 @@ void stat_node(tree_node_handle root_handle, NIRTreeDisk<min_branch_factor, max_
       }
 
       histogramFanoutAtLevel.at(lvl).at(fanout)++;
-      memoryFootprint += sizeof(BranchNode<min_branch_factor, max_branch_factor, strategy>);
+      memoryFootprint += sizeof(BranchNode<min_branch_factor, max_branch_factor>);
       deadSpace += (sizeof(Branch) * (max_branch_factor - current_branch_node->cur_offset_));
 
       // Compute the overlap and coverage of our children
@@ -3641,9 +3634,9 @@ static std::vector<Point> tree_validate_recursive(tree_node_handle current_handl
 }
 
 
-template <int min_branch_factor, int max_branch_factor, class strategy>
+template <int min_branch_factor, int max_branch_factor>
 IsotheticPolygon find_polygon(
-                  NIRTreeDisk<min_branch_factor, max_branch_factor, strategy> *treeRef,
+                  NIRTreeDisk<min_branch_factor, max_branch_factor> *treeRef,
                   tree_node_handle node_handle,
                   Rectangle rectangle){
   assert(node_handle != nullptr);
@@ -3657,9 +3650,9 @@ IsotheticPolygon find_polygon(
   }
 }
 
-template <int min_branch_factor, int max_branch_factor, class strategy>
+template <int min_branch_factor, int max_branch_factor>
 IsotheticPolygon find_polygon(
-                  NIRTreeDisk<min_branch_factor, max_branch_factor, strategy> *treeRef,
+                  NIRTreeDisk<min_branch_factor, max_branch_factor> *treeRef,
                   Branch branch){
   assert(branch.child != nullptr);
   std::map<tree_node_handle, IsotheticPolygon>::iterator it;
@@ -3673,9 +3666,9 @@ IsotheticPolygon find_polygon(
 }
 
 // Remove the polygon associated with this node from map 
-template <int min_branch_factor, int max_branch_factor, class strategy>
+template <int min_branch_factor, int max_branch_factor>
 void remove_polygon(
-        NIRTreeDisk<min_branch_factor, max_branch_factor, strategy> *treeRef,
+        NIRTreeDisk<min_branch_factor, max_branch_factor> *treeRef,
         tree_node_handle node_handle){
   assert(node_handle != nullptr);
   std::map<tree_node_handle, IsotheticPolygon>::iterator it;
@@ -3687,9 +3680,9 @@ void remove_polygon(
 }
 
 // Helper function for find_parent_handles 
-template <int min_branch_factor, int max_branch_factor, class strategy>
+template <int min_branch_factor, int max_branch_factor>
 bool find_path_to_leaf_helper(
-      NIRTreeDisk<min_branch_factor, max_branch_factor, strategy> *treeRef,
+      NIRTreeDisk<min_branch_factor, max_branch_factor> *treeRef,
       tree_node_handle start_handle,
       tree_node_handle leaf_handle,
       std::stack<tree_node_handle> &path_to_leaf  
@@ -3725,9 +3718,9 @@ bool find_path_to_leaf_helper(
 }
 
 // Find_parent_handles returns a stack of parent handles from start_handle to leave
-template <int min_branch_factor, int max_branch_factor, class strategy>
+template <int min_branch_factor, int max_branch_factor>
 std::stack<tree_node_handle> find_path_to_leaf(
-      NIRTreeDisk<min_branch_factor, max_branch_factor, strategy> *treeRef,
+      NIRTreeDisk<min_branch_factor, max_branch_factor> *treeRef,
       tree_node_handle start_handle,
       tree_node_handle leaf_handle) {
   assert(start_handle.get_type() == BRANCH_NODE);
@@ -3763,8 +3756,8 @@ computeExpansionArea( const IsotheticPolygon &this_poly, const IsotheticPolygon 
 }
 
 
-template <int min_branch_factor, int max_branch_factor, class strategy>
-void testDisjoint(NIRTreeDisk<min_branch_factor, max_branch_factor, strategy> *treeRef,
+template <int min_branch_factor, int max_branch_factor>
+void testDisjoint(NIRTreeDisk<min_branch_factor, max_branch_factor> *treeRef,
                   tree_node_handle root, 
                   std::string msg){
 #if DEBUG_TESTDISJOINT
@@ -3809,8 +3802,8 @@ void testDisjoint(NIRTreeDisk<min_branch_factor, max_branch_factor, strategy> *t
 #endif
 }
 
-template <int min_branch_factor, int max_branch_factor, class strategy>
-void testCount(NIRTreeDisk<min_branch_factor, max_branch_factor, strategy> *treeRef, 
+template <int min_branch_factor, int max_branch_factor>
+void testCount(NIRTreeDisk<min_branch_factor, max_branch_factor> *treeRef, 
                tree_node_handle root, 
                std::string msg){
 #if DEBUG_TESTCOUNT
@@ -3835,8 +3828,8 @@ void testCount(NIRTreeDisk<min_branch_factor, max_branch_factor, strategy> *tree
 #endif 
 }
 
-template <int min_branch_factor, int max_branch_factor, class strategy>
-void testContainPoints(NIRTreeDisk<min_branch_factor, max_branch_factor, strategy> *treeRef, 
+template <int min_branch_factor, int max_branch_factor>
+void testContainPoints(NIRTreeDisk<min_branch_factor, max_branch_factor> *treeRef, 
                        tree_node_handle root, 
                        std::string msg){
 #if DEBUG_TESTCONTAINPOINTS
@@ -3865,8 +3858,8 @@ void testContainPoints(NIRTreeDisk<min_branch_factor, max_branch_factor, strateg
 #endif 
 }
 
-template <int min_branch_factor, int max_branch_factor, class strategy>
-void testLevels(NIRTreeDisk<min_branch_factor, max_branch_factor, strategy> *treeRef, 
+template <int min_branch_factor, int max_branch_factor>
+void testLevels(NIRTreeDisk<min_branch_factor, max_branch_factor> *treeRef, 
                        tree_node_handle root){
 #if DEBUG_TESTLEVELS
   auto root_node = treeRef->get_branch_node(root);

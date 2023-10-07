@@ -858,7 +858,7 @@ static std::vector<Rectangle> generateRectanglesFromFile(std::string fileName) {
 
 static bool is_already_loaded(std::map<std::string, uint64_t> &configU, Index *spatial_index) {
   if (configU["tree"] == NIR_TREE) {
-    auto tree = (nirtreedisk::NIRTreeDisk<5, NIR_FANOUT, nirtreedisk::LineMinimizeDownsplits> *) spatial_index;
+    auto tree = (nirtreedisk::NIRTreeDisk<5, NIR_FANOUT> *) spatial_index;
     size_t existing_page_count = tree->node_allocator_->buffer_pool_.get_preexisting_page_count();
 
     if (existing_page_count > 0) {
@@ -936,8 +936,8 @@ runBench(PointGenerator<T> &pointGen,
     bufferPool = &(tree->node_allocator_->buffer_pool_);
     spatialIndex = tree;
   } else if (configU["tree"] == NIR_TREE) {
-    auto tree = new nirtreedisk::NIRTreeDisk<5, NIR_FANOUT, nirtreedisk::LineMinimizeDownsplits>(
-            configU["buffer_pool_memory"], configS["db_file_name"]
+    auto tree = new nirtreedisk::NIRTreeDisk<5, NIR_FANOUT>(
+            configU["buffer_pool_memory"], configS["db_file_name"], nirtreedisk::LINEMINIMIZEDOWNSPLITS
     );
     bufferPool = &(tree->node_allocator_->buffer_pool_);
     spatialIndex = tree;

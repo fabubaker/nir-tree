@@ -31,13 +31,13 @@ void fill_branch(
 
 template <>
 void fill_branch(
-    nirtreedisk::NIRTreeDisk<5, NIR_FANOUT, nirtreedisk::LineMinimizeDownsplits> *treeRef,
-    pinned_node_ptr<nirtreedisk::BranchNode<5, NIR_FANOUT, nirtreedisk::LineMinimizeDownsplits>> branch_node,
+    nirtreedisk::NIRTreeDisk<5, NIR_FANOUT> *treeRef,
+    pinned_node_ptr<nirtreedisk::BranchNode<5, NIR_FANOUT>> branch_node,
     tree_node_handle node_handle,
     std::vector<std::pair<Point, tree_node_handle>> &node_point_pairs,
     uint64_t &offset,
     unsigned branch_factor,
-    nirtreedisk::LeafNode<5, NIR_FANOUT, nirtreedisk::LineMinimizeDownsplits> *leaf_type);
+    nirtreedisk::LeafNode<5, NIR_FANOUT> *leaf_type);
 
 template <>
 void fill_branch(
@@ -71,7 +71,7 @@ bool point_comparator(const Point &lhs, const Point &rhs);
 
 template <>
 std::vector<tree_node_handle> str_packing_branch(
-    nirtreedisk::NIRTreeDisk<5, NIR_FANOUT, nirtreedisk::LineMinimizeDownsplits> *tree,
+    nirtreedisk::NIRTreeDisk<5, NIR_FANOUT> *tree,
     std::vector<tree_node_handle> &child_nodes,
     unsigned branch_factor,
     unsigned cur_depth);
@@ -103,7 +103,7 @@ std::vector<tree_node_handle> str_packing_leaf(
 
 template <>
 std::vector<tree_node_handle> str_packing_leaf(
-    nirtreedisk::NIRTreeDisk<5, NIR_FANOUT, nirtreedisk::LineMinimizeDownsplits> *tree,
+    nirtreedisk::NIRTreeDisk<5, NIR_FANOUT> *tree,
     std::vector<Point>::iterator begin,
     std::vector<Point>::iterator end,
     unsigned branch_factor,
@@ -124,7 +124,7 @@ std::vector<uint64_t> find_bounding_lines(
     unsigned partitions);
 
 std::pair<tree_node_handle, Rectangle> quad_tree_style_load(
-    nirtreedisk::NIRTreeDisk<5, NIR_FANOUT, nirtreedisk::LineMinimizeDownsplits> *tree,
+    nirtreedisk::NIRTreeDisk<5, NIR_FANOUT> *tree,
     std::vector<Point>::iterator start,
     std::vector<Point>::iterator stop,
     unsigned branch_factor,
@@ -154,7 +154,7 @@ void bulk_load_tree(
 
 template <>
 void bulk_load_tree(
-    nirtreedisk::NIRTreeDisk<5, NIR_FANOUT, nirtreedisk::LineMinimizeDownsplits> *tree,
+    nirtreedisk::NIRTreeDisk<5, NIR_FANOUT> *tree,
     std::map<std::string, size_t> &configU,
     std::vector<Point>::iterator begin,
     std::vector<Point>::iterator end,
@@ -179,7 +179,7 @@ void sequential_insert_tree(
 
 template <>
 void sequential_insert_tree(
-    nirtreedisk::NIRTreeDisk<5, NIR_FANOUT, nirtreedisk::LineMinimizeDownsplits> *tree,
+    nirtreedisk::NIRTreeDisk<5, NIR_FANOUT> *tree,
     std::map<std::string, size_t> &configU,
     std::vector<Point>::iterator begin,
     std::vector<Point>::iterator end,

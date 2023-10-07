@@ -93,9 +93,9 @@ void generate_tree(std::map<std::string, size_t> &configU, std::map<std::string,
   Index *spatialIndex;
 
   if (configU["tree"] == NIR_TREE) {
-    nirtreedisk::NIRTreeDisk<5, NIR_FANOUT, nirtreedisk::LineMinimizeDownsplits> *tree =
-            new nirtreedisk::NIRTreeDisk<5, NIR_FANOUT, nirtreedisk::LineMinimizeDownsplits>(
-            configU["buffer_pool_memory"], backing_file
+    nirtreedisk::NIRTreeDisk<5, NIR_FANOUT> *tree =
+            new nirtreedisk::NIRTreeDisk<5, NIR_FANOUT>(
+            configU["buffer_pool_memory"], backing_file, nirtreedisk::LINEMINIMIZEDOWNSPLITS
     );
 
     spatialIndex = tree;
