@@ -171,7 +171,7 @@ class Rectangle
 		bool intersectsRectangle(const Rectangle &givenRectangle) const;
 		bool containsPoint(const Point &givenPoint) const;
 		bool containsRectangle(const Rectangle &givenRectangle) const;
-               bool isUpperRightSmaller(const Rectangle &otherRectangle, const unsigned dim) const;
+                bool isUpperRightSmaller(const Rectangle &otherRectangle, const unsigned dim) const;
 		Point centrePoint() const;
 		Rectangle copyExpand(const Point &givenPoint) const;
 		Rectangle intersection(const Rectangle &clippingRectangle) const;
