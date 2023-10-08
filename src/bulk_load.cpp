@@ -1236,68 +1236,57 @@ void bulk_load_tree(
 }
 
 
-template <>
+template <typename T>
 void sequential_insert_tree(
-    nirtreedisk::NIRTreeDisk<5, NIR_FANOUT> *tree,
+    T *tree,
     std::map<std::string, size_t> &configU,
     std::vector<Point>::iterator begin,
     std::vector<Point>::iterator end,
     unsigned max_branch_factor
 ) {
-  // begin is inclusive, end is exclusive 
+  // begin is inclusive, end is exclusive
   uint64_t num_els = (end - begin);
   std::cout << "Num els to insert: " << num_els << std::endl;
-  uint64_t total_insert = 0; 
+  uint64_t total_insert = 0;
   uint64_t print_count = pow(10, int(log10(num_els)) - 1);
   std::chrono::high_resolution_clock::time_point begin_time = std::chrono::high_resolution_clock::now();
   std::chrono::high_resolution_clock::time_point section_begin_time = begin_time;
   for(auto iter = begin ; iter < end; iter++){
-      tree->insert(*iter); 
-      total_insert ++; 
+      tree->insert(*iter);
+      total_insert ++;
     if (total_insert % print_count == 0) {
       std::chrono::high_resolution_clock::time_point section_end_time = std::chrono::high_resolution_clock::now();
-      auto delta =  std::chrono::duration_cast<std::chrono::duration<double>>(section_end_time - section_begin_time); 
+      auto delta =  std::chrono::duration_cast<std::chrono::duration<double>>(section_end_time - section_begin_time);
       std::cout << "Finished insertion for " << total_insert << " points with " << delta.count() << "s..."<< std::endl;
-      section_begin_time = section_end_time; 
+      section_begin_time = section_end_time;
     }
   }
   std::chrono::high_resolution_clock::time_point end_time = std::chrono::high_resolution_clock::now();
   std::chrono::duration<double> delta = std::chrono::duration_cast<std::chrono::duration<double>>(end_time - begin_time);
-  
+
   std::cout << "Sequentially Inserting "<< total_insert << " points to NIRTree took: " << delta.count() << std::endl;
   std::cout << "Total pages occupied now: " << tree->node_allocator_->get_total_pages_occupied() << std::endl;
   tree->write_metadata();
 }
 
-template <>
-void sequential_insert_tree(
-    rstartreedisk::RStarTreeDisk<R_STAR_MIN_FANOUT, R_STAR_MAX_FANOUT> *tree,
-    std::map<std::string, size_t> &configU,
-    std::vector<Point>::iterator begin,
-    std::vector<Point>::iterator end,
-    unsigned max_branch_factor
-) {
-  // begin is inclusive, end is exclusive 
-  uint64_t num_els = (end - begin);
-  std::cout << "Num els to insert: " << num_els << std::endl;
-  uint64_t total_insert = 0; 
-  uint64_t print_count = pow(10, int(log10(num_els)) - 1);
-  std::chrono::high_resolution_clock::time_point begin_time = std::chrono::high_resolution_clock::now();
-  std::chrono::high_resolution_clock::time_point section_begin_time = begin_time;
-  for(auto iter = begin ; iter < end; iter++){
-      tree->insert(*iter); 
-      total_insert ++; 
-    if (total_insert % print_count == 0) {
-      std::chrono::high_resolution_clock::time_point section_end_time = std::chrono::high_resolution_clock::now();
-      auto delta =  std::chrono::duration_cast<std::chrono::duration<double>>(section_end_time - section_begin_time); 
-      std::cout << "Finished insertion for " << total_insert << " points with " << delta.count() << "s..."<< std::endl;
-      section_begin_time = section_end_time; 
-    }
-  }
-  std::chrono::high_resolution_clock::time_point end_time = std::chrono::high_resolution_clock::now();
-  std::chrono::duration<double> delta = std::chrono::duration_cast<std::chrono::duration<double>>(end_time - begin_time);
-  
-  std::cout << "Sequentially Inserting "<< total_insert << " points to R*-Tree took: " << delta.count() << std::endl;
-  std::cout << "Total pages occupied now: " << tree->node_allocator_->get_total_pages_occupied() << std::endl;
-  tree->write_metadata();
-}
+/* Generalized template definitions are supposed to be exposed in the header file in order
+ * for the compiler to generate code for specific instances. Alternatively, we can explicitly
+ * instantiate functions below for only those types that we care about and still keep everything
+ * in the .cpp file. */
+
+/* sequential_insert_tree */
+template void sequential_insert_tree(
+        nirtreedisk::NIRTreeDisk<5, NIR_FANOUT> *tree,
+        std::map<std::string, size_t> &configU,
+        std::vector<Point>::iterator begin,
+        std::vector<Point>::iterator end,
+        unsigned max_branch_factor
+);
+
+template void sequential_insert_tree(
+        rstartreedisk::RStarTreeDisk<R_STAR_MIN_FANOUT, R_STAR_MAX_FANOUT> *tree,
+        std::map<std::string, size_t> &configU,
+        std::vector<Point>::iterator begin,
+        std::vector<Point>::iterator end,
+        unsigned max_branch_factor
+);

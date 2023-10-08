@@ -168,7 +168,6 @@ void bulk_load_tree(
     std::vector<Point>::iterator end,
     unsigned max_branch_factor);
 
-
 template <typename T>
 void sequential_insert_tree(
     T *tree,
@@ -176,21 +175,3 @@ void sequential_insert_tree(
     std::vector<Point>::iterator begin,
     std::vector<Point>::iterator end,
     unsigned max_branch_factor);
-
-template <>
-void sequential_insert_tree(
-    nirtreedisk::NIRTreeDisk<5, NIR_FANOUT> *tree,
-    std::map<std::string, size_t> &configU,
-    std::vector<Point>::iterator begin,
-    std::vector<Point>::iterator end,
-    unsigned max_branch_factor);
-
-template <>
-void sequential_insert_tree(
-    rstartreedisk::RStarTreeDisk<R_STAR_MIN_FANOUT, R_STAR_MAX_FANOUT> *tree,
-    std::map<std::string, size_t> &configU,
-    std::vector<Point>::iterator begin,
-    std::vector<Point>::iterator end,
-    unsigned max_branch_factor);
-
-
