@@ -112,8 +112,11 @@ void generate_tree(std::map<std::string, size_t> &configU, std::map<std::string,
 
     // insert the rest of points:
     std::cout << "Sequential Inserting..." << std::endl;
-    sequential_insert_tree<nirtreedisk::NIRTreeDisk<5, NIR_FANOUT, nirtreedisk::ExperimentalStrategy>>
-      (tree, configU, all_points.begin() + cut_off_bulk_load, all_points.end(), NIR_FANOUT);
+    sequential_insert_tree(
+            tree, configU,
+            all_points.begin() + cut_off_bulk_load, all_points.end(),
+            NIR_FANOUT
+    );
     std::cout << "Created NIRTree." << std::endl;
 
     std::cout << "Buffer pool stats after sequential inserts: " << std::endl;
@@ -136,8 +139,11 @@ void generate_tree(std::map<std::string, size_t> &configU, std::map<std::string,
 
     // insert the rest of points:
     std::cout << "Sequential Inserting..." << std::endl;
-    sequential_insert_tree<rstartreedisk::RStarTreeDisk<R_STAR_MIN_FANOUT, R_STAR_MAX_FANOUT>>
-      (tree, configU, all_points.begin() + cut_off_bulk_load, all_points.end(), NIR_FANOUT);
+    sequential_insert_tree(
+            tree, configU,
+            all_points.begin() + cut_off_bulk_load, all_points.end(),
+            NIR_FANOUT
+    );
     std::cout << "Created R*Tree" << std::endl;
 
     std::cout << "Buffer pool stats after sequential inserts: " << std::endl;
