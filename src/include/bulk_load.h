@@ -35,36 +35,12 @@ void fill_branch(
     unsigned branch_factor,
     LN *leaf_type);
 
-template <>
-void fill_branch(
-    nirtreedisk::NIRTreeDisk<5, NIR_FANOUT> *treeRef,
-    pinned_node_ptr<nirtreedisk::BranchNode<5, NIR_FANOUT>> branch_node,
-    tree_node_handle node_handle,
-    std::vector<std::pair<Point, tree_node_handle>> &node_point_pairs,
-    uint64_t &offset,
-    unsigned branch_factor,
-    nirtreedisk::LeafNode<5, NIR_FANOUT> *leaf_type);
-
 template <typename T>
 std::vector<tree_node_handle> str_packing_branch(
         T *tree,
         std::vector<tree_node_handle> &child_nodes,
         unsigned branch_factor,
         unsigned cur_depth);
-
-template <>
-std::vector<tree_node_handle> str_packing_branch(
-    nirtreedisk::NIRTreeDisk<5, NIR_FANOUT> *tree,
-    std::vector<tree_node_handle> &child_nodes,
-    unsigned branch_factor,
-    unsigned cur_depth);
-
-template <>
-std::vector<tree_node_handle> str_packing_branch(
-    rstartreedisk::RStarTreeDisk<R_STAR_MIN_FANOUT, R_STAR_MAX_FANOUT> *tree,
-    std::vector<tree_node_handle> &child_nodes,
-    unsigned branch_factor,
-    unsigned cur_depth);
 
 template <typename T, typename LN, typename BN>
 std::vector<tree_node_handle> str_packing_branch(
@@ -78,22 +54,6 @@ std::vector<tree_node_handle> str_packing_branch(
 template <typename T>
 std::vector<tree_node_handle> str_packing_leaf(
     T *tree,
-    std::vector<Point>::iterator begin,
-    std::vector<Point>::iterator end,
-    unsigned branch_factor,
-    unsigned cur_depth);
-
-template <>
-std::vector<tree_node_handle> str_packing_leaf(
-    nirtreedisk::NIRTreeDisk<5, NIR_FANOUT> *tree,
-    std::vector<Point>::iterator begin,
-    std::vector<Point>::iterator end,
-    unsigned branch_factor,
-    unsigned cur_depth);
-
-template <>
-std::vector<tree_node_handle> str_packing_leaf(
-    rstartreedisk::RStarTreeDisk<R_STAR_MIN_FANOUT, R_STAR_MAX_FANOUT> *tree,
     std::vector<Point>::iterator begin,
     std::vector<Point>::iterator end,
     unsigned branch_factor,
@@ -143,14 +103,6 @@ tree_node_handle tgs_load(
 template <typename T>
 void bulk_load_tree(
     T *tree,
-    std::map<std::string, size_t> &configU,
-    std::vector<Point>::iterator begin,
-    std::vector<Point>::iterator end,
-    unsigned max_branch_factor);
-
-template <>
-void bulk_load_tree(
-    nirtreedisk::NIRTreeDisk<5, NIR_FANOUT> *tree,
     std::map<std::string, size_t> &configU,
     std::vector<Point>::iterator begin,
     std::vector<Point>::iterator end,
