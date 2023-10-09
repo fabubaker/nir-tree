@@ -11,6 +11,10 @@
 
 enum BulkLoadAlg { STR, QTS, TGS };
 
+std::pair<uint64_t, double> compute_max_dist(const Point &point, std::vector<Point> &pts);
+
+bool point_comparator(const Point &lhs, const Point &rhs);
+
 template <class TreeType>
 void make_all_rects_disjoint(
     TreeType *treeRef,
@@ -18,6 +22,8 @@ void make_all_rects_disjoint(
     tree_node_handle a_node,
     std::vector<Rectangle> &rects_b,
     tree_node_handle b_node);
+
+/* STR */
 
 template <typename T, typename LN, typename BN>
 void fill_branch(
@@ -51,23 +57,10 @@ void fill_branch(
 
 template <typename T>
 std::vector<tree_node_handle> str_packing_branch(
-    T *tree,
-    std::vector<tree_node_handle> &child_nodes,
-    unsigned branch_factor,
-    unsigned cur_depth);
-
-template <typename T, typename LN, typename BN>
-std::vector<tree_node_handle> str_packing_branch(
-    T *tree,
-    std::vector<tree_node_handle> &child_nodes,
-    unsigned branch_factor,
-    LN *leaf_node_type,
-    BN *branch_node_type,
-    unsigned cur_depth);
-
-std::pair<uint64_t, double> compute_max_dist(const Point &point, std::vector<Point> &pts);
-
-bool point_comparator(const Point &lhs, const Point &rhs);
+        T *tree,
+        std::vector<tree_node_handle> &child_nodes,
+        unsigned branch_factor,
+        unsigned cur_depth);
 
 template <>
 std::vector<tree_node_handle> str_packing_branch(
@@ -84,14 +77,13 @@ std::vector<tree_node_handle> str_packing_branch(
     unsigned cur_depth);
 
 template <typename T, typename LN, typename BN>
-std::vector<tree_node_handle> str_packing_leaf(
-    T *tree,
-    std::vector<Point>::iterator begin,
-    std::vector<Point>::iterator end,
-    unsigned branch_factor,
-    LN *ln_type,
-    BN *bn_type,
-    unsigned cur_depth);
+std::vector<tree_node_handle> str_packing_branch(
+        T *tree,
+        std::vector<tree_node_handle> &child_nodes,
+        unsigned branch_factor,
+        LN *leaf_node_type,
+        BN *branch_node_type,
+        unsigned cur_depth);
 
 template <typename T>
 std::vector<tree_node_handle> str_packing_leaf(
@@ -116,6 +108,18 @@ std::vector<tree_node_handle> str_packing_leaf(
     std::vector<Point>::iterator end,
     unsigned branch_factor,
     unsigned cur_depth);
+
+template <typename T, typename LN, typename BN>
+std::vector<tree_node_handle> str_packing_leaf(
+        T *tree,
+        std::vector<Point>::iterator begin,
+        std::vector<Point>::iterator end,
+        unsigned branch_factor,
+        LN *ln_type,
+        BN *bn_type,
+        unsigned cur_depth);
+
+/* QTS */
 
 std::vector<uint64_t> find_bounding_lines(
     std::vector<Point>::iterator start,
@@ -137,6 +141,8 @@ std::pair<tree_node_handle, Rectangle> quad_tree_style_load(
     unsigned branch_factor,
     unsigned cur_level);
 
+/* TGS */
+
 tree_node_handle tgs_load(
         rstartreedisk::RStarTreeDisk<R_STAR_MIN_FANOUT, R_STAR_MAX_FANOUT> *tree,
         std::vector<Point>::iterator begin,
@@ -155,14 +161,6 @@ void bulk_load_tree(
 template <>
 void bulk_load_tree(
     nirtreedisk::NIRTreeDisk<5, NIR_FANOUT> *tree,
-    std::map<std::string, size_t> &configU,
-    std::vector<Point>::iterator begin,
-    std::vector<Point>::iterator end,
-    unsigned max_branch_factor);
-
-template <>
-void bulk_load_tree(
-    rstartreedisk::RStarTreeDisk<R_STAR_MIN_FANOUT, R_STAR_MAX_FANOUT> *tree,
     std::map<std::string, size_t> &configU,
     std::vector<Point>::iterator begin,
     std::vector<Point>::iterator end,
