@@ -45,16 +45,6 @@ void fill_branch(
     unsigned branch_factor,
     nirtreedisk::LeafNode<5, NIR_FANOUT> *leaf_type);
 
-template <>
-void fill_branch(
-    rstartreedisk::RStarTreeDisk<R_STAR_MIN_FANOUT, R_STAR_MAX_FANOUT> *treeRef,
-    pinned_node_ptr<rstartreedisk::BranchNode<R_STAR_MIN_FANOUT, R_STAR_MAX_FANOUT>> branch_node,
-    tree_node_handle node_handle,
-    std::vector<std::pair<Point, tree_node_handle>> &node_point_pairs,
-    uint64_t &offset,
-    unsigned branch_factor,
-    rstartreedisk::LeafNode<R_STAR_MIN_FANOUT, R_STAR_MAX_FANOUT> *leaf_type);
-
 template <typename T>
 std::vector<tree_node_handle> str_packing_branch(
         T *tree,

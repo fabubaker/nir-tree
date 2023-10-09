@@ -74,6 +74,46 @@ void make_all_rects_disjoint(
   rects_a = a_output;
 }
 
+template <typename T, typename LN, typename BN>
+void fill_branch(
+        T *treeRef,
+        pinned_node_ptr<BN> branch_node,
+        tree_node_handle node_handle,
+        std::vector<std::pair<Point, tree_node_handle>> &node_point_pairs,
+        uint64_t &offset,
+        unsigned branch_factor,
+        LN *leaf_type
+) {
+  std::vector<std::pair<Rectangle, tree_node_handle>> bb_and_handles;
+  tree_node_allocator *allocator = treeRef->node_allocator_.get();
+
+  // Add up to branch factor items to it
+  for (uint64_t i = 0; i < branch_factor; i++) {
+    tree_node_handle child_handle = node_point_pairs[offset++].second;
+    Rectangle bbox;
+
+    // Adjust parent
+    if (child_handle.get_type() == LEAF_NODE) {
+      auto node = allocator->get_tree_node<LN>(child_handle);
+      bbox = node->boundingBox();
+    } else {
+      auto node = allocator->get_tree_node<BN>(child_handle);
+      bbox = node->boundingBox();
+    }
+
+    bb_and_handles.push_back(std::make_pair(bbox, child_handle));
+
+    rstartreedisk::Branch b;
+    b.child = child_handle;
+    b.boundingBox = bbox;
+    branch_node->addBranchToNode(b);
+
+    if (offset == node_point_pairs.size()) {
+      break;
+    }
+  }
+}
+
 template <>
 void fill_branch(
     nirtreedisk::NIRTreeDisk<5, NIR_FANOUT> *treeRef,
@@ -139,48 +179,6 @@ void fill_branch(
     }
 
     branch_node->addBranchToNode(b);
-  }
-}
-
-template <>
-void fill_branch(
-    rstartreedisk::RStarTreeDisk<R_STAR_MIN_FANOUT, R_STAR_MAX_FANOUT> *treeRef,
-    pinned_node_ptr<rstartreedisk::BranchNode<R_STAR_MIN_FANOUT, R_STAR_MAX_FANOUT>> branch_node,
-    tree_node_handle node_handle,
-    std::vector<std::pair<Point, tree_node_handle>> &node_point_pairs,
-    uint64_t &offset,
-    unsigned branch_factor,
-    rstartreedisk::LeafNode<R_STAR_MIN_FANOUT, R_STAR_MAX_FANOUT> *leaf_type) {
-  using LN = rstartreedisk::LeafNode<R_STAR_MIN_FANOUT, R_STAR_MAX_FANOUT>;
-  using BN = rstartreedisk::BranchNode<R_STAR_MIN_FANOUT, R_STAR_MAX_FANOUT>;
-
-  std::vector<std::pair<Rectangle, tree_node_handle>> bb_and_handles;
-  tree_node_allocator *allocator = treeRef->node_allocator_.get();
-
-  // Add up to branch factor items to it
-  for (uint64_t i = 0; i < branch_factor; i++) {
-    tree_node_handle child_handle = node_point_pairs[offset++].second;
-    Rectangle bbox;
-
-    // Adjust parent
-    if (child_handle.get_type() == LEAF_NODE) {
-      auto node = allocator->get_tree_node<LN>(child_handle);
-      bbox = node->boundingBox();
-    } else {
-      auto node = allocator->get_tree_node<BN>(child_handle);
-      bbox = node->boundingBox();
-    }
-    
-    bb_and_handles.push_back(std::make_pair(bbox, child_handle));
-
-    rstartreedisk::Branch b;
-    b.child = child_handle;
-    b.boundingBox = bbox;
-    branch_node->addBranchToNode(b);
-
-    if (offset == node_point_pairs.size()) {
-      break;
-    }
   }
 }
 
