@@ -40,21 +40,26 @@
 #include <boost/serialization/map.hpp>
 
 namespace nirtreedisk {
-template <int min_branch_factor, int max_branch_factor, class strategy = LineMinimizeDownsplits>
+
+template <int min_branch_factor, int max_branch_factor>
 class NIRTreeDisk : public Index {
 public:
   tree_node_handle root;
   std::unique_ptr<tree_node_allocator> node_allocator_;
   std::vector<bool> hasReinsertedOnLevel;
   std::map<tree_node_handle, IsotheticPolygon> polygons;
+  BranchPartitionStrategy strategy;
 
   // Constructors and destructors
-  NIRTreeDisk(size_t memory_budget, std::string backing_file) : node_allocator_(std::make_unique<tree_node_allocator>(memory_budget, backing_file)) {
+  NIRTreeDisk(size_t memory_budget, std::string backing_file, BranchPartitionStrategy partition_strategy) : 
+    node_allocator_(std::make_unique<tree_node_allocator>(memory_budget, backing_file)),
+    strategy(partition_strategy) {
     node_allocator_->initialize();
 
     size_t existing_page_count = node_allocator_->buffer_pool_.get_preexisting_page_count();
 
-    hasReinsertedOnLevel = {false};
+    hasReinsertedOnLevel = {false};    
+    
     // If this is a fresh tree, we need a root
     // Update: We disable this for bulk-loading since the root node
     // will be created anyways.
@@ -62,10 +67,10 @@ public:
     // otherwise a root node is required here 
     if (existing_page_count == 0) {
 
-//      auto alloc = node_allocator_->create_new_tree_node<LeafNode<min_branch_factor, max_branch_factor, strategy>>(NodeHandleType(LEAF_NODE));
+//      auto alloc = node_allocator_->create_new_tree_node<LeafNode<min_branch_factor, max_branch_factor>>(NodeHandleType(LEAF_NODE));
 //      root = alloc.second;
 //
-//      new (&(*(alloc.first))) LeafNode<min_branch_factor, max_branch_factor, strategy>(this, tree_node_handle(nullptr), root, 0);
+//      new (&(*(alloc.first))) LeafNode<min_branch_factor, max_branch_factor>(this, tree_node_handle(nullptr), root, 0);
 
       return;
     }
@@ -88,11 +93,11 @@ public:
     if (root.get_type() == LEAF_NODE){
       auto root_node = get_leaf_node(root);
       root_node->deleteSubtrees();
-      node_allocator_->free(root, sizeof(LeafNode<min_branch_factor, max_branch_factor, strategy>));
+      node_allocator_->free(root, sizeof(LeafNode<min_branch_factor, max_branch_factor>));
     } else if (root.get_type() == BRANCH_NODE){
       auto root_node = get_branch_node(root);
       root_node->deleteSubtrees(this);
-      node_allocator_->free(root, sizeof(BranchNode<min_branch_factor, max_branch_factor, strategy>));
+      node_allocator_->free(root, sizeof(BranchNode<min_branch_factor, max_branch_factor>));
     }
   }
 
@@ -117,7 +122,7 @@ public:
       assert(node_handle.get_type() == BRANCH_NODE);
 
       auto branch_node =
-              allocator->get_tree_node<BranchNode<min_branch_factor, max_branch_factor, strategy>>(node_handle);
+              allocator->get_tree_node<BranchNode<min_branch_factor, max_branch_factor>>(node_handle);
       Branch &b = branch_node->entries.at(0);
       node_handle = b.child;
     }
@@ -125,25 +130,25 @@ public:
     assert(node_handle.get_type() == LEAF_NODE);
 
     auto leaf_node =
-        allocator->get_tree_node<LeafNode<min_branch_factor, max_branch_factor, strategy>>(node_handle);
+        allocator->get_tree_node<LeafNode<min_branch_factor, max_branch_factor>>(node_handle);
     return leaf_node->entries.at(0);
   }
 
   /* If unpack_perm=true, the tree will be modified */
-  inline pinned_node_ptr<LeafNode<min_branch_factor, max_branch_factor, strategy>>
+  inline pinned_node_ptr<LeafNode<min_branch_factor, max_branch_factor>>
   get_leaf_node(tree_node_handle node_handle, bool unpack_perm = true) {
     assert(node_handle.get_type() == LEAF_NODE);
     auto ptr =
-        node_allocator_->get_tree_node<LeafNode<min_branch_factor, max_branch_factor, strategy>>(node_handle);
+        node_allocator_->get_tree_node<LeafNode<min_branch_factor, max_branch_factor>>(node_handle);
     return ptr;
   }
 
   /* If unpack_perm=true, the tree will be modified */
-  inline pinned_node_ptr<BranchNode<min_branch_factor, max_branch_factor, strategy>>
+  inline pinned_node_ptr<BranchNode<min_branch_factor, max_branch_factor>>
   get_branch_node(tree_node_handle node_handle, bool unpack_perm = true) {
     assert(node_handle.get_type() == BRANCH_NODE);
     auto ptr =
-        node_allocator_->get_tree_node<BranchNode<min_branch_factor, max_branch_factor, strategy>>(node_handle);
+        node_allocator_->get_tree_node<BranchNode<min_branch_factor, max_branch_factor>>(node_handle);
     return ptr;
   }
 
@@ -172,25 +177,25 @@ public:
   }
 };
 
-template <int min_branch_factor, int max_branch_factor, class strategy>
-std::vector<Point> NIRTreeDisk<min_branch_factor, max_branch_factor, strategy>::exhaustiveSearch(Point requestedPoint) {
+template <int min_branch_factor, int max_branch_factor>
+std::vector<Point> NIRTreeDisk<min_branch_factor, max_branch_factor>::exhaustiveSearch(Point requestedPoint) {
   return point_search(root, requestedPoint, this);
 }
 
-template <int min_branch_factor, int max_branch_factor, class strategy>
+template <int min_branch_factor, int max_branch_factor>
 std::vector<Point>
-NIRTreeDisk<min_branch_factor, max_branch_factor, strategy>::search(Point requestedPoint) {
+NIRTreeDisk<min_branch_factor, max_branch_factor>::search(Point requestedPoint) {
   return point_search(root, requestedPoint, this);
 }
 
-template <int min_branch_factor, int max_branch_factor, class strategy>
+template <int min_branch_factor, int max_branch_factor>
 std::vector<Point>
-NIRTreeDisk<min_branch_factor, max_branch_factor, strategy>::search(Rectangle requestedRectangle) {
+NIRTreeDisk<min_branch_factor, max_branch_factor>::search(Rectangle requestedRectangle) {
   return rectangle_search(root, requestedRectangle, this, true /* track */);
 }
 
-template <int min_branch_factor, int max_branch_factor, class strategy>
-void NIRTreeDisk<min_branch_factor, max_branch_factor, strategy>::insert(Point givenPoint) {
+template <int min_branch_factor, int max_branch_factor>
+void NIRTreeDisk<min_branch_factor, max_branch_factor>::insert(Point givenPoint) {
   std::fill(hasReinsertedOnLevel.begin(), hasReinsertedOnLevel.end(), false);
   if (root.get_type() == LEAF_NODE) {
     auto root_node = get_leaf_node(root, true);
@@ -202,8 +207,8 @@ void NIRTreeDisk<min_branch_factor, max_branch_factor, strategy>::insert(Point g
   }
 }
 
-template <int min_branch_factor, int max_branch_factor, class strategy>
-void NIRTreeDisk<min_branch_factor, max_branch_factor, strategy>::remove(Point givenPoint) {
+template <int min_branch_factor, int max_branch_factor>
+void NIRTreeDisk<min_branch_factor, max_branch_factor>::remove(Point givenPoint) {
   if (root.get_type() == LEAF_NODE) {
     auto root_node = get_leaf_node(root);
     auto result = root_node->remove(this, root, givenPoint);
@@ -226,8 +231,8 @@ void NIRTreeDisk<min_branch_factor, max_branch_factor, strategy>::remove(Point g
   }
 }
 
-template <int min_branch_factor, int max_branch_factor, class strategy>
-unsigned NIRTreeDisk<min_branch_factor, max_branch_factor, strategy>::checksum() {
+template <int min_branch_factor, int max_branch_factor>
+unsigned NIRTreeDisk<min_branch_factor, max_branch_factor>::checksum() {
   if (root.get_type() == LEAF_NODE) {
     auto root_node = get_leaf_node(root);
     return root_node->checksum();
@@ -237,8 +242,8 @@ unsigned NIRTreeDisk<min_branch_factor, max_branch_factor, strategy>::checksum()
   }
 }
 
-template <int min_branch_factor, int max_branch_factor, class strategy>
-bool NIRTreeDisk<min_branch_factor, max_branch_factor, strategy>::validate() {
+template <int min_branch_factor, int max_branch_factor>
+bool NIRTreeDisk<min_branch_factor, max_branch_factor>::validate() {
   if (root.get_type() == LEAF_NODE) {
     auto root_node = get_leaf_node(root);
     root_node->bounding_box_validate();
@@ -250,33 +255,33 @@ bool NIRTreeDisk<min_branch_factor, max_branch_factor, strategy>::validate() {
   }
 }
 
-template <int min_branch_factor, int max_branch_factor, class strategy>
-void NIRTreeDisk<min_branch_factor, max_branch_factor, strategy>::stat() {
+template <int min_branch_factor, int max_branch_factor>
+void NIRTreeDisk<min_branch_factor, max_branch_factor>::stat() {
   stat_node(root, this);
 }
 
-template <int min_branch_factor, int max_branch_factor, class strategy>
-void NIRTreeDisk<min_branch_factor, max_branch_factor, strategy>::print() {
+template <int min_branch_factor, int max_branch_factor>
+void NIRTreeDisk<min_branch_factor, max_branch_factor>::print() {
   std::ofstream outputFile("printed_nir_tree.txt");
 
   struct Printer {
       Printer(std::ofstream &printFile): printFile(printFile) {}
 
-      void operator()(NIRTreeDisk<min_branch_factor, max_branch_factor, strategy> *treeRef, tree_node_handle node_handle) {
-//        printPackedNodes<min_branch_factor, max_branch_factor, strategy>(treeRef, node_handle, printFile);
+      void operator()(NIRTreeDisk<min_branch_factor, max_branch_factor> *treeRef, tree_node_handle node_handle) {
+//        printPackedNodes<min_branch_factor, max_branch_factor>(treeRef, node_handle, printFile);
       }
 
       std::ofstream &printFile;
   };
 
   Printer printer(outputFile);
-  treeWalker<min_branch_factor, max_branch_factor, strategy>(this, root, printer);
+  treeWalker<min_branch_factor, max_branch_factor>(this, root, printer);
 
   outputFile.close();
 }
 
-template <int min_branch_factor, int max_branch_factor, class strategy>
-void NIRTreeDisk<min_branch_factor, max_branch_factor, strategy>::visualize() {
+template <int min_branch_factor, int max_branch_factor>
+void NIRTreeDisk<min_branch_factor, max_branch_factor>::visualize() {
   //BMPPrinter p(1000, 1000);
   // p.printToBMP(root);
 }
