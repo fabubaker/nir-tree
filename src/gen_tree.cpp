@@ -100,7 +100,7 @@ void generate_tree(std::map<std::string, size_t> &configU, std::map<std::string,
 
     spatialIndex = tree;
     bufferPool = &(tree->node_allocator_->buffer_pool_);
-    
+
     // start with bulk load:
     std::cout << "Bulk Loading..." << std::endl;
     std::cout << "Creating tree with " << configU["buffer_pool_memory"] << "bytes" << std::endl;

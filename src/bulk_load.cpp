@@ -1185,34 +1185,45 @@ void bulk_load_tree(
   /* Start measuring bulk load time */
   std::chrono::high_resolution_clock::time_point begin_time = std::chrono::high_resolution_clock::now();
 
-  if (configU["bulk_load_alg"] == STR) {
-    // STR is bottom up
-    uint64_t cur_level = 0;
-    std::cout << "Bulk-loading R* using Sort-Tile-Recursive..." << std::endl;
-    std::vector<tree_node_handle> leaves = str_packing_leaf(tree, begin, end, max_branch_factor, cur_level);
-    cur_level++;
-    std::vector<tree_node_handle> branches = str_packing_branch(tree, leaves, max_branch_factor, cur_level);
-    cur_level++;
-
-    while (branches.size() > 1) {
-      assert(cur_level <= max_depth);
-      branches = str_packing_branch(tree, branches, max_branch_factor, cur_level);
+  switch(configU["bulk_load_alg"]) {
+    case STR: {
+      // STR is bottom up
+      uint64_t cur_level = 0;
+      std::cout << "Bulk-loading R* using Sort-Tile-Recursive..." << std::endl;
+      std::vector<tree_node_handle> leaves = str_packing_leaf(tree, begin, end, max_branch_factor, cur_level);
       cur_level++;
-    }
+      std::vector<tree_node_handle> branches = str_packing_branch(tree, leaves, max_branch_factor, cur_level);
+      cur_level++;
 
-    tree->root = branches.at(0);
-  } else if (configU["bulk_load_alg"] == TGS) {
-    std::cout << "Bulk-loading R* using Top-Down Greedy Splitting..." << std::endl;
-    tree->root = tgs_load(tree, begin, end, max_branch_factor);
-  } else if(configU["bulk_load_alg"] == QTS) {
-    // QTS is top down
-    uint64_t root_level = max_depth;
-    std::cout << "Bulk-loading R* using Quad Tree Style Load..." << std::endl;
-    auto ret = quad_tree_style_load(tree, begin, end, max_branch_factor, root_level);
-    tree->root = ret.first;
-  } else {
-    std::cout << "Bulk-loading algorithm is not recognized..." << std::endl;
-    exit(1);
+      while (branches.size() > 1) {
+        assert(cur_level <= max_depth);
+        branches = str_packing_branch(tree, branches, max_branch_factor, cur_level);
+        cur_level++;
+      }
+
+      tree->root = branches.at(0);
+
+      break;
+    }
+    case TGS: {
+      std::cout << "Bulk-loading R* using Top-Down Greedy Splitting..." << std::endl;
+      tree->root = tgs_load(tree, begin, end, max_branch_factor);
+
+      break;
+    }
+    case QTS: {
+      // QTS is top down
+      uint64_t root_level = max_depth;
+      std::cout << "Bulk-loading R* using Quad Tree Style Load..." << std::endl;
+      auto ret = quad_tree_style_load(tree, begin, end, max_branch_factor, root_level);
+      tree->root = ret.first;
+
+      break;
+    }
+    default: {
+      std::cout << "Bulk-loading algorithm is not recognized..." << std::endl;
+      exit(1);
+    }
   }
 
   std::chrono::high_resolution_clock::time_point end_time = std::chrono::high_resolution_clock::now();
