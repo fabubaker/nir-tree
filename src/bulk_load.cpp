@@ -1244,7 +1244,6 @@ void bulk_load_tree(
   tree->write_metadata();
 }
 
-
 template <typename T>
 void sequential_insert_tree(
     T *tree,
