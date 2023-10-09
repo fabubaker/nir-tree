@@ -56,9 +56,9 @@ tree_node_allocator *get_node_allocator(NIRTreeDisk<min_branch_factor, max_branc
 }
 // Enumeration of Branch Partition Strategy
 enum BranchPartitionStrategy {
-  LINEMINIMIZEDOWNSPLITS,
-  LINEMINIMIZEDISTANCEFROMMEAN,
-  EXPERIMENTALSTRATEGY
+  LINE_MINIMIZE_DOWN_SPLITS,
+  LINE_MINIMIZE_DISTANCE_FROM_MEAN,
+  EXPERIMENTAL_STRATEGY
 };
 // Branch object contains child and boundingBox where child is the 
 // tree_node_handler which points to the disk page, and boundingBox 
@@ -2478,13 +2478,13 @@ Partition BranchNode<min_branch_factor, max_branch_factor>::partitionExperimenta
 template <int min_branch_factor, int max_branch_factor>
 Partition BranchNode<min_branch_factor, max_branch_factor>::partitionNode(NIRTreeDisk<min_branch_factor, max_branch_factor> *treeRef) {
   switch (treeRef->strategy) {
-    case LINEMINIMIZEDOWNSPLITS:
+    case LINE_MINIMIZE_DOWN_SPLITS:
       return partitionLineMinimizeDownsplits(treeRef);
       break;
-    case LINEMINIMIZEDISTANCEFROMMEAN:
+    case LINE_MINIMIZE_DISTANCE_FROM_MEAN:
       return partitionLineMinimizeDistanceFromMean(treeRef);
       break;
-    case EXPERIMENTALSTRATEGY:
+    case EXPERIMENTAL_STRATEGY:
       return partitionExperimentalStrategy(treeRef);
       break;
     default:

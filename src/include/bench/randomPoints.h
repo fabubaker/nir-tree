@@ -937,7 +937,7 @@ runBench(PointGenerator<T> &pointGen,
     spatialIndex = tree;
   } else if (configU["tree"] == NIR_TREE) {
     auto tree = new nirtreedisk::NIRTreeDisk<5, NIR_FANOUT>(
-            configU["buffer_pool_memory"], configS["db_file_name"], nirtreedisk::LINEMINIMIZEDOWNSPLITS
+            configU["buffer_pool_memory"], configS["db_file_name"], nirtreedisk::LINE_MINIMIZE_DOWN_SPLITS
     );
     bufferPool = &(tree->node_allocator_->buffer_pool_);
     spatialIndex = tree;
