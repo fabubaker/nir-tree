@@ -689,15 +689,17 @@ std::pair<double, uint64_t> find_best_cut(
 //        B1 = MBB of [M * i + 1, n]
 // 4.     compute cost_function(B0, B1)
 // 5. split the input set based on i which has the lowest cost
+template <typename T, typename LN, typename BN>
 void basic_split_leaf(
-        rstartreedisk::RStarTreeDisk<R_STAR_MIN_FANOUT, R_STAR_MAX_FANOUT> *tree,
+        T *tree,
         std::vector<std::vector<Point>::iterator> begins,
         std::vector<std::vector<Point>::iterator> ends,
         unsigned branch_factor,
         unsigned height, 
         uint64_t M, 
-        pinned_node_ptr<rstartreedisk::LeafNode<R_STAR_MIN_FANOUT, R_STAR_MAX_FANOUT>> leaf_node)
-{
+        pinned_node_ptr<LN> leaf_node,
+        BN *branch_node_type
+) {
   // count is number of points in this range
   uint64_t count = ends[0] - begins[0];
 
@@ -772,8 +774,8 @@ void basic_split_leaf(
     new_ends_right.push_back(end_x_right);
     new_ends_right.push_back(end_y_right);
 
-    basic_split_leaf(tree, new_begins_left, new_ends_left, branch_factor, height, M, leaf_node);
-    basic_split_leaf(tree, new_begins_right, new_ends_right, branch_factor, height, M, leaf_node);
+    basic_split_leaf(tree, new_begins_left, new_ends_left, branch_factor, height, M, leaf_node, branch_node_type);
+    basic_split_leaf(tree, new_begins_right, new_ends_right, branch_factor, height, M, leaf_node, branch_node_type);
   } else if (dimension == 1){
     // The best cut is in dimension y
     auto begin_y_left = begins[1];
@@ -804,25 +806,24 @@ void basic_split_leaf(
     new_ends_right.push_back(end_x_right);
     new_ends_right.push_back(end_y_right);
 
-    basic_split_leaf(tree, new_begins_left, new_ends_left, branch_factor, height, M, leaf_node);
-    basic_split_leaf(tree, new_begins_right, new_ends_right, branch_factor, height, M, leaf_node);
+    basic_split_leaf(tree, new_begins_left, new_ends_left, branch_factor, height, M, leaf_node, branch_node_type);
+    basic_split_leaf(tree, new_begins_right, new_ends_right, branch_factor, height, M, leaf_node, branch_node_type);
   } else {
     assert (dimension != 0 && dimension != 1);
   }
 }
 
+template <typename T, typename LN, typename BN>
 void basic_split_branch(
-        rstartreedisk::RStarTreeDisk<R_STAR_MIN_FANOUT, R_STAR_MAX_FANOUT> *tree,
+        T *tree,
         std::vector<std::vector<Point>::iterator> begins,
         std::vector<std::vector<Point>::iterator> ends,
         unsigned branch_factor,
         unsigned height, 
         uint64_t M, 
-        pinned_node_ptr<rstartreedisk::BranchNode<R_STAR_MIN_FANOUT, R_STAR_MAX_FANOUT>> branch_node)
-{
-  using LN = rstartreedisk::LeafNode<R_STAR_MIN_FANOUT, R_STAR_MAX_FANOUT>;
-  using BN = rstartreedisk::BranchNode<R_STAR_MIN_FANOUT, R_STAR_MAX_FANOUT>;
-
+        pinned_node_ptr<BN> branch_node,
+        LN *leaf_node_type
+) {
   // count is number of points in this range
   uint64_t count = ends[0] - begins[0]; 
 
@@ -842,7 +843,9 @@ void basic_split_branch(
 
       // Recurse onto next level with M = branch factor
       uint64_t new_M = branch_factor;
-      basic_split_leaf(tree, begins, ends, branch_factor, height - 1, new_M, leaf_node);
+      basic_split_leaf(
+          tree, begins, ends, branch_factor, height - 1, new_M, leaf_node, (BN *) nullptr
+      );
       
       // Create the current branch after recursing
       assert(leaf_handle.get_level() == 0);
@@ -859,7 +862,9 @@ void basic_split_branch(
 
       // Recurse onto next level
       uint64_t new_M = pow(branch_factor, (std::ceil(log(count) / log(branch_factor)) - 1));
-      basic_split_branch(tree, begins, ends, branch_factor, height - 1, new_M, child_node);
+      basic_split_branch(
+          tree, begins, ends, branch_factor, height - 1, new_M, child_node, leaf_node_type
+      );
 
       // Create the current branch after recursing
       assert(child_handle.get_level() == (height - 1));
@@ -930,8 +935,8 @@ void basic_split_branch(
     new_ends_right.push_back(end_x_right);
     new_ends_right.push_back(end_y_right);
 
-    basic_split_branch(tree, new_begins_left, new_ends_left, branch_factor, height, M, branch_node);
-    basic_split_branch(tree, new_begins_right, new_ends_right, branch_factor, height, M, branch_node);
+    basic_split_branch(tree, new_begins_left, new_ends_left, branch_factor, height, M, branch_node, leaf_node_type);
+    basic_split_branch(tree, new_begins_right, new_ends_right, branch_factor, height, M, branch_node, leaf_node_type);
   } else if (dimension == 1) {
     // The best cut is in dimension y
     auto begin_y_left = begins[1];
@@ -962,8 +967,8 @@ void basic_split_branch(
     new_ends_right.push_back(end_x_right);
     new_ends_right.push_back(end_y_right);
 
-    basic_split_branch(tree, new_begins_left, new_ends_left, branch_factor, height, M, branch_node);
-    basic_split_branch(tree, new_begins_right, new_ends_right, branch_factor, height, M, branch_node);
+    basic_split_branch(tree, new_begins_left, new_ends_left, branch_factor, height, M, branch_node, leaf_node_type);
+    basic_split_branch(tree, new_begins_right, new_ends_right, branch_factor, height, M, branch_node, leaf_node_type);
   } else {
     assert (dimension != 0 && dimension != 1);
   }
@@ -975,14 +980,15 @@ void basic_split_branch(
 //    points: just 1 ordering available 
 //    rectangles: (1) min coord (2) max coord (3) center 
 // 2. run basic_split to generate branch nodes and leaf nodes
+template <typename T, typename LN, typename BN>
 tree_node_handle tgs_load(
-        rstartreedisk::RStarTreeDisk<R_STAR_MIN_FANOUT, R_STAR_MAX_FANOUT> *tree,
+        T *tree,
         std::vector<Point>::iterator begin,
         std::vector<Point>::iterator end,
-        unsigned branch_factor
+        unsigned branch_factor,
+        LN *leaf_node_type,
+        BN *branch_node_type
 ) {
-  using BN = rstartreedisk::BranchNode<R_STAR_MIN_FANOUT, R_STAR_MAX_FANOUT>;
-
   // TODO: The number of points may be small enough to fit into a single leaf node.
   //       We do not handle this case.
   tree_node_allocator *allocator = tree->node_allocator_.get();
@@ -1020,7 +1026,7 @@ tree_node_handle tgs_load(
   unsigned root_level = height; 
   uint64_t M = pow(branch_factor, height);
 
-  basic_split_branch(tree, begins, ends, branch_factor, height, M, root_node); 
+  basic_split_branch(tree, begins, ends, branch_factor, height, M, root_node, leaf_node_type);
   // Set level for root node
   root_handle.set_level(root_level);
   return root_handle;
@@ -1156,7 +1162,10 @@ void bulk_load_tree(
     }
     case TGS: {
       std::cout << "Bulk-loading using Top-Down Greedy Splitting..." << std::endl;
-      tree->root = tgs_load(tree, begin, end, max_branch_factor);
+      tree->root = tgs_load(
+        tree, begin, end, max_branch_factor,
+        (LN *) nullptr, (BN *) nullptr
+      );
 
       break;
     }

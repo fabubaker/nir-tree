@@ -49,11 +49,14 @@ std::pair<tree_node_handle, Rectangle> quad_tree_style_load(
 
 /* TGS */
 
+template <typename T, typename LN, typename BN>
 tree_node_handle tgs_load(
         rstartreedisk::RStarTreeDisk<R_STAR_MIN_FANOUT, R_STAR_MAX_FANOUT> *tree,
         std::vector<Point>::iterator begin,
         std::vector<Point>::iterator end,
-        unsigned branch_factor
+        unsigned branch_factor,
+        LN *leaf_node_type,
+        BN *branch_node_type
 );
 
 /* Bulk-load/insert entry points */
