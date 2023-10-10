@@ -291,8 +291,9 @@ public:
 
   // Constructors and destructors
   BranchNode(): cur_offset_(0) {
-  static_assert(sizeof(BranchNode<min_branch_factor, max_branch_factor>) <= PAGE_DATA_SIZE);
+    static_assert(sizeof(BranchNode<min_branch_factor, max_branch_factor>) <= PAGE_DATA_SIZE);
   }
+
   void deleteSubtrees(NIRTreeDisk<min_branch_factor, max_branch_factor> *treeRef);
 
   // Data structure interface functions: 
@@ -3893,4 +3894,3 @@ void testLevels(NIRTreeDisk<min_branch_factor, max_branch_factor> *treeRef,
 
 
 } // namespace nirtreedisk
-
