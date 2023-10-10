@@ -15,10 +15,10 @@ enum BulkLoadAlg { STR, QTS, TGS };
 
 template <typename T>
 std::vector<tree_node_handle> str_packing_branch(
-        T *tree,
-        std::vector<tree_node_handle> &child_nodes,
-        unsigned branch_factor,
-        unsigned cur_depth);
+    T *tree,
+    std::vector<tree_node_handle> &child_nodes,
+    unsigned branch_factor,
+    unsigned cur_depth);
 
 template <typename T>
 std::vector<tree_node_handle> str_packing_leaf(
