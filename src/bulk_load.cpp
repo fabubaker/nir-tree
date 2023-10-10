@@ -92,7 +92,6 @@ void fill_branch(
     tree_node_handle child_handle = node_point_pairs[offset++].second;
     Rectangle bbox;
 
-    // Adjust parent
     if (child_handle.get_type() == LEAF_NODE) {
       auto node = allocator->get_tree_node<LN>(child_handle);
       bbox = node->boundingBox();
@@ -133,7 +132,7 @@ void fill_branch(
   for (uint64_t i = 0; i < branch_factor; i++) {
     tree_node_handle child_handle = node_point_pairs[offset++].second;
     Rectangle bbox;
-    // Adjust parent
+
     if (child_handle.get_type() == LEAF_NODE) {
       auto node = allocator->get_tree_node<LN>(child_handle);
       bbox = node->boundingBox();
