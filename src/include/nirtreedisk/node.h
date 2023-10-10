@@ -45,9 +45,9 @@
 #define DEBUG_TESTLEVELS 0
 #define IGNORE_REINSERTION 1
 
-#define REINSERTION_LIMIT 5
-
 namespace nirtreedisk {
+
+const unsigned REINSERTION_LIMIT = 5;
 
 template <int min_branch_factor, int max_branch_factor>
 class NIRTreeDisk;
@@ -81,17 +81,17 @@ struct Branch {
 // BranchAtLevel object is for inserting a branch at a specific
 // tree level
 // [REINSERTION]
-struct BranchAtLevel {
-  BranchAtLevel(Branch branch, uint8_t level):
-    branch(branch), level(level) {}
-  BranchAtLevel() = default;
-  BranchAtLevel(const BranchAtLevel &other): branch(other.branch), level(other.level) {}
-  bool operator==(const BranchAtLevel &o) const = default;
-  bool operator!=(const BranchAtLevel &o) const = default;
-  // members: 
-  Branch branch;
-  uint8_t level;
-};
+// struct BranchAtLevel {
+//   BranchAtLevel(Branch branch, uint8_t level):
+//     branch(branch), level(level) {}
+//   BranchAtLevel() = default;
+//   BranchAtLevel(const BranchAtLevel &other): branch(other.branch), level(other.level) {}
+//   bool operator==(const BranchAtLevel &o) const = default;
+//   bool operator!=(const BranchAtLevel &o) const = default;
+//   // members: 
+//   Branch branch;
+//   uint8_t level;
+// };
 
 
 // SplitResult object represents two newly created branches after 
@@ -338,6 +338,8 @@ public:
   };
   // removeBranch: just remove branch from Node without deleting the branch
   void removeBranch(unsigned index);
+  // removeBranch: just remove branch from Node without deleting the branch
+  void removeBranch(const Branch &entry);
   // updateBranch: update the Branch at node with the same entry.child
   void updateBranch(const Branch &entry);
   // removeBranch: remove branch from BranchNode and free the memory associated with Branch
@@ -897,7 +899,7 @@ std::pair<SplitResult, tree_node_handle> adjust_tree_bottom_half(
   }
 #endif
 
-#if IGNORE_REINSERTION
+// #if IGNORE_REINSERTION
   tree_node_handle parent_handle = tree_node_handle(nullptr);
   if ( !parentHandles.empty() ) {
     parent_handle = parentHandles.top();
@@ -908,27 +910,27 @@ std::pair<SplitResult, tree_node_handle> adjust_tree_bottom_half(
   
   // Ascend, propagating splits
   return std::make_pair(propagationSplit, parent_handle);
-#else
-  if(hasReinsertedOnLevel.at(current_handle.get_level())){
-    tree_node_handle parent_handle = tree_node_handle(nullptr);
-    if ( !parentHandles.empty() ) {
-      parent_handle = parentHandles.top();
-      parentHandles.pop();
-    } 
-    // Split the Node
-    propagationSplit = current_node->splitNode(treeRef, current_handle, parent_handle);
+// #else
+// //  if(! hasReinsertedOnLevel.at(current_handle.get_level())){
+//     tree_node_handle parent_handle = tree_node_handle(nullptr);
+//     if ( !parentHandles.empty() ) {
+//       parent_handle = parentHandles.top();
+//       parentHandles.pop();
+//     } 
+//     // Split the Node
+//     propagationSplit = current_node->splitNode(treeRef, current_handle, parent_handle);
     
-    // Ascend, propagating splits
-    return std::make_pair(propagationSplit, parent_handle);
-  } else {
-    // Nothing is real after you make this call
-    // The reinsert might have come back around again and split this
-    // node, or other nodes, or everyting
-    // Signal to the caller that we shoudl stop
-    current_node->reInsert(hasReinsertedOnLevel);
-    return std::make_pair(propagationSplit, tree_node_handle(nullptr));  
-  }
-#endif 
+//     // Ascend, propagating splits
+//     return std::make_pair(propagationSplit, parent_handle);
+//   // } else {
+//   //   // Nothing is real after you make this call
+//   //   // The reinsert might have come back around again and split this
+//   //   // node, or other nodes, or everyting
+//   //   // Signal to the caller that we shoudl stop
+//   //   current_node->reInsert(hasReinsertedOnLevel);
+//   //   return std::make_pair(propagationSplit, tree_node_handle(nullptr));  
+//   // }
+// #endif 
 }
 
 // [UNUSED]
@@ -1390,6 +1392,21 @@ void BranchNode<min_branch_factor, max_branch_factor>::removeBranch(unsigned ind
 }
 
 template <int min_branch_factor, int max_branch_factor>
+void BranchNode<min_branch_factor, max_branch_factor>::removeBranch(const Branch &entry)
+{
+  // Locate the child
+  unsigned childIndex = 0;
+  tree_node_handle entry_handle = entry.child;
+  while( entries.at(childIndex).child != entry_handle and childIndex < this->cur_offset_ )
+  { 
+    childIndex++; 
+  }
+  assert(entries.at(childIndex).child == entry_handle);
+
+  this->removeBranch(childIndex);
+}
+
+template <int min_branch_factor, int max_branch_factor>
 void BranchNode<min_branch_factor, max_branch_factor>::updateBranch(const Branch &entry) {
   // Locate the child
   unsigned childIndex = 0;
@@ -1726,6 +1743,8 @@ BranchNode<min_branch_factor, max_branch_factor>::chooseNodePoint(
 
     // Checking other branch/child starting at index 1 for better option
     for (unsigned i = 1; i < current_node->cur_offset_; i++) {
+      // optimization 
+      if (minimal_area_expansion == -1.0) { break; }
       Branch &b = current_node->entries.at(i);
       node_poly = find_polygon(treeRef, b); 
       exp = node_poly.computeExpansionArea(point);
@@ -1771,13 +1790,15 @@ BranchNode<min_branch_factor, max_branch_factor>::chooseNodePoint(
           continue;
         }
         Branch &other_branch = current_node->entries.at(i);
-        IsotheticPolygon other_poly = find_polygon(treeRef, other_branch); 
-        
+        IsotheticPolygon other_poly = find_polygon(treeRef, other_branch);
         chosen_poly.increaseResolution(Point::atInfinity, other_poly);
       }
       chosen_poly.refine();
       chosen_poly.recomputeBoundingBox();
+
+
       assert(chosen_poly.containsPoint(point));
+
       update_polygon(treeRef, chosen_branch.child, chosen_poly);
       chosen_branch.boundingBox = chosen_poly.boundingBox;
     }
@@ -1792,9 +1813,8 @@ BranchNode<min_branch_factor, max_branch_factor>::chooseNodePoint(
 
 // Always called on root, this = root
 // This top-to-bottom sweep is only for adjusting bounding boxes to contain the branch and
-// at a particular level
-// It also push all of LeafNode's ancestors to stack of parenHandles from root to parent 
-// with parent on top.
+// at a particular level. It also push all of BranchNode's ancestors to stack of parenHandles 
+// from root to parent with parent on top.
 // [REINSERTION]
 template <int min_branch_factor, int max_branch_factor>
 tree_node_handle
@@ -1805,31 +1825,29 @@ BranchNode<min_branch_factor, max_branch_factor>::chooseNodeBranch(
           Branch &branch) 
 {
   
-  // CL1 [Initialize]
+  // CNB1 [Initialize]
   assert(selfHandle != nullptr);
-  // insert() should always be called at the root level
   assert(treeRef->root == selfHandle); 
   tree_node_handle current_handle = selfHandle; 
-  // get tree height to calculate branch node level 
-  uint8_t height = this->height(treeRef,selfHandle);
   // stop at parent level 
-  uint8_t stopping_level = branchLevel.level + 1; 
-  Branch &branch = branchLevel.branch; 
+  unsigned stopping_level = current_handle.get_level() + 1; 
   // polygon of to-be-inserted branch 
-  IsotheticPolygon branch_poly = find_polygon(treeRef, branch); 
+  IsotheticPolygon insert_poly = find_polygon(treeRef, branch); 
   for (;;) {
     assert(current_handle != nullptr);
-    assert(current_handle.get_type() != LEAF_NODE);
+    // we should never reach to leaf level
+    assert(current_handle.get_type() == BRANCH_NODE);
     // if we are at the stopping level, it means we have found the
     // Branch Node 
-    uint8_t current_level = height - parentHandles.size(); 
+    unsigned current_level = current_handle.get_level();
     if (current_level == stopping_level) {
       return current_handle;
     }
+
     auto current_node = treeRef->get_branch_node(current_handle);
     assert(current_node->cur_offset_ > 0);
 
-    // CN2 [initialize node search]
+    // CNB2 [initialize node search]
     // This is the minimum amount of additional area we need in
     // one of the branches to encode our expansion
     double minimal_area_expansion = std::numeric_limits<double>::max();
@@ -1839,17 +1857,17 @@ BranchNode<min_branch_factor, max_branch_factor>::chooseNodeBranch(
     std::vector<IsotheticPolygon::OptimalExpansion> expansions;
     // find polygon of the first branch at current Branch Node
     IsotheticPolygon node_poly = find_polygon(treeRef, current_node->entries.at(0));
-    auto exp = computeExpansionArea(node_poly, branch_poly); 
+    auto exp = computeExpansionArea(node_poly, insert_poly); 
     minimal_area_expansion = exp.first;
     expansions = exp.second;
-    minimal_poly_area = branch_poly.area(); 
+    minimal_poly_area = node_poly.area(); 
     // This is the branch that gives us that minimum area expansion
     unsigned smallestExpansionBranchIndex = 0;   
-    // we are expecting expansion for branch insertion 
-    assert(minimal_area_expansion == -1.0);
 
     // checking each branch/child of current Branch Node 
     for (unsigned i = 1; i < current_node->cur_offset_; i++) {
+      // optimization 
+      if (minimal_area_expansion == -1.0) { break; }
       Branch &b = current_node->entries.at(i);
       node_poly = find_polygon(treeRef, b); 
         // Walk every rectangle in the branch's polygon
@@ -1861,13 +1879,13 @@ BranchNode<min_branch_factor, max_branch_factor>::chooseNodeBranch(
         // distinct polygons. So as a result of doing this
         // the polygon's constituent rectangles may now
         // overlap.
-      exp = computeExpansionArea(node_poly, branch_poly); 
+      exp = computeExpansionArea(node_poly, insert_poly); 
       double poly_area = node_poly.area(); 
       if (exp.first < minimal_area_expansion or
           (exp.first == minimal_area_expansion and poly_area < minimal_poly_area)) {
         minimal_area_expansion = exp.first;
-        minimal_poly_area = poly_area;
         expansions = exp.second;
+        minimal_poly_area = poly_area;
         smallestExpansionBranchIndex = i;
       }
     }
@@ -1890,17 +1908,16 @@ BranchNode<min_branch_factor, max_branch_factor>::chooseNodeBranch(
 
       Branch &chosen_branch = current_node->entries.at(smallestExpansionBranchIndex);
       IsotheticPolygon chosen_poly = find_polygon(treeRef, chosen_branch); 
-      assert(branch_poly.basicRectangles.size() == expansions.size());
+      
       // Fragment them on the way down.
       // clipping other poly according to the inserted branch 
-      // why not the other way around ??? 
       for (unsigned i = 0; i < current_node->cur_offset_; i++) {
         if (i == smallestExpansionBranchIndex) {
           continue;
         }
         Branch &other_branch = current_node->entries.at(i);
         IsotheticPolygon other_poly = find_polygon(treeRef, other_branch); 
-        other_poly.increaseResolution(Point::atInfinity, branch_poly);
+        other_poly.increaseResolution(Point::atInfinity, insert_poly);
         other_poly.refine();
         other_poly.recomputeBoundingBox();
         update_polygon(treeRef, other_branch.child, other_poly);
@@ -1910,9 +1927,10 @@ BranchNode<min_branch_factor, max_branch_factor>::chooseNodeBranch(
       // responsible for the new point/branch
       // Everyone else needs to fragment around my nodeEntry,
       // then we expand and fragment around them.
-      for (unsigned i = 0; i < branch_poly.basicRectangles.size(); i++) {
+      assert(insert_poly.basicRectangles.size() == expansions.size());
+      for (unsigned i = 0; i < insert_poly.basicRectangles.size(); i++) {
         auto &expansion = expansions.at(i);
-        auto &branch_rect = branch_poly.basicRectangles.at(i);
+        auto &branch_rect = insert_poly.basicRectangles.at(i);
         Rectangle &existing_rect = chosen_poly.basicRectangles.at(expansion.index);
         // Expand the existing rectangle. This rectangle
         // might now overlap with other rectangles in
@@ -1923,6 +1941,7 @@ BranchNode<min_branch_factor, max_branch_factor>::chooseNodeBranch(
         existing_rect.expand(branch_rect);
         assert(existing_rect.containsRectangle(branch_rect));
       }
+      chosen_poly.refine();
       chosen_poly.recomputeBoundingBox();
 
       // Dodge all the other branches
@@ -1936,6 +1955,8 @@ BranchNode<min_branch_factor, max_branch_factor>::chooseNodeBranch(
       }
       chosen_poly.refine();
       chosen_poly.recomputeBoundingBox();
+
+      // assert polygon contain polygon 
 
       update_polygon(treeRef, chosen_branch.child, chosen_poly);
       chosen_branch.boundingBox = chosen_poly.boundingBox;
@@ -2597,24 +2618,38 @@ SplitResult BranchNode<min_branch_factor, max_branch_factor>::splitNode(
         assert(child_sibling.child.get_type() == LEAF_NODE);
 
         // check if child_node satisfies min_branch_factor after downward split
-        if (child_node->cur_offset_ >= min_branch_factor) {
-          this->updateBranch(child_updated);
-          index = index + 1;
-        } else if (child_node->cur_offset_ > 0) {
-          // the splitted branch doesn't meet min_branch_factor
-          // it will be reinserted 
-        } else {
+        if (child_node->cur_offset_ == 0) {
           this->removeAndFreeBranch(treeRef, branch.child); //update cur_offset_
+        } else if (child_node->cur_offset_ < min_branch_factor && 
+                   treeRef->reinsertionAttempt <= REINSERTION_LIMIT) {
+          // the splitted branch doesn't meet min_branch_factor => reinsert
+          for (unsigned i = 0; i < child_node->cur_offset_; i++ ) {
+            Point &p = child_node->entries.at(i);
+            treeRef->Q2.push_back(p);
+          }
+          this->removeAndFreeBranch(treeRef, branch.child); //update cur_offset_
+        } else {
+          this->updateBranch(child_updated);
+          index = index + 1;         
         }
 
-        // check if child_sibling_node is empty after downward split 
+        // check if child_sibling_node satifsfies after downward split 
         auto child_sibling_node = treeRef->get_leaf_node(child_sibling.child);
-        if (child_sibling_node->cur_offset_ > 0){
-          sibling_node->addBranchToNode(child_sibling);
-        } else {
+        if (child_sibling_node->cur_offset_ == 0) {
           allocator->free(child_sibling.child, sizeof(LeafNode<min_branch_factor, max_branch_factor>));
+        } else if (child_sibling_node->cur_offset_ < min_branch_factor && 
+                   treeRef->reinsertionAttempt <= REINSERTION_LIMIT) {
+          // the splitted branch doesn't meet min_branch_factor => reinsert
+          for (unsigned i = 0; i < child_sibling_node->cur_offset_; i++ ) {
+            Point &p = child_sibling_node->entries.at(i);
+            treeRef->Q2.push_back(p);
+          }
+          allocator->free(child_sibling.child, sizeof(LeafNode<min_branch_factor, max_branch_factor>));
+        } else {
+          sibling_node->addBranchToNode(child_sibling);
         }
-      } else {
+
+      } else if (branch.child.get_type() == BRANCH_NODE){
         auto child_node = treeRef->get_branch_node(branch.child);
         downwardSplit = child_node->splitNode(treeRef, branch.child, current_handle, p, true);
         Branch child_updated = downwardSplit.leftBranch;
@@ -2622,21 +2657,39 @@ SplitResult BranchNode<min_branch_factor, max_branch_factor>::splitNode(
         assert(child_updated.child == branch.child);
         assert(child_sibling.child.get_type() == BRANCH_NODE);
 
-        // check if child_node is empty after downward split
-        if (child_node->cur_offset_ > 0) {
-          this->updateBranch(child_updated);
-          index = index + 1;
+        // check if child_node satisfies min_branch_factor after downward split
+        if (child_node->cur_offset_ == 0) {
+          this->removeAndFreeBranch(treeRef, branch.child); //update cur_offset_
+        } else if (child_node->cur_offset_ < min_branch_factor && 
+                   treeRef->reinsertionAttempt <= REINSERTION_LIMIT) {
+          // the splitted branch doesn't meet min_branch_factor => reinsert
+          for (unsigned i = 0; i < child_node->cur_offset_; i++ ) {
+            Branch &b = child_node->entries.at(i);
+            treeRef->Q1.push_back(b);
+          }
+          this->removeAndFreeBranch(treeRef, branch.child); //update cur_offset_
         } else {
-          this->removeAndFreeBranch(treeRef, branch.child);
+          this->updateBranch(child_updated);
+          index = index + 1;         
         }
 
-        // check if child_sibling_node is empty after downward split 
+        // check if child_sibling_node satifsfies after downward split 
         auto child_sibling_node = treeRef->get_branch_node(child_sibling.child);
-        if (child_sibling_node->cur_offset_ > 0){
-          sibling_node->addBranchToNode(child_sibling);
-        } else {
+        if (child_sibling_node->cur_offset_ == 0) {
           allocator->free(child_sibling.child, sizeof(BranchNode<min_branch_factor, max_branch_factor>));
+        } else if (child_sibling_node->cur_offset_ < min_branch_factor && 
+                   treeRef->reinsertionAttempt <= REINSERTION_LIMIT) {
+          // the splitted branch doesn't meet min_branch_factor => reinsert
+          for (unsigned i = 0; i < child_sibling_node->cur_offset_; i++ ) {
+            Branch &b = child_sibling_node->entries.at(i);
+            treeRef->Q1.push_back(b);
+          }
+          allocator->free(child_sibling.child, sizeof(BranchNode<min_branch_factor, max_branch_factor>));
+        } else {
+          sibling_node->addBranchToNode(child_sibling);
         }
+      } else {
+        exit(1);
       }
 
 #if DEBUG_TEST
@@ -2782,9 +2835,9 @@ tree_node_handle BranchNode<min_branch_factor, max_branch_factor>::insert(
     abort();
 #else
     current_handle = chooseNodeBranch(treeRef, 
-                                     selfHandle, 
-                                     parentHandles, 
-                                     std::get<Branch>(nodeEntry));
+                                      selfHandle, 
+                                      parentHandles, 
+                                      std::get<Branch>(nodeEntry));
 #endif
   }
 
@@ -2898,38 +2951,41 @@ tree_node_handle BranchNode<min_branch_factor, max_branch_factor>::insert(
 #endif
 
 
-  if( isReinsertion ){
+  if (isReinsertion) {
     return ret_handle;
   } 
   
   while (!treeRef->Q1.empty() or !treeRef->Q2.empty()){
+    std::cout << "** Point queue size: " <<  treeRef->Q1.size() << std::endl; 
+    std::cout << "** Branch queue size: " <<  treeRef->Q2.size() << std::endl; 
+    std::cout << "** reinsertion attempt: " <<  treeRef->reinsertionAttempt << std::endl; 
     // increment reinsertionAttempt 
     treeRef->reinsertionAttempt++;
     // make a copy of Q1 and Q2
-    std::vector<Branch> BranchesQ = treeRef->Q1;
-    std::vector<Point> PointsQ = treeRef->Q2;
+    std::vector<Branch> BranchesQueue = treeRef->Q1;
+    std::vector<Point> PointsQueue = treeRef->Q2;
     
     // work on branches 
-    if (! BranchesQ.empty()){
+    if (! BranchesQueue.empty()){
       // sort branch vector based on level in descending order
-      std::sort(BranchesQ.begin(), BranchesQ.end(), 
+      std::sort(BranchesQueue.begin(), BranchesQueue.end(), 
             [](Branch &l, Branch &r) { return l.child.get_level() > r.child.get_level(); }); 
-      for (Branch &b : BranchesQ) {
+      for (Branch &b : BranchesQueue) {
         //std::fill(treeRef->hasReinsertedOnLevel.begin(), treeRef->hasReinsertedOnLevel.end(), false);
         std::variant<Branch, Point> entry = b; 
         bool is_reinsertion = true;
         auto root_node = treeRef->get_branch_node(treeRef->root);
-        root_node->insert(treeRef, treeRef->root, entry, hasReinsertionOnLevel, is_reinsertion);
+        root_node->insert(treeRef, treeRef->root, entry, hasReinsertedOnLevel, is_reinsertion);
       }
     }
     // work on points
-    if (! Points.empty()) {
-      for (Point &p : PointsQ) {
+    if (! PointsQueue.empty()) {
+      for (Point &p : PointsQueue) {
         //std::fill(treeRef->hasReinsertedOnLevel.begin(), treeRef->hasReinsertedOnLevel.end(), false);
         std::variant<Branch, Point> entry = p; 
         bool is_reinsertion = true;
         auto root_node = treeRef->get_branch_node(treeRef->root);
-        root_node->insert(treeRef, treeRef->root, entry, hasReinsertionOnLevel, is_reinsertion);      
+        root_node->insert(treeRef, treeRef->root, entry, hasReinsertedOnLevel, is_reinsertion);      
       }
     }
   }
