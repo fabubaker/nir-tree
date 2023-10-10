@@ -283,36 +283,6 @@ bool point_comparator(const Point &lhs, const Point &rhs) {
   return false;
 }
 
-template <>
-std::vector<tree_node_handle> str_packing_branch(
-    nirtreedisk::NIRTreeDisk<5, NIR_FANOUT> *tree,
-    std::vector<tree_node_handle> &child_nodes,
-    unsigned branch_factor,
-    unsigned cur_depth) {
-  nirtreedisk::LeafNode<5, NIR_FANOUT> *targ = nullptr;
-  nirtreedisk::BranchNode<5, NIR_FANOUT> *targ2 = nullptr;
-
-  return str_packing_branch(
-    tree, child_nodes, branch_factor, targ,targ2, cur_depth
-  );
-}
-
-template <>
-std::vector<tree_node_handle> str_packing_branch(
-    rstartreedisk::RStarTreeDisk<R_STAR_MIN_FANOUT, R_STAR_MAX_FANOUT> *tree,
-    std::vector<tree_node_handle> &child_nodes,
-    unsigned branch_factor,
-    unsigned cur_depth
-) {
-  rstartreedisk::LeafNode<R_STAR_MIN_FANOUT, R_STAR_MAX_FANOUT> *targ = nullptr;
-  rstartreedisk::BranchNode<R_STAR_MIN_FANOUT, R_STAR_MAX_FANOUT> *targ2 = nullptr;
-
-
-  return str_packing_branch(
-    tree, child_nodes, branch_factor, targ, targ2, cur_depth
-  );
-}
-
 template <typename T, typename LN, typename BN>
 std::vector<tree_node_handle> str_packing_leaf(
     T *tree,
@@ -374,36 +344,6 @@ std::vector<tree_node_handle> str_packing_leaf(
   }
 
   return leaves;
-}
-
-template <>
-std::vector<tree_node_handle> str_packing_leaf(
-    nirtreedisk::NIRTreeDisk<5, NIR_FANOUT> *tree,
-    std::vector<Point>::iterator begin,
-    std::vector<Point>::iterator end,
-    unsigned branch_factor,
-    unsigned cur_depth) {
-  nirtreedisk::LeafNode<5, NIR_FANOUT> *targ = nullptr;
-  nirtreedisk::BranchNode<5, NIR_FANOUT> *targ2 = nullptr;
-
-  return str_packing_leaf(
-    tree, begin, end, branch_factor,targ, targ2, cur_depth
-  );
-}
-
-template <>
-std::vector<tree_node_handle> str_packing_leaf(
-    rstartreedisk::RStarTreeDisk<R_STAR_MIN_FANOUT, R_STAR_MAX_FANOUT> *tree,
-    std::vector<Point>::iterator begin,
-    std::vector<Point>::iterator end,
-    unsigned branch_factor,
-    unsigned cur_depth) {
-  rstartreedisk::LeafNode<R_STAR_MIN_FANOUT, R_STAR_MAX_FANOUT> *targ = nullptr;
-  rstartreedisk::BranchNode<R_STAR_MIN_FANOUT, R_STAR_MAX_FANOUT> *targ2 = nullptr;
-
-  return str_packing_leaf(
-    tree, begin, end, branch_factor,targ, targ2, cur_depth
-  );
 }
 
 std::vector<uint64_t> find_bounding_lines(
@@ -1161,6 +1101,9 @@ void bulk_load_tree(
     std::vector<Point>::iterator end,
     unsigned max_branch_factor
 ) {
+  using LN = rstartreedisk::LeafNode<R_STAR_MIN_FANOUT, R_STAR_MAX_FANOUT>;
+  using BN = rstartreedisk::BranchNode<R_STAR_MIN_FANOUT, R_STAR_MAX_FANOUT>;
+
   uint64_t num_els = (end - begin);
   // Leaf is at 0th level
   uint64_t max_depth = std::ceil(log(num_els) / log(max_branch_factor)) - 1;
@@ -1177,14 +1120,27 @@ void bulk_load_tree(
       // STR is bottom up
       uint64_t cur_level = 0;
       std::cout << "Bulk-loading R* using Sort-Tile-Recursive..." << std::endl;
-      std::vector<tree_node_handle> leaves = str_packing_leaf(tree, begin, end, max_branch_factor, cur_level);
+
+      // Bulk load the leaf level first
+      std::vector<tree_node_handle> leaves = str_packing_leaf(
+        tree, begin, end, max_branch_factor,
+        (LN *) nullptr, (BN *) nullptr, cur_level
+      );
       cur_level++;
-      std::vector<tree_node_handle> branches = str_packing_branch(tree, leaves, max_branch_factor, cur_level);
+
+      // Bulk load all branch levels next
+      std::vector<tree_node_handle> branches = str_packing_branch(
+        tree, leaves, max_branch_factor,
+        (LN *) nullptr, (BN *) nullptr, cur_level
+      );
       cur_level++;
 
       while (branches.size() > 1) {
         assert(cur_level <= max_depth);
-        branches = str_packing_branch(tree, branches, max_branch_factor, cur_level);
+        branches = str_packing_branch(
+          tree, branches, max_branch_factor,
+          (LN *) nullptr, (BN *) nullptr, cur_level
+        );
         cur_level++;
       }
 
