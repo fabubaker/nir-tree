@@ -1059,7 +1059,9 @@ void bulk_load_tree(
     std::map<std::string, size_t> &configU,
     std::vector<Point>::iterator begin,
     std::vector<Point>::iterator end,
-    unsigned max_branch_factor
+    unsigned max_branch_factor,
+    nirtreedisk::LeafNode<5, NIR_FANOUT> *leaf_node_type,
+    nirtreedisk::BranchNode<5, NIR_FANOUT> *branch_node_type
 ) {
   intersection_count = 0;
   auto tree_ptr = tree;
@@ -1094,24 +1096,22 @@ void bulk_load_tree(
   tree->write_metadata();
 }
 
-template <>
+template <typename T, typename LN, typename BN>
 void bulk_load_tree(
-    rstartreedisk::RStarTreeDisk<R_STAR_MIN_FANOUT, R_STAR_MAX_FANOUT> *tree,
+    T *tree,
     std::map<std::string, size_t> &configU,
     std::vector<Point>::iterator begin,
     std::vector<Point>::iterator end,
-    unsigned max_branch_factor
+    unsigned max_branch_factor,
+    LN *leaf_node_type,
+    BN *branch_node_type
 ) {
-  using LN = rstartreedisk::LeafNode<R_STAR_MIN_FANOUT, R_STAR_MAX_FANOUT>;
-  using BN = rstartreedisk::BranchNode<R_STAR_MIN_FANOUT, R_STAR_MAX_FANOUT>;
-
   uint64_t num_els = (end - begin);
   // Leaf is at 0th level
   uint64_t max_depth = std::ceil(log(num_els) / log(max_branch_factor)) - 1;
 
   std::cout << "Num els: " << num_els << std::endl;
   std::cout << "Max depth required: " << max_depth << std::endl;
-  std::cout << "Size of R* branch node: " << sizeof(rstartreedisk::BranchNode<R_STAR_MIN_FANOUT, R_STAR_MAX_FANOUT>) << std::endl;
 
   /* Start measuring bulk load time */
   std::chrono::high_resolution_clock::time_point begin_time = std::chrono::high_resolution_clock::now();
@@ -1120,7 +1120,7 @@ void bulk_load_tree(
     case STR: {
       // STR is bottom up
       uint64_t cur_level = 0;
-      std::cout << "Bulk-loading R* using Sort-Tile-Recursive..." << std::endl;
+      std::cout << "Bulk-loading using Sort-Tile-Recursive..." << std::endl;
 
       // Bulk load the leaf level first
       std::vector<tree_node_handle> leaves = str_packing_leaf(
@@ -1150,7 +1150,7 @@ void bulk_load_tree(
       break;
     }
     case TGS: {
-      std::cout << "Bulk-loading R* using Top-Down Greedy Splitting..." << std::endl;
+      std::cout << "Bulk-loading using Top-Down Greedy Splitting..." << std::endl;
       tree->root = tgs_load(tree, begin, end, max_branch_factor);
 
       break;
@@ -1158,7 +1158,7 @@ void bulk_load_tree(
     case QTS: {
       // QTS is top down
       uint64_t root_level = max_depth;
-      std::cout << "Bulk-loading R* using Quad Tree Style Load..." << std::endl;
+      std::cout << "Bulk-loading using Quad Tree Style Load..." << std::endl;
       auto ret = quad_tree_style_load(tree, begin, end, max_branch_factor, root_level);
       tree->root = ret.first;
 
@@ -1241,4 +1241,15 @@ template void sequential_insert_tree(
         std::vector<Point>::iterator begin,
         std::vector<Point>::iterator end,
         unsigned max_branch_factor
+);
+
+/* bulk_load_tree */
+template void bulk_load_tree(
+        rstartreedisk::RStarTreeDisk<R_STAR_MIN_FANOUT, R_STAR_MAX_FANOUT> *tree,
+        std::map<std::string, size_t> &configU,
+        std::vector<Point>::iterator begin,
+        std::vector<Point>::iterator end,
+        unsigned max_branch_factor,
+        rstartreedisk::LeafNode<R_STAR_MIN_FANOUT, R_STAR_MAX_FANOUT> *leaf_node_type,
+        rstartreedisk::BranchNode<R_STAR_MIN_FANOUT, R_STAR_MAX_FANOUT> *branch_node_type
 );

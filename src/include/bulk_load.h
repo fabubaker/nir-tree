@@ -61,13 +61,16 @@ tree_node_handle tgs_load(
 
 /* Bulk-load/insert entry points */
 
-template <typename T>
+template <typename T, typename LN, typename BN>
 void bulk_load_tree(
     T *tree,
     std::map<std::string, size_t> &configU,
     std::vector<Point>::iterator begin,
     std::vector<Point>::iterator end,
-    unsigned max_branch_factor);
+    unsigned max_branch_factor,
+    LN *leaf_node_type,
+    BN *branch_node_type
+);
 
 template <typename T>
 void sequential_insert_tree(
@@ -75,4 +78,5 @@ void sequential_insert_tree(
     std::map<std::string, size_t> &configU,
     std::vector<Point>::iterator begin,
     std::vector<Point>::iterator end,
-    unsigned max_branch_factor);
+    unsigned max_branch_factor
+);
