@@ -78,7 +78,6 @@ template <typename T, typename LN, typename BN>
 void fill_branch(
         T *treeRef,
         pinned_node_ptr<BN> branch_node,
-        tree_node_handle node_handle,
         std::vector<std::pair<Point, tree_node_handle>> &node_point_pairs,
         uint64_t &offset,
         unsigned branch_factor,
@@ -117,7 +116,6 @@ template <>
 void fill_branch(
     nirtreedisk::NIRTreeDisk<5, NIR_FANOUT> *treeRef,
     pinned_node_ptr<nirtreedisk::BranchNode<5, NIR_FANOUT>> branch_node,
-    tree_node_handle node_handle,
     std::vector<std::pair<Point, tree_node_handle>> &node_point_pairs,
     uint64_t &offset,
     unsigned branch_factor,
@@ -254,7 +252,6 @@ std::vector<tree_node_handle> str_packing_branch(
     fill_branch(
         tree,
         branch_node,
-        branch_handle,
         node_point_pairs,
         offset,
         branch_factor,
