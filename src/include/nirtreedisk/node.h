@@ -325,6 +325,11 @@ public:
     assert(false);
   };
   // addBranchToNode: add Branch at the end of array and increase cur_offset_
+  void addBranchToNode(Rectangle boundingBox, tree_node_handle child) {
+    Branch b(boundingBox, child);
+    entries.at(cur_offset_++) = b;
+  };
+
   void addBranchToNode(const Branch &entry) {
     entries.at(this->cur_offset_++) = entry;
   };
