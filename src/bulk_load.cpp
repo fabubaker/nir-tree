@@ -88,8 +88,8 @@ void fill_branch(
 
   // Add up to branch factor items to it
   for (uint64_t i = 0; i < branch_factor; i++) {
-    tree_node_handle child_handle = node_point_pairs[offset++].second;
     Rectangle bbox;
+    tree_node_handle child_handle = node_point_pairs[offset++].second;
 
     if (child_handle.get_type() == LEAF_NODE) {
       auto node = allocator->get_tree_node<LN>(child_handle);
@@ -101,10 +101,7 @@ void fill_branch(
 
     bb_and_handles.push_back(std::make_pair(bbox, child_handle));
 
-    rstartreedisk::Branch b;
-    b.child = child_handle;
-    b.boundingBox = bbox;
-    branch_node->addBranchToNode(b);
+    branch_node->addBranchToNode(bbox, child_handle);
 
     if (offset == node_point_pairs.size()) {
       break;
@@ -167,15 +164,15 @@ void fill_branch(
     nirtreedisk::Branch b;
     IsotheticPolygon constructed_poly = fixed_bb_and_handles.at(i).first;
 
-    b.child = fixed_bb_and_handles.at(i).second;
-    b.boundingBox = constructed_poly.boundingBox;
+    Rectangle boundingBox = constructed_poly.boundingBox;
+    tree_node_handle child = fixed_bb_and_handles.at(i).second;
 
     // If the MBR has not been split into a polygon, don't keep it in the map.
     if (constructed_poly.basicRectangles.size() != 1) {
       treeRef->polygons.insert({b.child, constructed_poly});
     }
 
-    branch_node->addBranchToNode(b);
+    branch_node->addBranchToNode(boundingBox, child);
   }
 }
 
@@ -598,15 +595,15 @@ std::pair<tree_node_handle, Rectangle> quad_tree_style_load(
     nirtreedisk::Branch b;
     IsotheticPolygon constructed_poly = branch_handles.at(i).first;
 
-    b.child = branch_handles.at(i).second;
-    b.boundingBox = constructed_poly.boundingBox;
+    Rectangle boundingBox = constructed_poly.boundingBox;
+    tree_node_handle child = branch_handles.at(i).second;
 
     // If the MBR has not been split into a polygon, don't keep it in the map.
     if (constructed_poly.basicRectangles.size() != 1) {
       tree->polygons.insert({b.child, constructed_poly});
     }
 
-    branch_node->addBranchToNode(b);
+    branch_node->addBranchToNode(boundingBox, child);
   }
 
   Rectangle bbox = branch_node->boundingBox();
@@ -690,10 +687,10 @@ std::pair<tree_node_handle, Rectangle> quad_tree_style_load(
                                       sub_stop,
                                       branch_factor,
                                       cur_level - 1);
-      rstartreedisk::Branch b;
-      b.child = ret.first;
-      b.boundingBox = ret.second;
-      branch_node->addBranchToNode(b);
+      Rectangle boundingBox = ret.second;
+      tree_node_handle child = ret.first;
+
+      branch_node->addBranchToNode(boundingBox, child);
     }
   }
   Rectangle bbox = branch_node->boundingBox();
@@ -905,11 +902,8 @@ void basic_split_branch(
       basic_split_leaf(tree, begins, ends, branch_factor, height - 1, new_M, leaf_node);
       
       // Create the current branch after recursing
-      rstartreedisk::Branch b;
-      b.child = leaf_handle;
-      b.boundingBox = leaf_node->boundingBox();
-      assert(b.child.get_level() == 0);
-      branch_node->addBranchToNode(b);
+      assert(leaf_handle.get_level() == 0);
+      branch_node->addBranchToNode(leaf_node->boundingBox(), leaf_handle);
     } else {
       // The next level is a branch node, so we allocate a branch node
       auto alloc_data = allocator->create_new_tree_node<BN>(NodeHandleType(BRANCH_NODE));
@@ -925,11 +919,8 @@ void basic_split_branch(
       basic_split_branch(tree, begins, ends, branch_factor, height - 1, new_M, child_node);
 
       // Create the current branch after recursing
-      rstartreedisk::Branch b;
-      b.child = child_handle;
-      b.boundingBox = child_node->boundingBox();
-      assert(b.child.get_level() == (height - 1));
-      branch_node->addBranchToNode(b);
+      assert(child_handle.get_level() == (height - 1));
+      branch_node->addBranchToNode(child_node->boundingBox(), child_handle);
     }
 
     return; 
