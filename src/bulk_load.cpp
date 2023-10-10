@@ -161,7 +161,6 @@ void fill_branch(
   // Now we have made all the BoundingRegions disjoint.
   // It is time to add our children
   for (uint64_t i = 0; i < fixed_bb_and_handles.size(); i++) {
-    nirtreedisk::Branch b;
     IsotheticPolygon constructed_poly = fixed_bb_and_handles.at(i).first;
 
     Rectangle boundingBox = constructed_poly.boundingBox;
@@ -169,7 +168,7 @@ void fill_branch(
 
     // If the MBR has not been split into a polygon, don't keep it in the map.
     if (constructed_poly.basicRectangles.size() != 1) {
-      treeRef->polygons.insert({b.child, constructed_poly});
+      treeRef->polygons.insert({child, constructed_poly});
     }
 
     branch_node->addBranchToNode(boundingBox, child);
@@ -622,7 +621,6 @@ std::pair<tree_node_handle, Rectangle> quad_tree_style_load(
   }
 
   for (uint64_t i = 0; i < branch_handles.size(); i++) {
-    nirtreedisk::Branch b;
     IsotheticPolygon constructed_poly = branch_handles.at(i).first;
 
     Rectangle boundingBox = constructed_poly.boundingBox;
@@ -630,7 +628,7 @@ std::pair<tree_node_handle, Rectangle> quad_tree_style_load(
 
     // If the MBR has not been split into a polygon, don't keep it in the map.
     if (constructed_poly.basicRectangles.size() != 1) {
-      tree->polygons.insert({b.child, constructed_poly});
+      tree->polygons.insert({child, constructed_poly});
     }
 
     branch_node->addBranchToNode(boundingBox, child);
