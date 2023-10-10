@@ -394,16 +394,106 @@ std::vector<uint64_t> find_bounding_lines(
   return lines;
 }
 
+template <typename T, typename LN, typename BN>
+std::pair<tree_node_handle, Rectangle> quad_tree_style_load(
+  T *tree,
+  std::vector<Point>::iterator start,
+  std::vector<Point>::iterator stop,
+  unsigned branch_factor,
+  unsigned cur_level,
+  LN *leaf_node_type,
+  BN *branch_node_type
+) {
+  uint64_t num_els = (stop - start);
+  tree_node_allocator *allocator = tree->node_allocator_.get();
+  if (cur_level == 0) {
+    // Leaf Node
+    if (num_els > branch_factor) {
+      std::cout << "NUM ELS: " << num_els << std::endl;
+    }
+
+    assert(num_els <= branch_factor);
+
+    num_els = (stop - start);
+    auto alloc_data = allocator->create_new_tree_node<LN>(NodeHandleType(LEAF_NODE));
+    new (&(*(alloc_data.first))) LN();
+
+    auto leaf_node = alloc_data.first;
+    auto leaf_handle = alloc_data.second;
+    leaf_handle.set_level(cur_level);
+    assert(leaf_handle.get_level() == 0);
+
+    for (auto iter = start; iter != stop; iter++) {
+      leaf_node->addPoint(*iter);
+    }
+
+    Rectangle bbox = leaf_node->boundingBox();
+    return std::make_pair(leaf_handle, bbox);
+  }
+  // branch Node case
+  // Return a tree node handle with pointers to all of its necessary
+  // children.
+  auto alloc_data = allocator->create_new_tree_node<BN>(NodeHandleType(BRANCH_NODE));
+  new (&(*(alloc_data.first))) BN();
+
+  auto branch_node = alloc_data.first;
+  tree_node_handle branch_handle = alloc_data.second;
+  branch_handle.set_level(cur_level);
+
+  uint64_t partitions = std::ceil(sqrt(branch_factor));
+  uint64_t sub_partitions = std::ceil(branch_factor / (float) partitions);
+
+  std::vector<uint64_t> x_lines = find_bounding_lines(start, stop, 0, branch_factor, partitions, sub_partitions, cur_level);
+
+  for (uint64_t i = 0; i < x_lines.size() - 1; i++) {
+    uint64_t x_start = x_lines.at(i);
+    uint64_t x_end = x_lines.at(i + 1); /* not inclusive */
+
+    std::vector<uint64_t> y_lines = find_bounding_lines(
+        start + x_start, start + x_end, 1, branch_factor, sub_partitions, 1, cur_level);
+    for (uint64_t j = 0; j < y_lines.size() - 1; j++) {
+      uint64_t y_start = y_lines.at(j);
+      uint64_t y_end = y_lines.at(j + 1); /* not inclusive */
+
+      std::vector<Point>::iterator sub_start = start + x_start + y_start;
+      std::vector<Point>::iterator sub_stop = start + x_start + y_end;
+
+      if (sub_start == sub_stop) {
+        // I think this can happen when we run out of points in
+        // the lowest layer to split among children.
+        continue;
+      }
+
+      // This needs to return the box and handle.
+      auto ret = quad_tree_style_load(
+        tree, sub_start, sub_stop,
+        branch_factor, cur_level - 1,
+        leaf_node_type, branch_node_type
+      );
+
+      Rectangle boundingBox = ret.second;
+      tree_node_handle child = ret.first;
+
+      branch_node->addBranchToNode(boundingBox, child);
+    }
+  }
+  Rectangle bbox = branch_node->boundingBox();
+  return std::make_pair(branch_handle, bbox);
+}
+
+template <>
 std::pair<tree_node_handle, Rectangle> quad_tree_style_load(
   nirtreedisk::NIRTreeDisk<5, NIR_FANOUT> *tree,
   std::vector<Point>::iterator start,
   std::vector<Point>::iterator stop,
   unsigned branch_factor,
-  unsigned cur_level
+  unsigned cur_level,
+  nirtreedisk::LeafNode<5, NIR_FANOUT> *leaf_node_type,
+  nirtreedisk::BranchNode<5, NIR_FANOUT> *branch_node_type
 ) {
   using LN = nirtreedisk::LeafNode<5, NIR_FANOUT>;
   using BN = nirtreedisk::BranchNode<5, NIR_FANOUT>;
-  
+
   uint64_t num_els = (stop - start);
   tree_node_allocator *allocator = tree->node_allocator_.get();
   if (cur_level == 0) {
@@ -452,7 +542,7 @@ std::pair<tree_node_handle, Rectangle> quad_tree_style_load(
     uint64_t x_end = x_lines.at(i + 1); /* not inclusive */
 
     std::vector<uint64_t> y_lines = find_bounding_lines(
-        start + x_start, start + x_end, 1, branch_factor, sub_partitions, 1, cur_level);
+            start + x_start, start + x_end, 1, branch_factor, sub_partitions, 1, cur_level);
     for (uint64_t j = 0; j < y_lines.size() - 1; j++) {
       uint64_t y_start = y_lines.at(j);
       uint64_t y_end = y_lines.at(j + 1); /* not inclusive */
@@ -468,11 +558,10 @@ std::pair<tree_node_handle, Rectangle> quad_tree_style_load(
 
       // This needs to return the box and handle.
       auto ret = quad_tree_style_load(
-          tree,
-          sub_start,
-          sub_stop,
-          branch_factor,
-          cur_level - 1);
+        tree, sub_start, sub_stop,
+        branch_factor, cur_level - 1,
+        leaf_node_type, branch_node_type
+      );
 
       tree_node_handle child_handle = ret.first;
       Rectangle bbox = ret.second;
@@ -492,11 +581,11 @@ std::pair<tree_node_handle, Rectangle> quad_tree_style_load(
           // so these should point to the basicRectangles vector of the polygons.
           intersection_count += 1;
           make_all_rects_disjoint(
-              tree,
-              existing_rects,              // Existing rects of sibling poly
-              branch_handles.at(i).second, // Sibling handle
-              ip.basicRectangles,          // Existing rects of our poly
-              child_handle                 // our handle
+                  tree,
+                  existing_rects,              // Existing rects of sibling poly
+                  branch_handles.at(i).second, // Sibling handle
+                  ip.basicRectangles,          // Existing rects of our poly
+                  child_handle                 // our handle
           );
 
           // These may have been updated. Update the metadata.
@@ -513,9 +602,9 @@ std::pair<tree_node_handle, Rectangle> quad_tree_style_load(
       for (uint64_t i = 0; i < branch_handles.size(); i++) {
         for (uint64_t j = i + 1; j < branch_handles.size(); j++) {
           std::vector<Rectangle> &existing_rects_a =
-              branch_handles.at(i).first.basicRectangles;
+                  branch_handles.at(i).first.basicRectangles;
           std::vector<Rectangle> &existing_rects_b =
-              branch_handles.at(j).first.basicRectangles;
+                  branch_handles.at(j).first.basicRectangles;
           for (Rectangle &rect_a : existing_rects_a) {
             for (Rectangle &rect_b : existing_rects_b) {
               if (rect_b.intersectsRectangle(rect_a)) {
@@ -547,93 +636,6 @@ std::pair<tree_node_handle, Rectangle> quad_tree_style_load(
     branch_node->addBranchToNode(boundingBox, child);
   }
 
-  Rectangle bbox = branch_node->boundingBox();
-  return std::make_pair(branch_handle, bbox);
-}
-
-
-std::pair<tree_node_handle, Rectangle> quad_tree_style_load(
-  rstartreedisk::RStarTreeDisk<R_STAR_MIN_FANOUT, R_STAR_MAX_FANOUT> *tree,
-  std::vector<Point>::iterator start,
-  std::vector<Point>::iterator stop,
-  unsigned branch_factor,
-  unsigned cur_level
-) {
-  using LN = rstartreedisk::LeafNode<R_STAR_MIN_FANOUT, R_STAR_MAX_FANOUT>;
-  using BN = rstartreedisk::BranchNode<R_STAR_MIN_FANOUT, R_STAR_MAX_FANOUT>;
-
-  uint64_t num_els = (stop - start);
-  tree_node_allocator *allocator = tree->node_allocator_.get();
-  if (cur_level == 0) {
-    // Leaf Node
-    if (num_els > branch_factor) {
-      std::cout << "NUM ELS: " << num_els << std::endl;
-    }
-
-    assert(num_els <= branch_factor);
-
-    num_els = (stop - start);
-    auto alloc_data = allocator->create_new_tree_node<LN>(NodeHandleType(LEAF_NODE));
-    new (&(*(alloc_data.first))) LN();
-
-    auto leaf_node = alloc_data.first;
-    auto leaf_handle = alloc_data.second;
-    leaf_handle.set_level(cur_level);
-    assert(leaf_handle.get_level() == 0);
-
-    for (auto iter = start; iter != stop; iter++) {
-      leaf_node->addPoint(*iter);
-    }
-
-    Rectangle bbox = leaf_node->boundingBox();
-    return std::make_pair(leaf_handle, bbox);
-  }
-  // branch Node case 
-  // Return a tree node handle with pointers to all of its necessary
-  // children.
-  auto alloc_data = allocator->create_new_tree_node<BN>(NodeHandleType(BRANCH_NODE));
-  new (&(*(alloc_data.first))) BN();
-
-  auto branch_node = alloc_data.first;
-  tree_node_handle branch_handle = alloc_data.second;
-  branch_handle.set_level(cur_level);
-
-  uint64_t partitions = std::ceil(sqrt(branch_factor));
-  uint64_t sub_partitions = std::ceil(branch_factor / (float) partitions);
-
-  std::vector<uint64_t> x_lines = find_bounding_lines(start, stop, 0, branch_factor, partitions, sub_partitions, cur_level);
-
-  for (uint64_t i = 0; i < x_lines.size() - 1; i++) {
-    uint64_t x_start = x_lines.at(i);
-    uint64_t x_end = x_lines.at(i + 1); /* not inclusive */
-
-    std::vector<uint64_t> y_lines = find_bounding_lines(
-        start + x_start, start + x_end, 1, branch_factor, sub_partitions, 1, cur_level);
-    for (uint64_t j = 0; j < y_lines.size() - 1; j++) {
-      uint64_t y_start = y_lines.at(j);
-      uint64_t y_end = y_lines.at(j + 1); /* not inclusive */
-
-      std::vector<Point>::iterator sub_start = start + x_start + y_start;
-      std::vector<Point>::iterator sub_stop = start + x_start + y_end;
-
-      if (sub_start == sub_stop) {
-        // I think this can happen when we run out of points in
-        // the lowest layer to split among children.
-        continue;
-      }
-
-      // This needs to return the box and handle.
-      auto ret = quad_tree_style_load(tree,
-                                      sub_start,
-                                      sub_stop,
-                                      branch_factor,
-                                      cur_level - 1);
-      Rectangle boundingBox = ret.second;
-      tree_node_handle child = ret.first;
-
-      branch_node->addBranchToNode(boundingBox, child);
-    }
-  }
   Rectangle bbox = branch_node->boundingBox();
   return std::make_pair(branch_handle, bbox);
 }
@@ -1078,7 +1080,10 @@ void bulk_load_tree(
   
   std::cout << "Bulk-loading NIRTree using Quad Tree Style Load..." << std::endl;
   std::chrono::high_resolution_clock::time_point begin_time = std::chrono::high_resolution_clock::now();
-  auto ret = quad_tree_style_load(tree_ptr, begin, end, max_branch_factor, root_level);
+  auto ret = quad_tree_style_load(
+    tree_ptr, begin, end, max_branch_factor, root_level,
+    leaf_node_type, branch_node_type
+  );
   tree->root = ret.first;
 
   std::chrono::high_resolution_clock::time_point end_time = std::chrono::high_resolution_clock::now();
@@ -1159,7 +1164,10 @@ void bulk_load_tree(
       // QTS is top down
       uint64_t root_level = max_depth;
       std::cout << "Bulk-loading using Quad Tree Style Load..." << std::endl;
-      auto ret = quad_tree_style_load(tree, begin, end, max_branch_factor, root_level);
+      auto ret = quad_tree_style_load(
+        tree, begin, end, max_branch_factor, root_level,
+        leaf_node_type, branch_node_type
+      );
       tree->root = ret.first;
 
       break;

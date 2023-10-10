@@ -36,19 +36,16 @@ std::vector<tree_node_handle> str_packing_leaf(
 
 /* QTS */
 
+template <typename T, typename LN, typename BN>
 std::pair<tree_node_handle, Rectangle> quad_tree_style_load(
-    nirtreedisk::NIRTreeDisk<5, NIR_FANOUT> *tree,
+    T *tree,
     std::vector<Point>::iterator start,
     std::vector<Point>::iterator stop,
     unsigned branch_factor,
-    unsigned cur_level);
-
-std::pair<tree_node_handle, Rectangle> quad_tree_style_load(
-    rstartreedisk::RStarTreeDisk<R_STAR_MIN_FANOUT, R_STAR_MAX_FANOUT> *tree,
-    std::vector<Point>::iterator start,
-    std::vector<Point>::iterator stop,
-    unsigned branch_factor,
-    unsigned cur_level);
+    unsigned cur_level,
+    LN *leaf_node_type,
+    BN *branch_node_type
+);
 
 /* TGS */
 
