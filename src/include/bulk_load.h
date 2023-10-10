@@ -18,9 +18,9 @@ std::vector<tree_node_handle> str_packing_branch(
     T *tree,
     std::vector<tree_node_handle> &child_nodes,
     unsigned branch_factor,
+    unsigned cur_depth,
     LN *leaf_node_type,
-    BN *branch_node_type,
-    unsigned cur_depth
+    BN *branch_node_type
 );
 
 template <typename T, typename LN, typename BN>
@@ -29,9 +29,9 @@ std::vector<tree_node_handle> str_packing_leaf(
     std::vector<Point>::iterator begin,
     std::vector<Point>::iterator end,
     unsigned branch_factor,
-    LN *ln_type,
-    BN *bn_type,
-    unsigned cur_depth
+    unsigned cur_depth,
+    LN *leaf_node_type,
+    BN *branch_node_type
 );
 
 /* QTS */

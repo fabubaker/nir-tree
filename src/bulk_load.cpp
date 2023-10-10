@@ -181,9 +181,10 @@ std::vector<tree_node_handle> str_packing_branch(
     T *tree,
     std::vector<tree_node_handle> &child_nodes,
     unsigned branch_factor,
+    unsigned cur_depth,
     LN *leaf_node_type,
-    BN *branch_node_type,
-    unsigned cur_depth) {
+    BN *branch_node_type
+) {
   tree_node_allocator *allocator = tree->node_allocator_.get();
 
   // Get bbox once for everything so I'm not materializing it
@@ -289,9 +290,9 @@ std::vector<tree_node_handle> str_packing_leaf(
     std::vector<Point>::iterator begin,
     std::vector<Point>::iterator end,
     unsigned branch_factor,
-    LN *ln_type,
-    BN *bn_type,
-    unsigned cur_depth
+    unsigned cur_depth,
+    LN *leaf_node_type,
+    BN *branch_node_type
 ) {
   uint64_t count = (end - begin);
   uint64_t P = count / branch_factor;
@@ -1123,23 +1124,23 @@ void bulk_load_tree(
 
       // Bulk load the leaf level first
       std::vector<tree_node_handle> leaves = str_packing_leaf(
-        tree, begin, end, max_branch_factor,
-        (LN *) nullptr, (BN *) nullptr, cur_level
+        tree, begin, end, max_branch_factor, cur_level,
+        (LN *) nullptr, (BN *) nullptr
       );
       cur_level++;
 
       // Bulk load all branch levels next
       std::vector<tree_node_handle> branches = str_packing_branch(
-        tree, leaves, max_branch_factor,
-        (LN *) nullptr, (BN *) nullptr, cur_level
+        tree, leaves, max_branch_factor, cur_level,
+        (LN *) nullptr, (BN *) nullptr
       );
       cur_level++;
 
       while (branches.size() > 1) {
         assert(cur_level <= max_depth);
         branches = str_packing_branch(
-          tree, branches, max_branch_factor,
-          (LN *) nullptr, (BN *) nullptr, cur_level
+          tree, branches, max_branch_factor, cur_level,
+          (LN *) nullptr, (BN *) nullptr
         );
         cur_level++;
       }
