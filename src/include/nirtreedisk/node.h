@@ -291,8 +291,9 @@ public:
 
   // Constructors and destructors
   BranchNode(): cur_offset_(0) {
-  static_assert(sizeof(BranchNode<min_branch_factor, max_branch_factor>) <= PAGE_DATA_SIZE);
+    static_assert(sizeof(BranchNode<min_branch_factor, max_branch_factor>) <= PAGE_DATA_SIZE);
   }
+
   void deleteSubtrees(NIRTreeDisk<min_branch_factor, max_branch_factor> *treeRef);
 
   // Data structure interface functions: 
@@ -324,6 +325,11 @@ public:
     assert(false);
   };
   // addBranchToNode: add Branch at the end of array and increase cur_offset_
+  void addBranchToNode(Rectangle boundingBox, tree_node_handle child) {
+    Branch b(boundingBox, child);
+    entries.at(cur_offset_++) = b;
+  };
+
   void addBranchToNode(const Branch &entry) {
     entries.at(this->cur_offset_++) = entry;
   };
@@ -3893,4 +3899,3 @@ void testLevels(NIRTreeDisk<min_branch_factor, max_branch_factor> *treeRef,
 
 
 } // namespace nirtreedisk
-

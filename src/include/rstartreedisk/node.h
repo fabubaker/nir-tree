@@ -150,6 +150,11 @@ public:
     cur_offset_ = 0;
   }
 
+  void addBranchToNode(Rectangle boundingBox, tree_node_handle child) {
+    Branch b(boundingBox, child);
+    entries.at(cur_offset_++) = b;
+  };
+
   void addBranchToNode(const Branch &b) {
     entries.at(cur_offset_++) = b;
   }
