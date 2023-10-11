@@ -111,14 +111,14 @@ void fill_branch(
 
 template <>
 void fill_branch(
-    nirtreedisk::NIRTreeDisk<5, NIR_FANOUT> *treeRef,
-    pinned_node_ptr<nirtreedisk::BranchNode<5, NIR_FANOUT>> branch_node,
+    nirtreedisk::NIRTreeDisk<NIR_MIN_FANOUT, NIR_MAX_FANOUT> *treeRef,
+    pinned_node_ptr<nirtreedisk::BranchNode<NIR_MIN_FANOUT, NIR_MAX_FANOUT>> branch_node,
     std::vector<std::pair<Point, tree_node_handle>> &node_point_pairs,
     uint64_t &offset,
     unsigned branch_factor,
-    nirtreedisk::LeafNode<5, NIR_FANOUT> *leaf_type) {
-  using LN = nirtreedisk::LeafNode<5, NIR_FANOUT>;
-  using BN = nirtreedisk::BranchNode<5, NIR_FANOUT>;
+    nirtreedisk::LeafNode<NIR_MIN_FANOUT, NIR_MAX_FANOUT> *leaf_type) {
+  using LN = nirtreedisk::LeafNode<NIR_MIN_FANOUT, NIR_MAX_FANOUT>;
+  using BN = nirtreedisk::BranchNode<NIR_MIN_FANOUT, NIR_MAX_FANOUT>;
 
   std::vector<std::pair<IsotheticPolygon, tree_node_handle>> fixed_bb_and_handles;
   tree_node_allocator *allocator = treeRef->node_allocator_.get();
@@ -482,16 +482,16 @@ std::pair<tree_node_handle, Rectangle> quad_tree_style_load(
 
 template <>
 std::pair<tree_node_handle, Rectangle> quad_tree_style_load(
-  nirtreedisk::NIRTreeDisk<5, NIR_FANOUT> *tree,
+  nirtreedisk::NIRTreeDisk<NIR_MIN_FANOUT, NIR_MAX_FANOUT> *tree,
   std::vector<Point>::iterator start,
   std::vector<Point>::iterator stop,
   unsigned branch_factor,
   unsigned cur_level,
-  nirtreedisk::LeafNode<5, NIR_FANOUT> *leaf_node_type,
-  nirtreedisk::BranchNode<5, NIR_FANOUT> *branch_node_type
+  nirtreedisk::LeafNode<NIR_MIN_FANOUT, NIR_MAX_FANOUT> *leaf_node_type,
+  nirtreedisk::BranchNode<NIR_MIN_FANOUT, NIR_MAX_FANOUT> *branch_node_type
 ) {
-  using LN = nirtreedisk::LeafNode<5, NIR_FANOUT>;
-  using BN = nirtreedisk::BranchNode<5, NIR_FANOUT>;
+  using LN = nirtreedisk::LeafNode<NIR_MIN_FANOUT, NIR_MAX_FANOUT>;
+  using BN = nirtreedisk::BranchNode<NIR_MIN_FANOUT, NIR_MAX_FANOUT>;
 
   uint64_t num_els = (stop - start);
   tree_node_allocator *allocator = tree->node_allocator_.get();
@@ -534,7 +534,7 @@ std::pair<tree_node_handle, Rectangle> quad_tree_style_load(
   std::vector<uint64_t> x_lines = find_bounding_lines(start, stop, 0, branch_factor, partitions, sub_partitions, cur_level);
 
   std::vector<std::pair<IsotheticPolygon, tree_node_handle>> branch_handles;
-  branch_handles.reserve(NIR_FANOUT);
+  branch_handles.reserve(NIR_MAX_FANOUT);
 
   for (uint64_t i = 0; i < x_lines.size() - 1; i++) {
     uint64_t x_start = x_lines.at(i);
@@ -1061,13 +1061,13 @@ void testLevels(TR *tree, tree_node_handle root, unsigned root_level){
 
 template <>
 void bulk_load_tree(
-    nirtreedisk::NIRTreeDisk<5, NIR_FANOUT> *tree,
+    nirtreedisk::NIRTreeDisk<NIR_MIN_FANOUT, NIR_MAX_FANOUT> *tree,
     std::map<std::string, size_t> &configU,
     std::vector<Point>::iterator begin,
     std::vector<Point>::iterator end,
     unsigned max_branch_factor,
-    nirtreedisk::LeafNode<5, NIR_FANOUT> *leaf_node_type,
-    nirtreedisk::BranchNode<5, NIR_FANOUT> *branch_node_type
+    nirtreedisk::LeafNode<NIR_MIN_FANOUT, NIR_MAX_FANOUT> *leaf_node_type,
+    nirtreedisk::BranchNode<NIR_MIN_FANOUT, NIR_MAX_FANOUT> *branch_node_type
 ) {
   intersection_count = 0;
   auto tree_ptr = tree;
@@ -1080,7 +1080,7 @@ void bulk_load_tree(
   std::cout << "Num els: " << num_els << std::endl;
   std::cout << "Max depth required: " << max_depth << std::endl;
   std::cout << "Size of NIR branch node: " <<
-    sizeof(nirtreedisk::BranchNode<5, NIR_FANOUT>) << std::endl;
+    sizeof(nirtreedisk::BranchNode<NIR_MIN_FANOUT, NIR_MAX_FANOUT>) << std::endl;
   
   std::cout << "Bulk-loading NIRTree using Quad Tree Style Load..." << std::endl;
   std::chrono::high_resolution_clock::time_point begin_time = std::chrono::high_resolution_clock::now();
@@ -1243,7 +1243,7 @@ void sequential_insert_tree(
 
 /* sequential_insert_tree */
 template void sequential_insert_tree(
-        nirtreedisk::NIRTreeDisk<5, NIR_FANOUT> *tree,
+        nirtreedisk::NIRTreeDisk<NIR_MIN_FANOUT, NIR_MAX_FANOUT> *tree,
         std::map<std::string, size_t> &configU,
         std::vector<Point>::iterator begin,
         std::vector<Point>::iterator end,
