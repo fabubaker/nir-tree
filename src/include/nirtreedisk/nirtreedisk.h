@@ -61,17 +61,11 @@ public:
     hasReinsertedOnLevel = {false};    
     
     // If this is a fresh tree, we need a root
-    // Update: We disable this for bulk-loading since the root node
-    // will be created anyways.
-    // We assume that insertion only happens after bulk load, 
-    // otherwise a root node is required here 
     if (existing_page_count == 0) {
-
-//      auto alloc = node_allocator_->create_new_tree_node<LeafNode<min_branch_factor, max_branch_factor>>(NodeHandleType(LEAF_NODE));
-//      root = alloc.second;
-//
-//      new (&(*(alloc.first))) LeafNode<min_branch_factor, max_branch_factor>(this, tree_node_handle(nullptr), root, 0);
-
+      auto node_type = NodeHandleType(LEAF_NODE);
+      auto alloc = node_allocator_->create_new_tree_node<LeafNode<min_branch_factor, max_branch_factor>>(node_type);
+      root = alloc.second;
+      new (&(*(alloc.first))) LeafNode<min_branch_factor, max_branch_factor>();
       return;
     }
 
