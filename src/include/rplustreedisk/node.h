@@ -64,15 +64,6 @@ namespace rplustreedisk
 
   template <int min_branch_factor, int max_branch_factor> class Node
 	{
-		private:
-			struct ReinsertionEntry
-			{
-				Rectangle boundingBox;
-				Point data;
-				Node *child;
-				unsigned level;
-			};
-
 		public:
 			RPlusTreeDisk<min_branch_factor,max_branch_factor> *treeRef;
 
