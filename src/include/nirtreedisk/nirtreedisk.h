@@ -49,8 +49,8 @@ public:
   std::vector<bool> hasReinsertedOnLevel;
   std::map<tree_node_handle, IsotheticPolygon> polygons;
   BranchPartitionStrategy strategy;
-  std::vector<Branch> Q1;
-  std::vector<Point> Q2;
+  std::vector<Point> pointQ;
+  std::vector<Branch> branchQ;
   unsigned reinsertionAttempt; 
 
   // Constructors and destructors

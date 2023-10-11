@@ -43,7 +43,7 @@
 #define DEBUG_TESTCONTAINPOINTS 0
 #define DEBUG_TESTCOUNT 0
 #define DEBUG_TESTLEVELS 0
-#define IGNORE_REINSERTION 1
+//#define IGNORE_REINSERTION 1
 
 namespace nirtreedisk {
 
@@ -2621,11 +2621,11 @@ SplitResult BranchNode<min_branch_factor, max_branch_factor>::splitNode(
         if (child_node->cur_offset_ == 0) {
           this->removeAndFreeBranch(treeRef, branch.child); //update cur_offset_
         } else if (child_node->cur_offset_ < min_branch_factor && 
-                   treeRef->reinsertionAttempt <= REINSERTION_LIMIT) {
+                   treeRef->reinsertionAttempt < REINSERTION_LIMIT) {
           // the splitted branch doesn't meet min_branch_factor => reinsert
           for (unsigned i = 0; i < child_node->cur_offset_; i++ ) {
             Point &p = child_node->entries.at(i);
-            treeRef->Q2.push_back(p);
+            treeRef->pointQ.push_back(p);
           }
           this->removeAndFreeBranch(treeRef, branch.child); //update cur_offset_
         } else {
@@ -2642,7 +2642,7 @@ SplitResult BranchNode<min_branch_factor, max_branch_factor>::splitNode(
           // the splitted branch doesn't meet min_branch_factor => reinsert
           for (unsigned i = 0; i < child_sibling_node->cur_offset_; i++ ) {
             Point &p = child_sibling_node->entries.at(i);
-            treeRef->Q2.push_back(p);
+            treeRef->pointQ.push_back(p);
           }
           allocator->free(child_sibling.child, sizeof(LeafNode<min_branch_factor, max_branch_factor>));
         } else {
@@ -2665,7 +2665,7 @@ SplitResult BranchNode<min_branch_factor, max_branch_factor>::splitNode(
           // the splitted branch doesn't meet min_branch_factor => reinsert
           for (unsigned i = 0; i < child_node->cur_offset_; i++ ) {
             Branch &b = child_node->entries.at(i);
-            treeRef->Q1.push_back(b);
+            treeRef->branchQ.push_back(b);
           }
           this->removeAndFreeBranch(treeRef, branch.child); //update cur_offset_
         } else {
@@ -2682,7 +2682,7 @@ SplitResult BranchNode<min_branch_factor, max_branch_factor>::splitNode(
           // the splitted branch doesn't meet min_branch_factor => reinsert
           for (unsigned i = 0; i < child_sibling_node->cur_offset_; i++ ) {
             Branch &b = child_sibling_node->entries.at(i);
-            treeRef->Q1.push_back(b);
+            treeRef->branchQ.push_back(b);
           }
           allocator->free(child_sibling.child, sizeof(BranchNode<min_branch_factor, max_branch_factor>));
         } else {
@@ -2955,15 +2955,17 @@ tree_node_handle BranchNode<min_branch_factor, max_branch_factor>::insert(
     return ret_handle;
   } 
   
-  while (!treeRef->Q1.empty() or !treeRef->Q2.empty()){
-    std::cout << "** Point queue size: " <<  treeRef->Q1.size() << std::endl; 
-    std::cout << "** Branch queue size: " <<  treeRef->Q2.size() << std::endl; 
+  while (!treeRef->pointQ.empty() or !treeRef->branchQ.empty()){
+    std::cout << "** Point queue size: " <<  treeRef->pointQ.size() << std::endl; 
+    std::cout << "** Branch queue size: " <<  treeRef->branchQ.size() << std::endl; 
     std::cout << "** reinsertion attempt: " <<  treeRef->reinsertionAttempt << std::endl; 
     // increment reinsertionAttempt 
     treeRef->reinsertionAttempt++;
-    // make a copy of Q1 and Q2
-    std::vector<Branch> BranchesQueue = treeRef->Q1;
-    std::vector<Point> PointsQueue = treeRef->Q2;
+    // make a copy of pointQ and branchQ
+    std::vector<Branch> BranchesQueue = treeRef->branchQ;
+    std::vector<Point> PointsQueue = treeRef->pointQ;
+    treeRef->branchQ.clear();
+    treeRef->pointQ.clear();
     
     // work on branches 
     if (! BranchesQueue.empty()){
@@ -2992,8 +2994,8 @@ tree_node_handle BranchNode<min_branch_factor, max_branch_factor>::insert(
 
   // reset variable
   treeRef->reinsertionAttempt = 0;
-  assert(treeRef->Q1.empty());
-  assert(treeRef->Q2.empty());
+  assert(treeRef->pointQ.empty());
+  assert(treeRef->branchQ.empty());
   // caution: root may be updated after reinsertion 
   return treeRef->root;
 }
