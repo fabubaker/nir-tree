@@ -1144,11 +1144,6 @@ tree_node_handle LeafNode<min_branch_factor, max_branch_factor>::insert(
 
     // update root in tree 
     treeRef->root = new_root_handle;
-  
-    // free the Leaf Node and remove the associated polygon from map 
-    assert(selfHandle.get_type() == LEAF_NODE);
-    allocator->free(selfHandle, sizeof(LeafNode<min_branch_factor, max_branch_factor>));
-    remove_polygon(treeRef, selfHandle);
 
     // Fix the reinserted length
     hasReinsertedOnLevel.push_back(false);
@@ -2873,11 +2868,6 @@ tree_node_handle BranchNode<min_branch_factor, max_branch_factor>::insert(
     
     // update root in the tree
     treeRef->root = new_root_handle;
-
-    assert(selfHandle.get_type() == BRANCH_NODE);
-    allocator->free(selfHandle, sizeof(BranchNode<min_branch_factor, max_branch_factor>));
-    remove_polygon(treeRef, selfHandle);
-    selfHandle = tree_node_handle(nullptr);
 
     // Fix the reinserted length
     hasReinsertedOnLevel.push_back(false);
