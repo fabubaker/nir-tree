@@ -93,8 +93,8 @@ void generate_tree(std::map<std::string, size_t> &configU, std::map<std::string,
   Index *spatialIndex;
 
   if (configU["tree"] == NIR_TREE) {
-    nirtreedisk::NIRTreeDisk<5, NIR_FANOUT> *tree =
-            new nirtreedisk::NIRTreeDisk<5, NIR_FANOUT>(
+    nirtreedisk::NIRTreeDisk<NIR_MIN_FANOUT, NIR_MAX_FANOUT> *tree =
+            new nirtreedisk::NIRTreeDisk<NIR_MIN_FANOUT, NIR_MAX_FANOUT>(
             configU["buffer_pool_memory"], backing_file, nirtreedisk::LINE_MINIMIZE_DOWN_SPLITS
     );
 
@@ -105,9 +105,9 @@ void generate_tree(std::map<std::string, size_t> &configU, std::map<std::string,
     std::cout << "Bulk Loading..." << std::endl;
     std::cout << "Creating tree with " << configU["buffer_pool_memory"] << "bytes" << std::endl;
     bulk_load_tree(
-      tree, configU, all_points.begin(), all_points.begin() + cut_off_bulk_load, NIR_FANOUT,
-      (nirtreedisk::LeafNode<5, NIR_FANOUT> *) nullptr,
-      (nirtreedisk::BranchNode<5, NIR_FANOUT> *) nullptr
+      tree, configU, all_points.begin(), all_points.begin() + cut_off_bulk_load, NIR_MAX_FANOUT,
+      (nirtreedisk::LeafNode<NIR_MIN_FANOUT, NIR_MAX_FANOUT> *) nullptr,
+      (nirtreedisk::BranchNode<NIR_MIN_FANOUT, NIR_MAX_FANOUT> *) nullptr
     );
 
     std::cout << "Buffer pool stats after bulk-loading: " << std::endl;
@@ -119,7 +119,7 @@ void generate_tree(std::map<std::string, size_t> &configU, std::map<std::string,
     sequential_insert_tree(
             tree, configU,
             all_points.begin() + cut_off_bulk_load, all_points.end(),
-            NIR_FANOUT
+            NIR_MAX_FANOUT
     );
     std::cout << "Created NIRTree." << std::endl;
 
@@ -150,7 +150,7 @@ void generate_tree(std::map<std::string, size_t> &configU, std::map<std::string,
     sequential_insert_tree(
             tree, configU,
             all_points.begin() + cut_off_bulk_load, all_points.end(),
-            NIR_FANOUT
+            NIR_MAX_FANOUT
     );
     std::cout << "Created R*Tree" << std::endl;
 
