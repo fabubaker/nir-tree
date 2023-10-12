@@ -271,15 +271,24 @@ void NIRTreeDisk<min_branch_factor, max_branch_factor>::print() {
       Printer(std::ofstream &printFile): printFile(printFile) {}
 
       void operator()(NIRTreeDisk<min_branch_factor, max_branch_factor> *treeRef, tree_node_handle node_handle) {
-//        printPackedNodes<min_branch_factor, max_branch_factor>(treeRef, node_handle, printFile);
+        //printPackedNodes<min_branch_factor, max_branch_factor>(treeRef, node_handle, printFile);
+        //tree_node_allocator *allocator = treeRef->node_allocator_.get();
+      //   if (node_handle.get_type() == LEAF_NODE){
+      //     auto node = treeRef->get_leaf_node(node_handle);
+      //     node->print(node_handle, );
+      //   } else {
+      //     auto node = treeRef->get_branch_node(node_handle);
+      //     node->print();
+      //   }
       }
 
       std::ofstream &printFile;
   };
 
-  Printer printer(outputFile);
-  treeWalker<min_branch_factor, max_branch_factor>(this, root, printer);
-
+  // Printer printer(outputFile);
+  // treeWalker<min_branch_factor, max_branch_factor>(this, root, printer);
+  auto root_node = this->get_branch_node(root);
+  root_node->printTree(this, root, tree_node_handle(nullptr), root.get_level()+1 );
   outputFile.close();
 }
 
