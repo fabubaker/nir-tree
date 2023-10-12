@@ -866,7 +866,7 @@ static bool is_already_loaded(std::map<std::string, uint64_t> &configU, Index *s
     }
   } else if (configU["tree"] == R_PLUS_TREE) {
     auto tree = (rplustreedisk::RPlusTreeDisk<5, 9> *) spatial_index;
-    size_t existing_page_count = tree->node_allocator_.buffer_pool_.get_preexisting_page_count();
+    size_t existing_page_count = tree->node_allocator_->buffer_pool_.get_preexisting_page_count();
 
     if (existing_page_count > 0) {
       return true;
