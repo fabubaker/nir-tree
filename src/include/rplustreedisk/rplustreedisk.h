@@ -19,8 +19,6 @@ namespace rplustreedisk {
     template <int min_branch_factor, int max_branch_factor>
     class RPlusTreeDisk : public Index {
     public:
-        static constexpr float p = 0.3; // For reinsertion entries. 0.3 by default
-
         tree_node_handle root;
         std::unique_ptr<tree_node_allocator> node_allocator_;
         std::string backing_file_;

@@ -28,11 +28,6 @@ namespace rplustreedisk {
     }
 
     template <int min_branch_factor, int max_branch_factor>
-    float get_p_value(RPlusTreeDisk<min_branch_factor, max_branch_factor> *treeRef) {
-      return treeRef->p;
-    }
-
-    template <int min_branch_factor, int max_branch_factor>
     tree_node_handle get_root_handle(RPlusTreeDisk<min_branch_factor, max_branch_factor> *treeRef) {
       return treeRef->root;
     }
@@ -93,12 +88,6 @@ namespace rplustreedisk {
                 RPlusTreeDisk<min_branch_factor, max_branch_factor> *treeRef,
                 tree_node_handle current_handle,
                 tree_node_handle sibling_handle,
-                std::stack<tree_node_handle> parentHandles,
-                std::vector<bool> &hasReinsertedOnLevel
-        );
-        tree_node_handle reInsert(
-                RPlusTreeDisk<min_branch_factor, max_branch_factor> *treeRef,
-                tree_node_handle current_handle,
                 std::stack<tree_node_handle> parentHandles,
                 std::vector<bool> &hasReinsertedOnLevel
         );
@@ -188,12 +177,6 @@ namespace rplustreedisk {
                 RPlusTreeDisk<min_branch_factor, max_branch_factor> *treeRef,
                 tree_node_handle current_handle,
                 tree_node_handle sibling_handle,
-                std::stack<tree_node_handle> parentHandles,
-                std::vector<bool> &hasReinsertedOnLevel
-        );
-        tree_node_handle reInsert(
-                RPlusTreeDisk<min_branch_factor, max_branch_factor> *treeRef,
-                tree_node_handle current_handle,
                 std::stack<tree_node_handle> parentHandles,
                 std::vector<bool> &hasReinsertedOnLevel
         );
@@ -722,103 +705,6 @@ namespace rplustreedisk {
       return adjustTreeSub(treeRef, current_handle, sibling_handle, parentHandles, hasReinsertedOnLevel);
     }
 
-    template <int min_branch_factor, int max_branch_factor>
-    tree_node_handle LeafNode<min_branch_factor, max_branch_factor>::reInsert(
-            RPlusTreeDisk<min_branch_factor, max_branch_factor> *treeRef,
-            tree_node_handle current_handle,
-            std::stack<tree_node_handle> parentHandles,
-            std::vector<bool> &hasReinsertedOnLevel
-    ) {
-      // 1. RI1 Compute distance between each of the points and the bounding box containing them.
-      // 2. RI2 Sort the entries by DECREASING index -> ok let's define an
-      // 		extra helper function that gets to do this and pass it into sort
-
-      Point globalCenterPoint = boundingBox().centrePoint();
-
-      auto current_level = current_handle.get_level();
-      assert(hasReinsertedOnLevel.at(current_level));
-
-      std::sort(entries.begin(), entries.begin() + cur_offset_,
-                [&globalCenterPoint](Point &a, Point &b) {
-                    Rectangle rectA(a, Point::closest_larger_point(a));
-                    Rectangle rectB(b, Point::closest_larger_point(b));
-                    return rectA.centrePoint().distance(globalCenterPoint) > rectB.centrePoint().distance(globalCenterPoint);
-                });
-
-      // 3. RI3 Remove the first p entries from N and adjust the bounding box -> OK so we need to adjust the data model
-      //		to include a specified "p" value -> this should be unique to the node -> so it's a node variable
-      unsigned numNodesToReinsert = get_p_value(treeRef) * cur_offset_;
-
-      // 4. Insert the removed entries -> OK we can also specify a flag that is
-      //		if you want to reinsert starting with largest values (i.e. start at index 0) or closest values (Start at index p)
-      unsigned remainder = cur_offset_ - numNodesToReinsert;
-
-      // We need to reinsert these entries
-      // We pop them all off before hand so that any reorganization of the tree during this recursive
-      // insert does not affect which entries get popped off
-      std::vector<Point> entriesToReinsert;
-      entriesToReinsert.reserve(numNodesToReinsert);
-
-      // copy these out
-      std::copy(entries.begin() + remainder, entries.begin() + cur_offset_, std::back_inserter(entriesToReinsert));
-
-      // adjust ending of array
-      cur_offset_ = remainder;
-
-      /* We removed some entries from this node, which means bounding boxes
-       * have to be updated. Do this now before the actual re-insertion. */
-      tree_node_handle child_handle = current_handle;
-
-      for (;;) {
-        if (parentHandles.empty()) {
-          break;
-        }
-
-        tree_node_handle parent_handle = parentHandles.top();
-        parentHandles.pop();
-
-        if (child_handle.get_type() == LEAF_NODE) {
-          auto child = treeRef->get_leaf_node(child_handle);
-          auto parent = treeRef->get_branch_node(parent_handle);
-
-          parent->updateBoundingBox(child_handle, child->boundingBox());
-        } else {
-          auto child = treeRef->get_branch_node(child_handle);
-          auto parent = treeRef->get_branch_node(parent_handle);
-
-          parent->updateBoundingBox(child_handle, child->boundingBox());
-        }
-
-        child_handle = parent_handle;
-      }
-
-      // During this recursive insert (we are already in an insert, since we are reInserting), we
-      // may end up here again. If we do, we should still be using the same hasReinsertedOnLevel
-      // vector because it corresponds to the activities we have performed during a single
-      // point/rectangle insertion (the top level one)
-
-      /*
-        std::cout << "Overflow treatment, need to reinsert nodes: {" <<
-            std::endl;
-        for( size_t i = 0; i < entriesToReinsert.size(); i++ ) {
-            std::cout << entriesToReinsert.at(i) << std::endl;
-        }
-        std::cout << "}" << std::endl;
-        */
-
-      for (const Point &entry : entriesToReinsert) {
-        if (treeRef->root.get_type() == LEAF_NODE) {
-          auto root_node = treeRef->get_leaf_node(treeRef->root);
-          treeRef->root = root_node->insert(treeRef, treeRef->root, entry, hasReinsertedOnLevel);
-        } else {
-          auto root_node = treeRef->get_branch_node(treeRef->root);
-          treeRef->root = root_node->insert(treeRef, treeRef->root, entry, hasReinsertedOnLevel);
-        }
-      }
-
-      return tree_node_handle(nullptr);
-    }
-
 // Overflow treatment for dealing with a node that is too big (overflow)
     template <int min_branch_factor, int max_branch_factor>
     tree_node_handle LeafNode<min_branch_factor, max_branch_factor>::overflowTreatment(
@@ -834,11 +720,6 @@ namespace rplustreedisk {
         //std::cout << "Overflow treatment on leaf node, splitting." <<
         //    std::endl;
         return splitNode(treeRef, current_handle);
-      } else {
-        hasReinsertedOnLevel.at(current_level) = true;
-        //std::cout << "Overflow treatment on leaf node, reinserting." <<
-        //    std::endl;
-        return reInsert(treeRef, current_handle, parentHandles, hasReinsertedOnLevel);
       }
     }
 
@@ -1795,99 +1676,6 @@ namespace rplustreedisk {
       return sibling_handle;
     }
 
-    template <int min_branch_factor, int max_branch_factor>
-    tree_node_handle BranchNode<min_branch_factor, max_branch_factor>::reInsert(
-            RPlusTreeDisk<min_branch_factor, max_branch_factor> *treeRef,
-            tree_node_handle current_handle,
-            std::stack<tree_node_handle> parentHandles,
-            std::vector<bool> &hasReinsertedOnLevel
-    ) {
-      // 1. RI1 Compute distance between each of the points and the bounding box containing them.
-      // 2. RI2 Sort the entries by DECREASING index -> ok let's define an
-      // 		extra helper function that gets to do this and pass it into sort
-
-      Point globalCenterPoint = boundingBox().centrePoint();
-
-      auto current_level = current_handle.get_level();
-      assert(hasReinsertedOnLevel.at(current_level));
-
-      std::sort(entries.begin(), entries.begin() + cur_offset_,
-                [&globalCenterPoint](Branch &a, Branch &b) {
-                    Rectangle rectA = a.boundingBox;
-                    Rectangle rectB = b.boundingBox;
-                    return rectA.centrePoint().distance(globalCenterPoint) > rectB.centrePoint().distance(globalCenterPoint);
-                });
-
-      // 3. RI3 Remove the first p entries from N and adjust the bounding box -> OK so we need to adjust the data model
-      //		to include a specified "p" value -> this should be unique to the node -> so it's a node variable
-      unsigned numNodesToReinsert = get_p_value(treeRef) * cur_offset_;
-
-      // 4. Insert the removed entries -> OK we can also specify a flag that is
-      //		if you want to reinsert starting with largest values (i.e. start at index 0) or closest values (Start at index p)
-      unsigned remainder = cur_offset_ - numNodesToReinsert;
-
-      // We need to reinsert these entries
-      // We pop them all off before hand so that any reorganization of the tree during this recursive
-      // insert does not affect which entries get popped off
-      std::vector<Branch> entriesToReinsert;
-      entriesToReinsert.reserve(numNodesToReinsert);
-
-      // copy these out
-      std::copy(entries.begin() + remainder, entries.begin() + cur_offset_, std::back_inserter(entriesToReinsert));
-
-      //adjust ending of array
-      cur_offset_ = remainder;
-
-      /* We removed some entries from this node, which means bounding boxes
-       * have to be updated. Do this now before the actual re-insertion. */
-      tree_node_handle child_handle = current_handle;
-
-      for (;;) {
-        if (parentHandles.empty()) {
-          break;
-        }
-
-        tree_node_handle parent_handle = parentHandles.top();
-        parentHandles.pop();
-
-        if (child_handle.get_type() == LEAF_NODE) {
-          auto child = treeRef->get_leaf_node(child_handle);
-          auto parent = treeRef->get_branch_node(parent_handle);
-
-          parent->updateBoundingBox(child_handle, child->boundingBox());
-        } else {
-          auto child = treeRef->get_branch_node(child_handle);
-          auto parent = treeRef->get_branch_node(parent_handle);
-
-          parent->updateBoundingBox(child_handle, child->boundingBox());
-        }
-
-        child_handle = parent_handle;
-      }
-
-      // During this recursive insert (we are already in an insert, since we are reInserting), we
-      // may end up here again. If we do, we should still be using the same hasReinsertedOnLevel
-      // vector because it corresponds to the activities we have performed during a single
-      // point/rectangle insertion (the top level one)
-      auto root_node = treeRef->get_branch_node(treeRef->root);
-
-      /*
-        std::cout << "Overflow treatment, need to reinsert nodes: {" <<
-            std::endl;
-        for( size_t i = 0; i < entriesToReinsert.size(); i++ ) {
-            std::cout << entriesToReinsert.at(i).boundingBox << std::endl;
-        }
-        std::cout << "}" << std::endl;
-        */
-
-      for (const Branch &entry : entriesToReinsert) {
-        treeRef->root = root_node->insert(treeRef, treeRef->root, entry, hasReinsertedOnLevel);
-        root_node = treeRef->get_branch_node(treeRef->root);
-      }
-
-      return tree_node_handle(nullptr);
-    }
-
 // Overflow treatement for dealing with a node that is too big (overflow)
     template <int min_branch_factor, int max_branch_factor>
     tree_node_handle BranchNode<min_branch_factor, max_branch_factor>::overflowTreatment(
@@ -1903,11 +1691,6 @@ namespace rplustreedisk {
         //std::cout << "Overflow treatment on branch node, splitting." <<
         //    std::endl;
         return splitNode(treeRef, current_handle);
-      } else {
-        hasReinsertedOnLevel.at(current_level) = true;
-        //std::cout << "Overflow treatment on branch node, reinserting." <<
-        //    std::endl;
-        return reInsert(treeRef, current_handle, parentHandles, hasReinsertedOnLevel);
       }
     }
 
