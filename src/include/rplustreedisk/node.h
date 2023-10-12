@@ -70,7 +70,6 @@ namespace rplustreedisk {
         Rectangle boundingBox() const;
         void removePoint(const Point &givenPoint);
 
-        tree_node_handle chooseSubtree(const NodeEntry &nodeEntry);
         tree_node_handle findLeaf(
                 RPlusTreeDisk<min_branch_factor, max_branch_factor> *treeRef,
                 tree_node_handle selfHandle,
