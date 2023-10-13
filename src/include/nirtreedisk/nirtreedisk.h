@@ -49,9 +49,10 @@ public:
   std::vector<bool> hasReinsertedOnLevel;
   std::map<tree_node_handle, IsotheticPolygon> polygons;
   BranchPartitionStrategy strategy;
+  // [REINSERTION]
   std::vector<Point> pointQ;
   std::vector<Branch> branchQ;
-  unsigned reinsertionAttempt; 
+  unsigned reinsertionAttempt;
 
   // Constructors and destructors
   NIRTreeDisk(size_t memory_budget, std::string backing_file, BranchPartitionStrategy partition_strategy) : 
@@ -272,14 +273,6 @@ void NIRTreeDisk<min_branch_factor, max_branch_factor>::print() {
 
       void operator()(NIRTreeDisk<min_branch_factor, max_branch_factor> *treeRef, tree_node_handle node_handle) {
         //printPackedNodes<min_branch_factor, max_branch_factor>(treeRef, node_handle, printFile);
-        //tree_node_allocator *allocator = treeRef->node_allocator_.get();
-      //   if (node_handle.get_type() == LEAF_NODE){
-      //     auto node = treeRef->get_leaf_node(node_handle);
-      //     node->print(node_handle, );
-      //   } else {
-      //     auto node = treeRef->get_branch_node(node_handle);
-      //     node->print();
-      //   }
       }
 
       std::ofstream &printFile;
@@ -288,7 +281,7 @@ void NIRTreeDisk<min_branch_factor, max_branch_factor>::print() {
   // Printer printer(outputFile);
   // treeWalker<min_branch_factor, max_branch_factor>(this, root, printer);
   auto root_node = this->get_branch_node(root);
-  root_node->printTree(this, root, tree_node_handle(nullptr), root.get_level()+1 );
+  root_node->printTree(this, root, tree_node_handle(nullptr), 0);
   outputFile.close();
 }
 

@@ -161,60 +161,58 @@ void generate_tree(std::map<std::string, size_t> &configU, std::map<std::string,
     std::cout << "Only Supports NIR_Tree and R_STAR_TREE for gen_tree" << std::endl; 
     abort();
   }
-  
-  
 
-  // // Quick Test: Searching first 5000 points which are bulk loaded 
-  // unsigned totalSearchesLoaded = 0;
-  // double totalTimeSearches = 0.0;
-  // for (auto iter = all_points.begin(); iter < all_points.begin() + cut_off_bulk_load; iter++ ) {
-  //   Point p = *iter; 
-  //   std::chrono::high_resolution_clock::time_point begin = std::chrono::high_resolution_clock::now();
-  //   std::vector<Point> out = spatialIndex->search(p);
-  //   if (out.size() != 1) {
-  //     spatialIndex->print();
-  //     int index = std::distance(all_points.begin(), iter);
-  //     std::cout << "Could not find bulk loaded point " << p << " at index "<< index << std::endl;
-  //     std::cout << "Output size is " << out.size() << std::endl;
-  //     std::cout << "Total successful searches: " << totalSearchesLoaded << std::endl;
-  //     abort();
-  //   }
-  //   std::chrono::high_resolution_clock::time_point end = std::chrono::high_resolution_clock::now();
-  //   std::chrono::duration<double> delta = std::chrono::duration_cast<std::chrono::duration<double>>(end - begin);
-  //   totalTimeSearches += delta.count();
-  //   totalSearchesLoaded += 1;
-  //   if (totalSearchesLoaded >= 5000) {
-  //     break;
-  //   }
-  // }
+  // Quick Test: Searching first 5000 points which are bulk loaded 
+  unsigned totalSearchesLoaded = 0;
+  double totalTimeSearches = 0.0;
+  for (auto iter = all_points.begin(); iter < all_points.begin() + cut_off_bulk_load; iter++ ) {
+    Point p = *iter; 
+    std::chrono::high_resolution_clock::time_point begin = std::chrono::high_resolution_clock::now();
+    std::vector<Point> out = spatialIndex->search(p);
+    if (out.size() != 1) {
+      spatialIndex->print();
+      int index = std::distance(all_points.begin(), iter);
+      std::cout << "Could not find bulk loaded point " << p << " at index "<< index << std::endl;
+      std::cout << "Output size is " << out.size() << std::endl;
+      std::cout << "Total successful searches: " << totalSearchesLoaded << std::endl;
+      abort();
+    }
+    std::chrono::high_resolution_clock::time_point end = std::chrono::high_resolution_clock::now();
+    std::chrono::duration<double> delta = std::chrono::duration_cast<std::chrono::duration<double>>(end - begin);
+    totalTimeSearches += delta.count();
+    totalSearchesLoaded += 1;
+    if (totalSearchesLoaded >= 5000) {
+      break;
+    }
+  }
 
-  // // Quick Test: Searching first 5000 points which are inserted
-  // unsigned totalSearchesInserted = 0;
-  // for (auto iter = all_points.begin()+ cut_off_bulk_load; iter < all_points.end(); iter++ ) {
-  //   Point p = *iter; 
-  //   std::chrono::high_resolution_clock::time_point begin = std::chrono::high_resolution_clock::now();
-  //   std::vector<Point> out = spatialIndex->search(p);
-  //   if (out.size() != 1) {
-  //     spatialIndex->print();
-  //     int index = std::distance(all_points.begin(), iter);
-  //     std::cout << "Could not find inserted point" << p << " at index "<< index << std::endl;
-  //     std::cout << "Output size is " << out.size() << std::endl;
-  //     std::cout << "Total successful searches: " << totalSearchesInserted << std::endl;
-  //     abort();
-  //   }
-  //   std::chrono::high_resolution_clock::time_point end = std::chrono::high_resolution_clock::now();
-  //   std::chrono::duration<double> delta = std::chrono::duration_cast<std::chrono::duration<double>>(end - begin);
-  //   totalTimeSearches += delta.count();
-  //   totalSearchesInserted += 1;
-  //   if (totalSearchesInserted >= 5000) {
-  //     break;
-  //   }
-  // }
+  // Quick Test: Searching first 5000 points which are inserted
+  unsigned totalSearchesInserted = 0;
+  for (auto iter = all_points.begin()+ cut_off_bulk_load; iter < all_points.end(); iter++ ) {
+    Point p = *iter; 
+    std::chrono::high_resolution_clock::time_point begin = std::chrono::high_resolution_clock::now();
+    std::vector<Point> out = spatialIndex->search(p);
+    if (out.size() != 1) {
+      spatialIndex->print();
+      int index = std::distance(all_points.begin(), iter);
+      std::cout << "Could not find inserted point" << p << " at index "<< index << std::endl;
+      std::cout << "Output size is " << out.size() << std::endl;
+      std::cout << "Total successful searches: " << totalSearchesInserted << std::endl;
+      abort();
+    }
+    std::chrono::high_resolution_clock::time_point end = std::chrono::high_resolution_clock::now();
+    std::chrono::duration<double> delta = std::chrono::duration_cast<std::chrono::duration<double>>(end - begin);
+    totalTimeSearches += delta.count();
+    totalSearchesInserted += 1;
+    if (totalSearchesInserted >= 5000) {
+      break;
+    }
+  }
   
   spatialIndex->stat();
 
-  // std::cout << "Total time to search: " << totalTimeSearches << "s" << std::endl;
-  // std::cout << "Avg time to search: " << totalTimeSearches / (totalSearchesInserted + totalSearchesLoaded) << "s" << std::endl;
+  std::cout << "Total time to search: " << totalTimeSearches << "s" << std::endl;
+  std::cout << "Avg time to search: " << totalTimeSearches / (totalSearchesInserted + totalSearchesLoaded) << "s" << std::endl;
 
   return;
 }
