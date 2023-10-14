@@ -105,10 +105,9 @@ namespace rplustreedisk {
         tree_node_handle insert(
                 RPlusTreeDisk<min_branch_factor, max_branch_factor> *treeRef,
                 tree_node_handle current_handle,
-                Point point,
-                std::vector<bool> &hasReinsertedOnLevel
+                Point point
         );
-        tree_node_handle remove(Point &givenPoint, std::vector<bool> hasReinsertedOnLevel);
+        tree_node_handle remove(Point &givenPoint);
 
         // Miscellaneous
         unsigned checksum() const;
@@ -194,10 +193,9 @@ namespace rplustreedisk {
         tree_node_handle insert(
                 RPlusTreeDisk<min_branch_factor, max_branch_factor> *treeRef,
                 tree_node_handle current_handle,
-                Point point,
-                std::vector<bool> &hasReinsertedOnLevel
+                Point point
         );
-        tree_node_handle remove(Point &givenPoint, std::vector<bool> hasReinsertedOnLevel);
+        tree_node_handle remove(Point &givenPoint);
 
         // Miscellaneous
         unsigned checksum() const;
@@ -723,9 +721,10 @@ namespace rplustreedisk {
     tree_node_handle LeafNode<min_branch_factor, max_branch_factor>::insert(
             RPlusTreeDisk<min_branch_factor, max_branch_factor> *treeRef,
             tree_node_handle current_handle,
-            Point point,
-            std::vector<bool> &hasReinsertedOnLevel
+            Point point
     ) {
+      std::vector<bool> hasReinsertedOnLevel;
+
       tree_node_allocator *allocator = get_node_allocator(treeRef);
 
       // I1 [Find position for new record]
@@ -900,7 +899,7 @@ namespace rplustreedisk {
 
 // Always called on root, this = root
     template <int min_branch_factor, int max_branch_factor>
-    tree_node_handle LeafNode<min_branch_factor, max_branch_factor>::remove(Point &givenPoint, std::vector<bool> hasReinsertedOnLevel) {
+    tree_node_handle LeafNode<min_branch_factor, max_branch_factor>::remove(Point &givenPoint) {
 #if 0
       removePoint(givenPoint);
 
@@ -1597,9 +1596,10 @@ namespace rplustreedisk {
     tree_node_handle BranchNode<min_branch_factor, max_branch_factor>::insert(
             RPlusTreeDisk<min_branch_factor, max_branch_factor> *treeRef,
             tree_node_handle current_handle,
-            Point point,
-            std::vector<bool> &hasReinsertedOnLevel
+            Point point
     ) {
+      std::vector<bool> hasReinsertedOnLevel;
+
       tree_node_allocator *allocator = get_node_allocator(treeRef);
 
       std::stack<tree_node_handle> parentHandles; // Populated by chooseSubtree
@@ -1697,7 +1697,7 @@ namespace rplustreedisk {
 
 // Always called on root, this = root
     template <int min_branch_factor, int max_branch_factor>
-    tree_node_handle BranchNode<min_branch_factor, max_branch_factor>::remove(Point &givenPoint, std::vector<bool> hasReinsertedOnLevel) {
+    tree_node_handle BranchNode<min_branch_factor, max_branch_factor>::remove(Point &givenPoint) {
 #if 0
       assert(!parent);
 

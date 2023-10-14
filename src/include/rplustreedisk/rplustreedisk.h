@@ -23,16 +23,12 @@ namespace rplustreedisk {
         std::unique_ptr<tree_node_allocator> node_allocator_;
         std::string backing_file_;
 
-        std::vector<bool> hasReinsertedOnLevel;
-
         // Constructors and destructors
         RPlusTreeDisk(size_t memory_budget, std::string backing_file) : backing_file_(backing_file) {
           node_allocator_ = std::make_unique<tree_node_allocator>(memory_budget, backing_file);
 
           // Initialize buffer pool
           node_allocator_->initialize();
-
-          hasReinsertedOnLevel = {false};
 
           /* We need to figure out if there was already data, and read
                        * that into memory if we have it. */
@@ -130,24 +126,21 @@ namespace rplustreedisk {
     void RPlusTreeDisk<min_branch_factor, max_branch_factor>::insert(Point givenPoint) {
       if (root.get_type() == LEAF_NODE) {
         auto root_ptr = get_leaf_node(root);
-        std::fill(hasReinsertedOnLevel.begin(), hasReinsertedOnLevel.end(), false);
-        root = root_ptr->insert(this, this->root, givenPoint, hasReinsertedOnLevel);
+        root = root_ptr->insert(this, this->root, givenPoint);
         return;
       }
       auto root_ptr = get_branch_node(root);
-      std::fill(hasReinsertedOnLevel.begin(), hasReinsertedOnLevel.end(), false);
-      root = root_ptr->insert(this, this->root, givenPoint, hasReinsertedOnLevel);
+      root = root_ptr->insert(this, this->root, givenPoint);
     }
 
     template <int min_branch_factor, int max_branch_factor>
     void RPlusTreeDisk<min_branch_factor, max_branch_factor>::remove(Point givenPoint) {
-      std::fill(hasReinsertedOnLevel.begin(), hasReinsertedOnLevel.end(), false);
       if (root.get_type() == LEAF_NODE) {
         auto root_ptr = get_leaf_node(root);
-        root = root_ptr->remove(givenPoint, hasReinsertedOnLevel);
+        root = root_ptr->remove(givenPoint);
       } else {
         auto root_ptr = get_branch_node(root);
-        root = root_ptr->remove(givenPoint, hasReinsertedOnLevel);
+        root = root_ptr->remove(givenPoint);
       }
     }
 
