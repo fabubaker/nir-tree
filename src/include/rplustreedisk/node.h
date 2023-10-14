@@ -47,8 +47,6 @@ namespace rplustreedisk {
         tree_node_handle child;
     };
 
-    typedef std::variant<Branch, Point> NodeEntry;
-
     template <int min_branch_factor, int max_branch_factor>
     class LeafNode {
     public:
