@@ -105,7 +105,7 @@ namespace rplustreedisk {
         tree_node_handle insert(
                 RPlusTreeDisk<min_branch_factor, max_branch_factor> *treeRef,
                 tree_node_handle current_handle,
-                Point nodeEntry,
+                Point point,
                 std::vector<bool> &hasReinsertedOnLevel
         );
         tree_node_handle remove(Point &givenPoint, std::vector<bool> hasReinsertedOnLevel);
@@ -194,7 +194,7 @@ namespace rplustreedisk {
         tree_node_handle insert(
                 RPlusTreeDisk<min_branch_factor, max_branch_factor> *treeRef,
                 tree_node_handle current_handle,
-                NodeEntry nodeEntry,
+                Point point,
                 std::vector<bool> &hasReinsertedOnLevel
         );
         tree_node_handle remove(Point &givenPoint, std::vector<bool> hasReinsertedOnLevel);
@@ -304,11 +304,6 @@ namespace rplustreedisk {
           accumulator.push_back(p);
         }
       }
-    }
-
-    template <int min_branch_factor, int max_branch_factor>
-    tree_node_handle LeafNode<min_branch_factor, max_branch_factor>::chooseSubtree(const NodeEntry &givenNodeEntry) {
-      std::cout << "ChooseSubTree for point: " << std::get<Point>(givenNodeEntry) << std::endl;
     }
 
     template <int min_branch_factor, int max_branch_factor>
@@ -728,7 +723,7 @@ namespace rplustreedisk {
     tree_node_handle LeafNode<min_branch_factor, max_branch_factor>::insert(
             RPlusTreeDisk<min_branch_factor, max_branch_factor> *treeRef,
             tree_node_handle current_handle,
-            Point nodeEntry,
+            Point point,
             std::vector<bool> &hasReinsertedOnLevel
     ) {
       tree_node_allocator *allocator = get_node_allocator(treeRef);
@@ -737,7 +732,7 @@ namespace rplustreedisk {
       tree_node_handle sibling_handle = tree_node_handle(nullptr);
 
       // I2 [Add record to leaf node]
-      addPoint(nodeEntry);
+      addPoint(point);
 
       // Empty parentHandles since we are the only node in the tree.
       std::stack<tree_node_handle> parentHandles;
@@ -745,7 +740,7 @@ namespace rplustreedisk {
       uint16_t current_level = current_handle.get_level();
       assert(current_level == 0); // Leaf nodes have level = 0
 
-      /*std::cout << "Inserted Point: " << nodeEntry <<
+      /*std::cout << "Inserted Point: " << point <<
             std::endl;
         std::cout << "Insertion point now has points: { " << std::endl;
         for( size_t i = 0; i < cur_offset_; i++ ) {
@@ -1602,7 +1597,7 @@ namespace rplustreedisk {
     tree_node_handle BranchNode<min_branch_factor, max_branch_factor>::insert(
             RPlusTreeDisk<min_branch_factor, max_branch_factor> *treeRef,
             tree_node_handle current_handle,
-            NodeEntry nodeEntry,
+            Point point,
             std::vector<bool> &hasReinsertedOnLevel
     ) {
       tree_node_allocator *allocator = get_node_allocator(treeRef);
@@ -1616,90 +1611,47 @@ namespace rplustreedisk {
               treeRef,
               current_handle,
               parentHandles,
-              nodeEntry
+              point
       );
       uint16_t insertion_point_level = insertion_point_handle.get_level();
 
       tree_node_handle sibling_handle = tree_node_handle(nullptr);
 
       // I2 [Add record to leaf node]
-      bool givenIsLeaf = std::holds_alternative<Point>(nodeEntry);
-      if (givenIsLeaf) {
-        auto insertion_point = treeRef->get_leaf_node(insertion_point_handle);
-        insertion_point->addPoint(std::get<Point>(nodeEntry));
+      auto insertion_point = treeRef->get_leaf_node(insertion_point_handle);
+      insertion_point->addPoint(point);
 
-        /*std::cout << "Inserted Point: " << std::get<Point>( nodeEntry ) <<
-                std::endl;
-            std::cout << "Insertion point now has points: { " << std::endl;
-            for( size_t i = 0; i < insertion_point->cur_offset_; i++ ) {
-                std::cout << insertion_point->entries.at(i) << std::endl;
-            }
-            std::cout << "}" << std::endl;
-            */
+      /*std::cout << "Inserted Point: " << std::get<Point>( point ) <<
+              std::endl;
+          std::cout << "Insertion point now has points: { " << std::endl;
+          for( size_t i = 0; i < insertion_point->cur_offset_; i++ ) {
+              std::cout << insertion_point->entries.at(i) << std::endl;
+          }
+          std::cout << "}" << std::endl;
+          */
 
-        unsigned num_els = insertion_point->cur_offset_;
+      unsigned num_els = insertion_point->cur_offset_;
 
-        // If we exceed treeRef->maxBranchFactor we need to do something about it
-        if (num_els > max_branch_factor) {
-          // We call overflow treatment to determine how our sibling node is treated. If we do a
-          // reInsert, sibling is nullptr. This is properly dealt with in adjustTree.
-          sibling_handle = insertion_point->overflowTreatment(
-                  treeRef,
-                  insertion_point_handle,
-                  parentHandles,
-                  hasReinsertedOnLevel
-          );
-        }
-
-        // I3 [Propogate overflow treatment changes upward]
-        sibling_handle = insertion_point->adjustTree(
+      // If we exceed treeRef->maxBranchFactor we need to do something about it
+      if (num_els > max_branch_factor) {
+        // We call overflow treatment to determine how our sibling node is treated. If we do a
+        // reInsert, sibling is nullptr. This is properly dealt with in adjustTree.
+        sibling_handle = insertion_point->overflowTreatment(
                 treeRef,
                 insertion_point_handle,
-                sibling_handle,
-                parentHandles,
-                hasReinsertedOnLevel
-        );
-      } else {
-        auto insertion_point = treeRef->get_branch_node(insertion_point_handle);
-        Branch &b = std::get<Branch>(nodeEntry);
-        insertion_point->addBranchToNode(b);
-        /*
-            std::cout << "Inserted branch with bounding box: " <<
-                b.boundingBox << std::endl;
-            std::cout << "Insertion point now has boundingBoxes: {" <<
-                std::endl;
-            for( size_t i = 0; i < insertion_point->cur_offset_; i++ ) {
-                std::cout << insertion_point->entries.at(i).boundingBox <<
-                    std::endl;
-            }
-            std::cout << "}" << std::endl;
-            */
-
-        assert(insertion_point_level == b.child.get_level() + 1);
-
-        unsigned num_els = insertion_point->cur_offset_;
-
-        // If we exceed treeRef->maxBranchFactor we need to do something about it
-        if (num_els > max_branch_factor) {
-          // We call overflow treatment to determine how our sibling node is treated if we do a
-          // reInsert, sibling is nullptr. This is properly dealt with in adjustTree
-          sibling_handle = insertion_point->overflowTreatment(
-                  treeRef,
-                  insertion_point_handle,
-                  parentHandles,
-                  hasReinsertedOnLevel
-          );
-        }
-
-        // I3 [Propogate overflow treatment changes upward]
-        sibling_handle = insertion_point->adjustTree(
-                treeRef,
-                insertion_point_handle,
-                sibling_handle,
                 parentHandles,
                 hasReinsertedOnLevel
         );
       }
+
+      // I3 [Propogate overflow treatment changes upward]
+      sibling_handle = insertion_point->adjustTree(
+              treeRef,
+              insertion_point_handle,
+              sibling_handle,
+              parentHandles,
+              hasReinsertedOnLevel
+      );
 
       // I4 [Grow tree taller]
       if (sibling_handle) {
