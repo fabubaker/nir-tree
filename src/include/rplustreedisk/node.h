@@ -107,6 +107,7 @@ namespace rplustreedisk {
                 std::vector<bool> &hasReinsertedOnLevel
         );
         tree_node_handle condenseTree(std::vector<bool> &hasReinsertedOnLevel);
+        Partition partitionNode();
 
         // Datastructure interface functions
         void exhaustiveSearch(const Point &requestedPoint, std::vector<Point> &accumulator) const;
@@ -195,6 +196,7 @@ namespace rplustreedisk {
                 std::vector<bool> &hasReinsertedOnLevel
         );
         tree_node_handle condenseTree(std::vector<bool> &hasReinsertedOnLevel);
+        Partition partitionNode();
 
         // Datastructure interface functions
         void exhaustiveSearch(const Point &requestedPoint, std::vector<Point> &accumulator) const;
@@ -469,6 +471,44 @@ namespace rplustreedisk {
       }
 
       return splitIndex;
+    }
+
+    template <int min_branch_factor, int max_branch_factor>
+    Partition LeafNode<min_branch_factor, max_branch_factor>::partitionNode() {
+      Partition defaultPartition;
+      unsigned costMetric = std::numeric_limits<unsigned>::max();
+      double location;
+
+      for (unsigned d = 0; d < dimensions; d++) {
+        // Sort along dimension d
+        std::sort(
+          entries.begin(), entries.begin() + cur_offset_,
+          [d](Point &a, Point &b) { return a[d] < b[d]; }
+        );
+
+        // Pick at least half the data
+        location = entries.at(cur_offset_ / 2 - 1)[d];
+
+        // Compute cost, # of duplicates of this location
+        unsigned duplicateCount = 0;
+        for (unsigned i = 0; i < cur_offset_; i++) {
+          Point &data_point = entries.at(i);
+
+          if (location == data_point[d]) {
+            duplicateCount++;
+          }
+        }
+
+        // Compare cost
+        if (duplicateCount < costMetric) {
+          defaultPartition.dimension = d;
+          // Set the partition location after the point.
+          defaultPartition.location = nextafter(location, DBL_MAX);
+          costMetric = duplicateCount;
+        }
+      }
+
+      return defaultPartition;
     }
 
     template <int min_branch_factor, int max_branch_factor>
@@ -1498,6 +1538,123 @@ namespace rplustreedisk {
       }
 
       return splitIndex;
+    }
+
+    template <int min_branch_factor, int max_branch_factor>
+    Partition BranchNode<min_branch_factor, max_branch_factor>::partitionNode() {
+      Partition defaultPartition;
+      unsigned costMetric = std::numeric_limits<unsigned>::max();
+      double location;
+      std::vector<Rectangle> sortableBoundingBoxes;
+
+      for (unsigned i = 0; i < cur_offset_; i++) {
+        Branch &b = entries.at(i);
+        sortableBoundingBoxes.push_back(b.boundingBox);
+      }
+
+      for (unsigned d = 0; d < dimensions; d++) {
+        // Sort along d
+        std::sort(sortableBoundingBoxes.begin(), sortableBoundingBoxes.end(),
+                   [d](Rectangle a, Rectangle b){ return a.upperRight[d] < b.upperRight[d]; });
+
+
+        // By picking a line based on the upper bounding point, we
+        // guaranteed that at least some of the entries will go to the
+        // left. But we can't guarantee that *all* entries won't go to the
+        // left, because we might have to downsplit the remaining
+        // entries in the array (R+ nodes are not guaranteed to be disjoint).
+        // This would result in a split not actually reducing the number
+        // of entries in our new split nodes, which defeats the whole
+        // point.
+        // I'm not sure we can even guarantee that a line partitions the
+        // data in a way such that we DONT overflow --- presumably every
+        // box isn't on top of each other but I'm not sure that's a
+        // property you rely on.
+        // But even if we could guarantee that, we still can't check
+        // every cut point to figure it out because that would be N^2
+        // and this is D N LOG N.
+
+        location = sortableBoundingBoxes[sortableBoundingBoxes.size() / 2 - 1].upperRight[d];
+
+        // Compute cost, # of splits if d is chosen
+        unsigned currentInducedSplits = 0;
+        unsigned left_count = 0;
+        unsigned right_count = 0;
+        for (unsigned i = 0; i < sortableBoundingBoxes.size(); i++) {
+          bool is_contained_left = sortableBoundingBoxes[i].upperRight[d] <= location;
+          bool is_contained_right = sortableBoundingBoxes[i].lowerLeft[d] >= location;
+
+          if (is_contained_left) {
+            left_count++;
+          } else if(is_contained_right) {
+            right_count++;
+          } else if (sortableBoundingBoxes[i].lowerLeft[d] <= location and
+                     location <= sortableBoundingBoxes[i].upperRight[d]) {
+            currentInducedSplits++;
+            left_count++;
+            right_count++;
+          }
+        }
+
+        // Compare cost
+        if (left_count <= max_branch_factor and right_count <= max_branch_factor and
+            currentInducedSplits < costMetric) {
+          defaultPartition.dimension = d;
+          defaultPartition.location = location;
+          costMetric = currentInducedSplits;
+        }
+      }
+
+      // If there was a default split point that didnt' overflow children,
+      // use that
+      if (costMetric < std::numeric_limits<unsigned>::max()) {
+        return defaultPartition;
+      }
+
+      // It's time to get fancy
+      for (unsigned d = 0; d < dimensions; d++) {
+        for (unsigned i = 0; i < sortableBoundingBoxes.size(); i++) {
+          unsigned left_count = 0;
+          unsigned right_count = 0;
+          double partition_candidate = sortableBoundingBoxes[i].upperRight[d];
+          unsigned cost = 0;
+
+          for (unsigned j = 0; j < sortableBoundingBoxes.size(); j++) {
+            Rectangle &bounding_rect = sortableBoundingBoxes[j];
+            bool greater_than_left = bounding_rect.lowerLeft[d] < partition_candidate;
+            bool less_than_right = bounding_rect.upperRight[d] > partition_candidate;
+            bool requires_split = greater_than_left and less_than_right;
+            bool should_go_left = bounding_rect.upperRight[d] <= partition_candidate;
+            bool should_go_right = bounding_rect.lowerLeft[d] >= partition_candidate;
+
+            if (requires_split) {
+              left_count++;
+              right_count++;
+              cost++;
+            } else if (should_go_left) {
+              left_count++;
+            } else if (should_go_right) {
+              right_count++;
+            } else {
+              assert(false);
+            }
+          } //j
+
+          if (left_count <= max_branch_factor and
+              right_count <= max_branch_factor and
+              left_count > 0 and right_count > 0 ) {
+            if (cost < costMetric) {
+              defaultPartition.dimension = d;
+              defaultPartition.location = partition_candidate;
+              costMetric = cost;
+            }
+          }
+        } // i
+      } // d
+
+      assert(costMetric < std::numeric_limits<unsigned>::max());
+
+      return defaultPartition;
     }
 
     template <int min_branch_factor, int max_branch_factor>
