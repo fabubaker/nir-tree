@@ -47,6 +47,18 @@ namespace rplustreedisk {
         tree_node_handle child;
     };
 
+    struct SplitResult
+    {
+        Branch leftBranch;
+        Branch rightBranch;
+    };
+
+    struct Partition
+    {
+        unsigned dimension;
+        double location;
+    };
+
     template <int min_branch_factor, int max_branch_factor>
     class LeafNode {
     public:
