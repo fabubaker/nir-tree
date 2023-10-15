@@ -664,6 +664,14 @@ IsotheticPolygon::IsotheticPolygon(const IsotheticPolygon &basePolygon)
 	basicRectangles.insert(basicRectangles.end(), basePolygon.basicRectangles.begin(), basePolygon.basicRectangles.end());
 }
 
+IsotheticPolygon::IsotheticPolygon(const std::vector<Rectangle> &baseRectangleVector)
+{
+	for (auto rectangle : baseRectangleVector){
+		basicRectangles.push_back(rectangle);
+	}
+	recomputeBoundingBox();
+}
+
 void IsotheticPolygon::reset() {
     boundingBox = Rectangle();
     basicRectangles.clear();
@@ -1161,6 +1169,60 @@ void IsotheticPolygon::refine()
 
 	assert(basicRectangles.size() > 0);
 }
+
+// TODO: Optimize maybe?
+void IsotheticPolygon::simplify()
+{
+	// Early exit
+	if( basicRectangles.size() <= 1 ) {
+		return;
+	}
+	
+	Rectangle boundingBefore = boundingBox;
+	
+	std::sort(basicRectangles.begin(), basicRectangles.end(), [](Rectangle &a, Rectangle &b){return a.area() < b.area();});
+	
+	std::vector<Rectangle> rectangleSetRefined;
+
+	for (unsigned i = 0; i < basicRectangles.size(); i++) {
+		Rectangle &current_rect = basicRectangles.at(i);
+		unsigned index = basicRectangles.size() - 1;
+		bool skip = false;
+		// loop from larger rect to smaller rec 
+		while (index > i) {
+			Rectangle &cmp_rect = basicRectangles.at(index);
+			if (cmp_rect.containsRectangle(current_rect)) {
+				// current rect is contained in a larger rectangle
+				// skip it
+				skip = true;
+				break;
+			// } else if (cmp_rect.alignedForMerging(current_rect)) {
+			// 	// current rect aligned with a larger rectangle 
+			// 	// expand the larger rectangle and skip 
+			// 	cmp_rect.expand(current_rect);
+			// 	skip = true;
+			// 	break;
+			} else if (cmp_rect.intersectsRectangle(current_rect)) {
+				// current rect is partially contained in larger rectangle
+				std::vector<Rectangle> frag_rects = current_rect.fragmentRectangle(cmp_rect);
+				if (frag_rects.size() == 1) {
+					current_rect = frag_rects.at(0);
+				} 
+				// ignoring the other cases for now
+			}
+			index --;
+		}
+		if (skip == false){
+			rectangleSetRefined.push_back(current_rect);
+		}
+	}
+	basicRectangles.swap(rectangleSetRefined);
+	rectangleSetRefined.clear();
+    recomputeBoundingBox();
+    assert( boundingBefore == boundingBox );
+	assert(basicRectangles.size() > 0);
+}
+
 
 void IsotheticPolygon::recomputeBoundingBox()
 {

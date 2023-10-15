@@ -208,7 +208,7 @@ class IsotheticPolygon
     void reset();
 		explicit IsotheticPolygon(const Rectangle &baseRectangle);
 		IsotheticPolygon(const IsotheticPolygon &basePolygon);
-
+        IsotheticPolygon(const std::vector<Rectangle> &baseRectangleVector);
 		double area() const;
 		double computeIntersectionArea(const Rectangle &givenRectangle) const;
 		OptimalExpansion computeExpansionArea(const Point &givenPoint) const;
@@ -233,6 +233,7 @@ class IsotheticPolygon
 		void remove(unsigned basicRectangleIndex);
 		void deduplicate();
 		void refine();
+        void simplify();
         void recomputeBoundingBox();
 
         void shrink( const std::vector<Point> &pinPoints ) {
