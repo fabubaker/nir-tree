@@ -89,7 +89,7 @@ namespace rplustreedisk {
         unsigned chooseSplitNonLeafAxis();
         unsigned chooseSplitAxis();
         unsigned chooseSplitIndex(unsigned axis);
-        tree_node_handle splitNode(
+        SplitResult splitNode(
                 RPlusTreeDisk<min_branch_factor, max_branch_factor> *treeRef,
                 tree_node_handle current_handle
         );
@@ -178,7 +178,7 @@ namespace rplustreedisk {
         unsigned chooseSplitNonLeafAxis();
         unsigned chooseSplitAxis();
         unsigned chooseSplitIndex(unsigned axis);
-        tree_node_handle splitNode(
+        SplitResult splitNode(
                 RPlusTreeDisk<min_branch_factor, max_branch_factor> *treeRef,
                 tree_node_handle current_handle
         );
@@ -512,68 +512,48 @@ namespace rplustreedisk {
     }
 
     template <int min_branch_factor, int max_branch_factor>
-    tree_node_handle LeafNode<min_branch_factor, max_branch_factor>::splitNode(
-            RPlusTreeDisk<min_branch_factor, max_branch_factor> *treeRef,
-            tree_node_handle current_handle
+    SplitResult LeafNode<min_branch_factor, max_branch_factor>::splitNode(
+      RPlusTreeDisk<min_branch_factor, max_branch_factor> *treeRef,
+      tree_node_handle current_handle
     ) {
       using NodeType = LeafNode<min_branch_factor, max_branch_factor>;
-      // S1: Call chooseSplitAxis to determine the axis perpendicular to which the split is performed
-      // S2: Invoke chooseSplitIndex given the axis to determine the best distribution along this axis
-      // S3: Distribute the entries among these two groups
-
-      // Call chooseSplitAxis to determine the axis perpendicular to which the split is performed
-      // For now we will save the axis as an int -> since this allows for room for growth in the future
-      // Call ChooseSplitIndex to create optimal splitting of data array
-      unsigned splitAxis = chooseSplitAxis();
-      unsigned splitIndex = chooseSplitIndex(splitAxis);
-
-      /*
-        std::cout << "Split Leaf Node: {" <<  std::endl;
-        for( unsigned i = 0; i < cur_offset_; i++ ) {
-            std::cout << entries.at(i) << std::endl;
-        }
-        std::cout << "}" << std::endl;
-        std::cout << "Split on axis" << splitAxis << ", index: " <<
-            splitIndex << std::endl;
-            */
 
       tree_node_allocator *allocator = get_node_allocator(treeRef);
+      Partition p = partitionNode();
+
+      // Create a copy of entries
+      std::vector<Point> entriesCopy(entries);
+
+      // We are the left child
+      auto left_handle = current_handle;
+      auto left_node = this;
+      left_node->cur_offset_ = 0; // Reset our entries and repopulate below
+
+      // Create a new sibling
       auto alloc_data = allocator->create_new_tree_node<NodeType>(NodeHandleType(LEAF_NODE));
-      uint16_t current_level = current_handle.get_level();
+      new (&(*(alloc_data.first))) NodeType();
+      auto right_handle = alloc_data.second;
+      auto right_node = alloc_data.first;
+      right_handle.set_level(left_handle.get_level());
 
-      auto newSibling = alloc_data.first;
-      tree_node_handle sibling_handle = alloc_data.second;
+      // Loop through entries and assign points to left or right nodes
+      for (unsigned i = 0; i < entriesCopy.size(); i++) {
+        Point data_point = entriesCopy.at(i);
 
-      new (&(*(newSibling))) NodeType();
-      sibling_handle.set_level(current_level);
-
-      // Copy everything to the right of the splitPoint (inclusive) to the new sibling
-      std::copy(entries.begin() + splitIndex, entries.begin() + cur_offset_, newSibling->entries.begin());
-
-      newSibling->cur_offset_ = cur_offset_ - splitIndex;
-
-      // Chop our node's data down
-      cur_offset_ = splitIndex;
-
-      assert(cur_offset_ > 0);
-      assert(newSibling->cur_offset_ > 0);
-
-      /*
-        std::cout << "New Node1: {" <<  std::endl;
-        for( unsigned i = 0; i < cur_offset_; i++ ) {
-            std::cout << entries.at(i) << std::endl;
+        if (data_point[p.dimension] < p.location and left_node->cur_offset_ < max_branch_factor ) {
+          left_node->entries.at(left_node->cur_offset_++) = data_point;
+        } else {
+          right_node->entries.at(right_node->cur_offset_++) = data_point;
         }
-        std::cout << "}" << std::endl;
 
-        std::cout << "New Node2: {" <<  std::endl;
-        for( unsigned i = 0; i < newSibling->cur_offset_; i++ ) {
-            std::cout << newSibling->entries.at(i) << std::endl;
-        }
-        std::cout << "}" << std::endl;
-        */
+        assert( left_node->cur_offset_ <= max_branch_factor );
+        assert( right_node->cur_offset_ <= max_branch_factor );
+      }
 
-      // Return our newly minted sibling
-      return sibling_handle;
+      return {
+        {left_handle, left_node->boundingBox()},
+        {right_handle, right_node->boundingBox()}
+      };
     }
 
 // Note: This function modifies parentHandles.
@@ -1658,30 +1638,13 @@ namespace rplustreedisk {
     }
 
     template <int min_branch_factor, int max_branch_factor>
-    tree_node_handle BranchNode<min_branch_factor, max_branch_factor>::splitNode(
+    SplitResult BranchNode<min_branch_factor, max_branch_factor>::splitNode(
             RPlusTreeDisk<min_branch_factor, max_branch_factor> *treeRef,
             tree_node_handle current_handle
     ) {
       using NodeType = BranchNode<min_branch_factor, max_branch_factor>;
-      // S1: Call chooseSplitAxis to determine the axis perpendicular to which the split is performed
-      // S2: Invoke chooseSplitIndex given the axis to determine the best distribution along this axis
-      // S3: Distribute the entries among these two groups
 
-      // Call chooseSplitAxis to determine the axis perpendicular to which the split is performed
-      // For now we will save the axis as a int -> since this allows for room for growth in the future
-      // Call ChooseSplitIndex to create optimal splitting of data array
-      unsigned splitAxis = chooseSplitAxis();
-      unsigned splitIndex = chooseSplitIndex(splitAxis);
-
-      /*std::cout << "Split Branch Node: {" <<  std::endl;
-        for( unsigned i = 0; i < cur_offset_; i++ ) {
-            std::cout << entries.at(i).boundingBox << std::endl;
-        }
-        std::cout << "}" << std::endl;
-        std::cout << "Split on axis" << splitAxis << ", index: " <<
-            splitIndex << std::endl;
-        */
-
+      // Create a new sibling node
       tree_node_allocator *allocator = get_node_allocator(treeRef);
       auto alloc_data = allocator->create_new_tree_node<NodeType>(NodeHandleType(BRANCH_NODE));
       uint16_t current_level = current_handle.get_level();
