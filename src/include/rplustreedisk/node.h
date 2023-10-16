@@ -91,7 +91,8 @@ namespace rplustreedisk {
         unsigned chooseSplitIndex(unsigned axis);
         SplitResult splitNode(
                 RPlusTreeDisk<min_branch_factor, max_branch_factor> *treeRef,
-                tree_node_handle current_handle
+                tree_node_handle current_handle,
+                Partition p
         );
         tree_node_handle adjustTree(
                 RPlusTreeDisk<min_branch_factor, max_branch_factor> *treeRef,
@@ -180,7 +181,8 @@ namespace rplustreedisk {
         unsigned chooseSplitIndex(unsigned axis);
         SplitResult splitNode(
                 RPlusTreeDisk<min_branch_factor, max_branch_factor> *treeRef,
-                tree_node_handle current_handle
+                tree_node_handle current_handle,
+                Partition p
         );
         tree_node_handle adjustTree(
                 RPlusTreeDisk<min_branch_factor, max_branch_factor> *treeRef,
@@ -514,12 +516,12 @@ namespace rplustreedisk {
     template <int min_branch_factor, int max_branch_factor>
     SplitResult LeafNode<min_branch_factor, max_branch_factor>::splitNode(
       RPlusTreeDisk<min_branch_factor, max_branch_factor> *treeRef,
-      tree_node_handle current_handle
+      tree_node_handle current_handle,
+      Partition p
     ) {
       using NodeType = LeafNode<min_branch_factor, max_branch_factor>;
 
       tree_node_allocator *allocator = get_node_allocator(treeRef);
-      Partition p = partitionNode();
 
       // Create a copy of entries
       std::vector<Point> entriesCopy(entries);
