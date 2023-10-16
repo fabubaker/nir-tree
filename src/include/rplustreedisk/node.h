@@ -1642,62 +1642,69 @@ namespace rplustreedisk {
     template <int min_branch_factor, int max_branch_factor>
     SplitResult BranchNode<min_branch_factor, max_branch_factor>::splitNode(
             RPlusTreeDisk<min_branch_factor, max_branch_factor> *treeRef,
-            tree_node_handle current_handle
+            tree_node_handle current_handle,
+            Partition p
     ) {
       using NodeType = BranchNode<min_branch_factor, max_branch_factor>;
 
-      // Create a new sibling node
       tree_node_allocator *allocator = get_node_allocator(treeRef);
+
+      // Create a copy of entries
+      std::vector<Branch> entriesCopy(entries);
+
+      // We are the left child
+      auto left_handle = current_handle;
+      auto left_node = this;
+      left_node->cur_offset_ = 0; // Reset our entries and repopulate below
+
+      // Create a new sibling node
       auto alloc_data = allocator->create_new_tree_node<NodeType>(NodeHandleType(BRANCH_NODE));
-      uint16_t current_level = current_handle.get_level();
+      auto right_handle = alloc_data.second;
+      auto right_node = alloc_data.first;
+      new (&(*(right_node))) NodeType();
+      right_handle.set_level(current_handle.get_level());
 
-      auto newSibling = alloc_data.first;
-      tree_node_handle sibling_handle = alloc_data.second;
+      assert(left_node->cur_offset_ == 0);
+      assert(right_node->cur_offset_ == 0);
 
-      new (&(*(newSibling))) NodeType();
-      sibling_handle.set_level(current_level);
+      // This is partitioning on a point that either shoves everything
+      // left or cuts enough stuff that left gets everything.
+      // Very confusing...
+      for (unsigned i = 0; i < entriesCopy.size(); i++) {
+        Branch b = entriesCopy.at(i);
 
-      // Copy everything to the right of the splitPoint (inclusive) to the new sibling
-      std::copy(entries.begin() + splitIndex, entries.begin() + cur_offset_, newSibling->entries.begin());
+        bool is_contained_left = b.boundingBox.upperRight[p.dimension] <= p.location;
+        bool is_contained_right = b.boundingBox.lowerLeft[p.dimension] >= p.location;
 
-      newSibling->cur_offset_ = cur_offset_ - splitIndex;
+        assert(not(is_contained_left and is_contained_right));
 
-#ifndef NDEBUG
-      for (unsigned i = 0; i < newSibling->cur_offset_; i++) {
-        Branch &b = newSibling->entries.at(i);
+        if (is_contained_left) {
+          left_node->entries.at(left_node->cur_offset_++) = b;
+        } else if (is_contained_right) {
+          right_node->entries.at(right_node->cur_offset_++) = b;
+        } else { // Line cuts through child, so we downsplit
+          SplitResult downwardSplit;
 
-        if (b.child.get_type() == LEAF_NODE) {
-          assert(current_level == b.child.get_level() + 1);
-          assert(sibling_handle.get_level() == b.child.get_level() + 1);
-        } else {
-          assert(current_level == b.child.get_level() + 1);
-          assert(sibling_handle.get_level() == b.child.get_level() + 1);
+          if (b.child.get_type() == LEAF_NODE) {
+            auto child_node = treeRef->get_leaf_node(b.child);
+            downwardSplit = child_node->splitNode(treeRef, b.child, p);
+          } else {
+            auto child_node = treeRef->get_branch_node(b.child);
+            downwardSplit = child_node->splitNode(treeRef, b.child, p);
+          }
+
+          if (downwardSplit.leftBranch.boundingBox != Rectangle::atInfinity) {
+            left_node->entries.at(left_node->cur_offset_++) = downwardSplit.leftBranch;
+          }
+
+          if (downwardSplit.rightBranch.boundingBox != Rectangle::atInfinity) {
+            right_node->entries.at(right_node->cur_offset_++) = downwardSplit.rightBranch;
+          }
         }
       }
-#endif
 
-      // Chop our node's data down
-      cur_offset_ = splitIndex;
-
-      assert(cur_offset_ > 0);
-      assert(newSibling->cur_offset_ > 0);
-
-      /*
-        std::cout << "New Node1: {" <<  std::endl;
-        for( unsigned i = 0; i < cur_offset_; i++ ) {
-            std::cout << entries.at(i).boundingBox << std::endl;
-        }
-        std::cout << "}" << std::endl;
-
-        std::cout << "New Node2: {" <<  std::endl;
-        for( unsigned i = 0; i < newSibling->cur_offset_; i++ ) {
-            std::cout << newSibling->entries.at(i).boundingBox << std::endl;
-        }
-        std::cout << "}" << std::endl;
-        */
-
-      // Return our newly minted sibling
-      return sibling_handle;
+      assert(left_node->cur_offset_ <= max_branch_factor);
+      assert(right_node->cur_offset_ <= max_branch_factor);
     }
 
 // Overflow treatement for dealing with a node that is too big (overflow)
