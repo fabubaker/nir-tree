@@ -743,7 +743,7 @@ namespace rplustreedisk {
       if (hasReinsertedOnLevel.at(current_level)) {
         //std::cout << "Overflow treatment on leaf node, splitting." <<
         //    std::endl;
-        return splitNode(treeRef, current_handle);
+//        return splitNode(treeRef, current_handle, partitionNode());
       }
     }
 
@@ -770,15 +770,6 @@ namespace rplustreedisk {
 
       uint16_t current_level = current_handle.get_level();
       assert(current_level == 0); // Leaf nodes have level = 0
-
-      /*std::cout << "Inserted Point: " << point <<
-            std::endl;
-        std::cout << "Insertion point now has points: { " << std::endl;
-        for( size_t i = 0; i < cur_offset_; i++ ) {
-            std::cout << entries.at(i) << std::endl;
-        }
-        std::cout << "}" << std::endl;
-        */
 
       // If we exceed treeRef->maxBranchFactor we need to do something about it
       if (cur_offset_ > max_branch_factor) {
@@ -1721,7 +1712,7 @@ namespace rplustreedisk {
       if (hasReinsertedOnLevel.at(current_level)) {
         //std::cout << "Overflow treatment on branch node, splitting." <<
         //    std::endl;
-        return splitNode(treeRef, current_handle);
+//        return splitNode(treeRef, current_handle, partitionNode());
       }
     }
 
