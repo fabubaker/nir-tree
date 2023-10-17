@@ -17,7 +17,8 @@ class Statistics {
 			histogramRangeSearch(1000000, 0),
 			histogramRangeLeaves(100000, 0),
 			histogramScatter(100, 0),
-      histogramOutOfLine(100000, 0)
+    			histogramOutOfLine(100000, 0),
+	  		histogramHit(100, 0)
 		{
 			nodesSearched = 0;
 			leavesSearched = 0;
@@ -153,7 +154,7 @@ class Statistics {
 		}
 
   size_t intersectionCount = 0;
-
+  std::vector<unsigned> histogramHit;
 	private:
 		std::vector<unsigned> histogramSearch;
 		std::vector<unsigned> histogramLeaves;
