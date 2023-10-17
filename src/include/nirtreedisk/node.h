@@ -528,15 +528,15 @@ Partition LeafNode<min_branch_factor, max_branch_factor>::partitionLeafNode() {
     }
   }
   
-  defaultPartition.location = average[defaultPartition.dimension];
+  //defaultPartition.location = average[defaultPartition.dimension];
   // sort points on the best dimension and choose an even split 
   unsigned choosenDimension = defaultPartition.dimension;
   std::sort(this->entries.begin(), this->entries.end(), [choosenDimension](
             const Point &p1, const Point &p2) {return p1.orderedCompare(p2, choosenDimension);});
-  // Point mediumPoint = this->entries.at(int(this->cur_offset_ / 2));
-  // defaultPartition.location = mediumPoint[defaultPartition.dimension];
-  // Point minBranchPoint_left = this->entries.at(min_branch_factor);
-  // Point minBranchPoint_right = this->entries.at(this->cur_offset_ - min_branch_factor - 1);
+  Point mediumPoint = this->entries.at(int(this->cur_offset_ / 2));
+  defaultPartition.location = mediumPoint[defaultPartition.dimension];
+  // Point minBranchPoint_left = this->entries.at(min_branch_factor - 1);
+  // Point minBranchPoint_right = this->entries.at(this->cur_offset_ - min_branch_factor);
   // if(average[choosenDimension] < minBranchPoint_left[choosenDimension]) {
   //   defaultPartition.location = Point::closest_larger_point(minBranchPoint_left)[choosenDimension];
   // } else if (average[choosenDimension] > minBranchPoint_right[choosenDimension]){
@@ -1160,20 +1160,20 @@ SplitResult adjustTreeSub(
           parent_node->removeAndFreeBranch(treeRef, propagationSplit.leftBranch.child); 
         }
         propagationSplit.leftBranch.child = tree_node_handle(nullptr);
-      } else if (left_node->cur_offset_ < min_branch_factor && treeRef->reinsertionAttempt <= REINSERTION_LIMIT) {
-        // reinsert branch
-        for (unsigned i = 0; i < left_node->cur_offset_; i++ ) {
-          Branch b = left_node->entries.at(i);
-          treeRef->branchQ.push_back(b);
-          remove_polygon(treeRef, b.child);
-        }
-        if (current_handle == nullptr) {
-          allocator->free(propagationSplit.leftBranch.child, sizeof(BranchNode<min_branch_factor, max_branch_factor>));
-        } else {
-          auto parent_node = treeRef->get_branch_node(current_handle);
-          parent_node->removeAndFreeBranch(treeRef, propagationSplit.leftBranch.child);
-        }
-        propagationSplit.leftBranch.child = tree_node_handle(nullptr);
+      // } else if (left_node->cur_offset_ < min_branch_factor && treeRef->reinsertionAttempt <= REINSERTION_LIMIT) {
+      //   // reinsert branch
+      //   for (unsigned i = 0; i < left_node->cur_offset_; i++ ) {
+      //     Branch b = left_node->entries.at(i);
+      //     treeRef->branchQ.push_back(b);
+      //     remove_polygon(treeRef, b.child);
+      //   }
+      //   if (current_handle == nullptr) {
+      //     allocator->free(propagationSplit.leftBranch.child, sizeof(BranchNode<min_branch_factor, max_branch_factor>));
+      //   } else {
+      //     auto parent_node = treeRef->get_branch_node(current_handle);
+      //     parent_node->removeAndFreeBranch(treeRef, propagationSplit.leftBranch.child);
+      //   }
+      //   propagationSplit.leftBranch.child = tree_node_handle(nullptr);
       } else {
         // update to branch node
         assert(left_node->cur_offset_ <= max_branch_factor);
@@ -1188,15 +1188,15 @@ SplitResult adjustTreeSub(
         // remove node
         allocator->free(propagationSplit.rightBranch.child, sizeof(BranchNode<min_branch_factor, max_branch_factor>));
         propagationSplit.rightBranch.child = tree_node_handle(nullptr);
-      } else if (right_node->cur_offset_ < min_branch_factor && treeRef->reinsertionAttempt <= REINSERTION_LIMIT) {
-        // reinsert node
-        for (unsigned i = 0; i < right_node->cur_offset_; i++ ) {
-          Branch b = right_node->entries.at(i);
-          treeRef->branchQ.push_back(b);
-          remove_polygon(treeRef, b.child);
-        }
-        allocator->free(propagationSplit.rightBranch.child, sizeof(BranchNode<min_branch_factor, max_branch_factor>));
-        propagationSplit.rightBranch.child = tree_node_handle(nullptr);
+      // } else if (right_node->cur_offset_ < min_branch_factor && treeRef->reinsertionAttempt <= REINSERTION_LIMIT) {
+      //   // reinsert node
+      //   for (unsigned i = 0; i < right_node->cur_offset_; i++ ) {
+      //     Branch b = right_node->entries.at(i);
+      //     treeRef->branchQ.push_back(b);
+      //     remove_polygon(treeRef, b.child);
+      //   }
+      //   allocator->free(propagationSplit.rightBranch.child, sizeof(BranchNode<min_branch_factor, max_branch_factor>));
+      //   propagationSplit.rightBranch.child = tree_node_handle(nullptr);
       } else {
         // update to branch node
         assert(right_node->cur_offset_ <= max_branch_factor);
@@ -3189,7 +3189,7 @@ tree_node_handle BranchNode<min_branch_factor, max_branch_factor>::insert(
   }
 
   while (!treeRef->pointQ.empty() or !treeRef->branchQ.empty()){
-    if (treeRef->reinsertionAttempt > 0) {
+    if (treeRef->reinsertionAttempt >= 1) {
       std::cout << "** Point queue size: " <<  treeRef->pointQ.size() << std::endl;
       std::cout << "** Branch queue size: " <<  treeRef->branchQ.size() << std::endl;
       std::cout << "** reinsertion attempt: " <<  treeRef->reinsertionAttempt << std::endl; 
