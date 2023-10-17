@@ -46,7 +46,7 @@
 
 namespace nirtreedisk {
 
-const unsigned REINSERTION_LIMIT = 5;
+const unsigned REINSERTION_LIMIT = 100;
 
 template <int min_branch_factor, int max_branch_factor>
 class NIRTreeDisk;
@@ -1105,7 +1105,7 @@ SplitResult adjustTreeSub(
           parent_node->removeAndFreeBranch(treeRef, propagationSplit.leftBranch.child);
         }
         propagationSplit.leftBranch.child = tree_node_handle(nullptr);
-      } else if (left_node->cur_offset_ < min_branch_factor) {
+      } else if (left_node->cur_offset_ < min_branch_factor && treeRef->reinsertionAttempt <= REINSERTION_LIMIT) {
         // reinsert
         for (unsigned i = 0; i < left_node->cur_offset_; i++ ) {
           Point p = left_node->entries.at(i);
@@ -1132,7 +1132,7 @@ SplitResult adjustTreeSub(
         // remove node
         allocator->free(propagationSplit.rightBranch.child, sizeof(LeafNode<min_branch_factor, max_branch_factor>));
         propagationSplit.rightBranch.child = tree_node_handle(nullptr);
-      } else if (right_node->cur_offset_ < min_branch_factor) {
+      } else if (right_node->cur_offset_ < min_branch_factor && treeRef->reinsertionAttempt <= REINSERTION_LIMIT) {
         // reinsert node
         for (unsigned i = 0; i < right_node->cur_offset_; i++ ) {
           Point p = right_node->entries.at(i);
@@ -1160,7 +1160,7 @@ SplitResult adjustTreeSub(
           parent_node->removeAndFreeBranch(treeRef, propagationSplit.leftBranch.child); 
         }
         propagationSplit.leftBranch.child = tree_node_handle(nullptr);
-      } else if (left_node->cur_offset_ < min_branch_factor) {
+      } else if (left_node->cur_offset_ < min_branch_factor && treeRef->reinsertionAttempt <= REINSERTION_LIMIT) {
         // reinsert branch
         for (unsigned i = 0; i < left_node->cur_offset_; i++ ) {
           Branch b = left_node->entries.at(i);
@@ -1188,7 +1188,7 @@ SplitResult adjustTreeSub(
         // remove node
         allocator->free(propagationSplit.rightBranch.child, sizeof(BranchNode<min_branch_factor, max_branch_factor>));
         propagationSplit.rightBranch.child = tree_node_handle(nullptr);
-      } else if (right_node->cur_offset_ < min_branch_factor) {
+      } else if (right_node->cur_offset_ < min_branch_factor && treeRef->reinsertionAttempt <= REINSERTION_LIMIT) {
         // reinsert node
         for (unsigned i = 0; i < right_node->cur_offset_; i++ ) {
           Branch b = right_node->entries.at(i);
@@ -1205,8 +1205,6 @@ SplitResult adjustTreeSub(
           parent_node->addBranchToNode(propagationSplit.rightBranch);
         }
       }
-    } else {
-      exit(1);
     }
   }
   return propagationSplit;
@@ -2744,7 +2742,7 @@ SplitResult BranchNode<min_branch_factor, max_branch_factor>::splitNode(
         if (child_node->cur_offset_ == 0) {
           this->removeAndFreeBranch(treeRef, branch.child); //update cur_offset_
         } else if (child_node->cur_offset_ < min_branch_factor
-                /*&& treeRef->reinsertionAttempt <= REINSERTION_LIMIT*/) {
+                && treeRef->reinsertionAttempt <= REINSERTION_LIMIT) {
           // the splitted branch doesn't meet min_branch_factor => reinsert
           for (unsigned i = 0; i < child_node->cur_offset_; i++ ) {
             Point p = child_node->entries.at(i);
@@ -2761,7 +2759,7 @@ SplitResult BranchNode<min_branch_factor, max_branch_factor>::splitNode(
         if (child_sibling_node->cur_offset_ == 0) {
           allocator->free(child_sibling.child, sizeof(LeafNode<min_branch_factor, max_branch_factor>));
         } else if (child_sibling_node->cur_offset_ < min_branch_factor
-              /*&& treeRef->reinsertionAttempt <= REINSERTION_LIMIT*/) {
+              && treeRef->reinsertionAttempt <= REINSERTION_LIMIT) {
           // the splitted branch doesn't meet min_branch_factor => reinsert
           for (unsigned i = 0; i < child_sibling_node->cur_offset_; i++ ) {
             Point p = child_sibling_node->entries.at(i);
@@ -3197,7 +3195,7 @@ tree_node_handle BranchNode<min_branch_factor, max_branch_factor>::insert(
       std::cout << "** reinsertion attempt: " <<  treeRef->reinsertionAttempt << std::endl; 
     }
     // increment reinsertionAttempt 
-    treeRef->reinsertionAttempt++;
+    unsigned attempt = treeRef->reinsertionAttempt++;
     // make a copy of pointQ and branchQ
     std::vector<Branch> BranchesQueue = treeRef->branchQ;
     std::vector<Point> PointsQueue = treeRef->pointQ;
@@ -3219,6 +3217,8 @@ tree_node_handle BranchNode<min_branch_factor, max_branch_factor>::insert(
     }
     // work on points
     if (! PointsQueue.empty()) {
+      std::sort(PointsQueue.begin(), PointsQueue.end(), 
+          [attempt, dimensions](Point &l, Point &r) { return l.orderedCompare(r, attempt % dimensions); }); 
       for (Point &p : PointsQueue) {
         //std::fill(treeRef->hasReinsertedOnLevel.begin(), treeRef->hasReinsertedOnLevel.end(), false);
         std::variant<Branch, Point> entry = p; 
