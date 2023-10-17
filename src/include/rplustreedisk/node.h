@@ -632,79 +632,86 @@ namespace rplustreedisk {
       return std::make_pair(node_handle, tree_node_handle(nullptr));
     }
 
-    template <int min_branch_factor, int max_branch_factor>
-    tree_node_handle adjustTreeSub(
-            RPlusTreeDisk<min_branch_factor, max_branch_factor> *treeRef,
-            tree_node_handle current_handle,
-            tree_node_handle sibling_handle,
-            std::stack<tree_node_handle> parentHandles,
-            std::vector<bool> &hasReinsertedOnLevel) {
-      // AT1 [Initialize]
-      for (;;) {
-        assert(current_handle);
+    template <class TR, class NT>
+    SplitResult adjustTreeSubHelper(
+      TR *treeRef,
+      NT current_node,
+      tree_node_handle current_handle,
+      tree_node_handle parent_handle,
+      SplitResult currentPropagationSplit,
+      int max_branch_factor
+    ) {
+      // Returns a new split that needs to be propagated upwards
+      SplitResult newPropagationSplit;
 
-        if (parentHandles.empty()) { // No more parents to traverse up
-          break;
+      if (currentPropagationSplit.leftBranch.child != nullptr and currentPropagationSplit.rightBranch.child != nullptr) {
+        if (current_node->cur_offset_ >= max_branch_factor) {
+          assert(false);
         }
 
-        if (current_handle.get_type() == LEAF_NODE) {
-          auto node = treeRef->get_leaf_node(current_handle);
-
-          pinned_node_ptr<LeafNode<min_branch_factor, max_branch_factor>> sibling_node(
-                  treeRef->node_allocator_->buffer_pool_, nullptr, nullptr
-          );
-          assert(sibling_node == nullptr);
-
-          if (sibling_handle) {
-            assert(sibling_handle.get_type() == LEAF_NODE);
-            sibling_node = treeRef->get_leaf_node(sibling_handle);
+        // If there was a split we were supposed to propagate then propagate it
+        if (currentPropagationSplit.leftBranch.child.get_type() == LEAF_NODE) {
+          auto left_node = treeRef->get_leaf_node(currentPropagationSplit.leftBranch.child);
+          if (left_node->cur_offset_ > 0) {
+            current_node->entries.at(current_node->cur_offset_++) = currentPropagationSplit.leftBranch;
           }
-
-          auto ret_data = adjustTreeBottomHalf(
-                  treeRef,
-                  node,
-                  sibling_node,
-                  current_handle,
-                  sibling_handle,
-                  parentHandles,
-                  hasReinsertedOnLevel,
-                  max_branch_factor);
-
-          current_handle = ret_data.first;
-          sibling_handle = ret_data.second;
         } else {
-          auto node = treeRef->get_branch_node(current_handle);
-
-          pinned_node_ptr<BranchNode<min_branch_factor, max_branch_factor>> sibling_node(
-                  treeRef->node_allocator_->buffer_pool_, nullptr, nullptr
-          );
-          assert(sibling_node == nullptr);
-
-          if (sibling_handle) {
-            assert(sibling_handle.get_type() == BRANCH_NODE);
-            sibling_node = treeRef->get_branch_node(sibling_handle);
+          auto left_node = treeRef->get_branch_node(currentPropagationSplit.leftBranch.child);
+          if (left_node->cur_offset_ > 0) {
+            current_node->entries.at(current_node->cur_offset_++) = currentPropagationSplit.leftBranch;
           }
-
-          auto ret_data = adjustTreeBottomHalf(
-                  treeRef,
-                  node,
-                  sibling_node,
-                  current_handle,
-                  sibling_handle,
-                  parentHandles,
-                  hasReinsertedOnLevel,
-                  max_branch_factor);
-
-          current_handle = ret_data.first;
-          sibling_handle = ret_data.second;
         }
 
-        if (!current_handle) {
-          break;
+        if (currentPropagationSplit.rightBranch.child.get_type() == LEAF_NODE) {
+          auto right_node = treeRef->get_leaf_node(currentPropagationSplit.rightBranch.child);
+          if (right_node->cur_offset_ > 0) {
+            current_node->entries.at(current_node->cur_offset_++) = currentPropagationSplit.rightBranch;
+          }
+        } else {
+          auto right_node = treeRef->get_branch_node(currentPropagationSplit.rightBranch.child);
+          if (right_node->cur_offset_ > 0) {
+            current_node->entries.at(current_node->cur_offset_++) = currentPropagationSplit.rightBranch;
+          }
         }
       }
 
-      return sibling_handle;
+      // Early exit if this node does not overflow
+      if (current_node->cur_offset_ <= max_branch_factor) {
+        newPropagationSplit = {
+          {Rectangle(), tree_node_handle( nullptr )},
+          {Rectangle(), tree_node_handle( nullptr )}
+        };
+        return newPropagationSplit;
+      }
+
+      // Otherwise, split node
+      newPropagationSplit = current_node->splitNode();
+
+      // The current node has been split into two new nodes, remove it from the parent
+      if (parent_handle != nullptr) {
+        // parent is guaranteed to be a branch node
+        auto parent_node = treeRef->get_branch_node(parent_handle);
+        assert(parent_node->cur_offset_ <= max_branch_factor);
+
+        parent_node->removeChild(current_handle);
+        assert(parent_node->cur_offset_ <= max_branch_factor - 1);
+      }
+
+      return newPropagationSplit;
+    }
+
+    template <int min_branch_factor, int max_branch_factor>
+    SplitResult adjustTreeSub(
+      RPlusTreeDisk<min_branch_factor, max_branch_factor> *treeRef,
+      tree_node_handle current_handle,
+      std::stack<tree_node_handle> parentHandles
+    ) {
+      SplitResult propagationSplit = {
+        {Rectangle(), tree_node_handle(nullptr)},
+        {Rectangle(), tree_node_handle(nullptr)}
+      };
+
+      return propagationSplit;
     }
 
     template <int min_branch_factor, int max_branch_factor>
@@ -1062,15 +1069,13 @@ namespace rplustreedisk {
 
     template <int min_branch_factor, int max_branch_factor>
     void BranchNode<min_branch_factor, max_branch_factor>::removeChild(tree_node_handle child) {
-      unsigned i = 0;
-      for (; i < cur_offset_; i++) {
+      for (unsigned i = 0; i < cur_offset_; i++) {
         if (entries.at(i).child == child) {
-          break;
+          entries.at(i) = entries.at(cur_offset_ - 1);
+          cur_offset_--;
+          return;
         }
       }
-      assert(entries.at(i).child == child);
-      entries.at(i) = entries.at(cur_offset_ - 1);
-      cur_offset_--;
     }
 
     template <int min_branch_factor, int max_branch_factor>
