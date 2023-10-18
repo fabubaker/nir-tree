@@ -1758,20 +1758,17 @@ namespace rplustreedisk {
       // I2 [Add record to leaf node]
       auto insertion_point = treeRef->get_leaf_node(insertion_point_handle);
       insertion_point->addPoint(point);
-      unsigned num_els = insertion_point->cur_offset_;
 
-      // If we exceed treeRef->maxBranchFactor we need to do something about it
-      if (num_els > max_branch_factor) {
+      // If we exceed max_branch_factor we need to do something about it
+      if (insertion_point->cur_offset_ > max_branch_factor) {
         SplitResult split;
         SplitResult finalSplit = {
             {Rectangle(), tree_node_handle(nullptr)},
             {Rectangle(), tree_node_handle(nullptr)}
         };
 
-        // Split the leaf node where the new point was inserted
-        split = insertion_point->splitNode(treeRef, current_handle, insertion_point->partitionNode());
         // Adjust the tree from bottom-to-top, splitting nodes if they are full
-        finalSplit = insertion_point->adjustTree(treeRef, insertion_point_handle, parentHandles, split);
+        finalSplit = adjustTree(treeRef, insertion_point_handle, parentHandles, split);
 
         // If the root was split in adjustTree, create a new root
         if (finalSplit.leftBranch.child != nullptr and finalSplit.rightBranch.child != nullptr) {
