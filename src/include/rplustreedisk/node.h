@@ -621,7 +621,7 @@ namespace rplustreedisk {
     template <class TR, class NT>
     SplitResult propagateSplit(
       TR *treeRef,
-      NT current_node,
+      pinned_node_ptr<NT> current_node,
       tree_node_handle current_handle,
       tree_node_handle parent_handle,
       SplitResult currentPropagationSplit,
@@ -671,7 +671,7 @@ namespace rplustreedisk {
       }
 
       // Otherwise, split node
-      newPropagationSplit = current_node->splitNode();
+      newPropagationSplit = current_node->splitNode(treeRef, current_handle, current_node->partitionNode());
 
       // The current node has been split into two new nodes, remove it from the parent
       if (parent_handle != nullptr) {
