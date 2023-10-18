@@ -619,7 +619,7 @@ namespace rplustreedisk {
     }
 
     template <class TR, class NT>
-    SplitResult adjustTreeSubHelper(
+    SplitResult propagateSplit(
       TR *treeRef,
       NT current_node,
       tree_node_handle current_handle,
@@ -708,13 +708,13 @@ namespace rplustreedisk {
         if (current_handle.get_type() == LEAF_NODE) {
           auto current_node = treeRef->get_leaf_node(current_handle);
 
-          currentPropagationSplit = adjustTreeSubHelper(
+          currentPropagationSplit = propagateSplit(
                   treeRef, current_node, current_handle, parent_handle, currentPropagationSplit, max_branch_factor
           );
         } else {
           auto current_node = treeRef->get_branch_node(current_handle);
 
-          currentPropagationSplit = adjustTreeSubHelper(
+          currentPropagationSplit = propagateSplit(
                   treeRef, current_node, current_handle, parent_handle, currentPropagationSplit, max_branch_factor
           );
         }
