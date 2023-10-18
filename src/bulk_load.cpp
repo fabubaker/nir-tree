@@ -1262,6 +1262,14 @@ template void sequential_insert_tree(
         unsigned max_branch_factor
 );
 
+template void sequential_insert_tree(
+        rplustreedisk::RPlusTreeDisk<R_STAR_MIN_FANOUT, R_STAR_MAX_FANOUT> *tree,
+        std::map<std::string, size_t> &configU,
+        std::vector<Point>::iterator begin,
+        std::vector<Point>::iterator end,
+        unsigned max_branch_factor
+);
+
 /* bulk_load_tree */
 template void bulk_load_tree(
         rstartreedisk::RStarTreeDisk<R_STAR_MIN_FANOUT, R_STAR_MAX_FANOUT> *tree,
@@ -1271,4 +1279,14 @@ template void bulk_load_tree(
         unsigned max_branch_factor,
         rstartreedisk::LeafNode<R_STAR_MIN_FANOUT, R_STAR_MAX_FANOUT> *leaf_node_type,
         rstartreedisk::BranchNode<R_STAR_MIN_FANOUT, R_STAR_MAX_FANOUT> *branch_node_type
+);
+
+template void bulk_load_tree(
+        rplustreedisk::RPlusTreeDisk<R_STAR_MIN_FANOUT, R_STAR_MAX_FANOUT> *tree,
+        std::map<std::string, size_t> &configU,
+        std::vector<Point>::iterator begin,
+        std::vector<Point>::iterator end,
+        unsigned max_branch_factor,
+        rplustreedisk::LeafNode<R_STAR_MIN_FANOUT, R_STAR_MAX_FANOUT> *leaf_node_type,
+        rplustreedisk::BranchNode<R_STAR_MIN_FANOUT, R_STAR_MAX_FANOUT> *branch_node_type
 );
