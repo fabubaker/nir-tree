@@ -1771,14 +1771,10 @@ namespace rplustreedisk {
 
       // If we exceed max_branch_factor we need to do something about it
       if (insertion_point->cur_offset_ > max_branch_factor) {
-        SplitResult split;
-        SplitResult finalSplit = {
-            {Rectangle(), tree_node_handle(nullptr)},
-            {Rectangle(), tree_node_handle(nullptr)}
-        };
+        SplitResult finalSplit;
 
         // Adjust the tree from bottom-to-top, splitting nodes if they are full
-        finalSplit = adjustTree(treeRef, insertion_point_handle, parentHandles, split);
+        finalSplit = adjustTree(treeRef, insertion_point_handle, parentHandles);
 
         // If the root was split in adjustTree, create a new root
         if (finalSplit.leftBranch.child != nullptr and finalSplit.rightBranch.child != nullptr) {
