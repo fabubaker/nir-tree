@@ -510,7 +510,7 @@ namespace rplustreedisk {
       tree_node_allocator *allocator = get_node_allocator(treeRef);
 
       // Create a copy of entries
-      std::vector<Point> entriesCopy(entries);
+      std::vector<Point> entriesCopy(entries.begin(), entries.end());
 
       // We are the left child
       auto left_handle = current_handle;
@@ -1623,7 +1623,7 @@ namespace rplustreedisk {
       tree_node_allocator *allocator = get_node_allocator(treeRef);
 
       // Create a copy of entries
-      std::vector<Branch> entriesCopy(entries);
+      std::vector<Branch> entriesCopy(entries.begin(), entries.end());
 
       // We are the left child
       auto left_handle = current_handle;
