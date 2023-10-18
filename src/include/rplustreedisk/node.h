@@ -690,10 +690,12 @@ namespace rplustreedisk {
     SplitResult adjustTree(
       RPlusTreeDisk<min_branch_factor, max_branch_factor> *treeRef,
       tree_node_handle current_handle,
-      std::stack<tree_node_handle> parentHandles,
-      SplitResult propagationSplit
+      std::stack<tree_node_handle> parentHandles
     ) {
-      SplitResult currentPropagationSplit = propagationSplit;
+      SplitResult currentPropagationSplit = {
+        {Rectangle(), tree_node_handle( nullptr )},
+        {Rectangle(), tree_node_handle( nullptr )}
+      };
 
       for (;;) {
         assert(current_handle);
@@ -711,12 +713,30 @@ namespace rplustreedisk {
           currentPropagationSplit = propagateSplit(
                   treeRef, current_node, current_handle, parent_handle, currentPropagationSplit, max_branch_factor
           );
+
+          // Stop adjusting tree if there are no more splits to propagate
+          if (currentPropagationSplit.leftBranch.child == nullptr and
+              currentPropagationSplit.rightBranch.child == nullptr) {
+            return currentPropagationSplit;
+          }
+
+          // Ascend
+          current_handle = parent_handle;
         } else {
           auto current_node = treeRef->get_branch_node(current_handle);
 
           currentPropagationSplit = propagateSplit(
                   treeRef, current_node, current_handle, parent_handle, currentPropagationSplit, max_branch_factor
           );
+
+          // Stop adjusting tree if there are no more splits to propagate
+          if (currentPropagationSplit.leftBranch.child == nullptr and
+              currentPropagationSplit.rightBranch.child == nullptr) {
+            return currentPropagationSplit;
+          }
+
+          // Ascend
+          current_handle = parent_handle;
         }
       }
 
