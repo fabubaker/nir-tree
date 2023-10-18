@@ -1689,6 +1689,11 @@ namespace rplustreedisk {
 
       assert(left_node->cur_offset_ <= max_branch_factor);
       assert(right_node->cur_offset_ <= max_branch_factor);
+
+      return {
+        {left_handle, left_node->boundingBox()},
+        {right_handle, right_node->boundingBox()}
+      };
     }
 
 // Overflow treatement for dealing with a node that is too big (overflow)
