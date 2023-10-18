@@ -1721,8 +1721,6 @@ namespace rplustreedisk {
             tree_node_handle current_handle,
             Point point
     ) {
-      std::vector<bool> hasReinsertedOnLevel;
-
       tree_node_allocator *allocator = get_node_allocator(treeRef);
 
       std::stack<tree_node_handle> parentHandles; // Populated by chooseSubtree
@@ -1736,78 +1734,44 @@ namespace rplustreedisk {
               parentHandles,
               point
       );
-      uint16_t insertion_point_level = insertion_point_handle.get_level();
-
-      tree_node_handle sibling_handle = tree_node_handle(nullptr);
 
       // I2 [Add record to leaf node]
       auto insertion_point = treeRef->get_leaf_node(insertion_point_handle);
       insertion_point->addPoint(point);
-
-      /*std::cout << "Inserted Point: " << std::get<Point>( point ) <<
-              std::endl;
-          std::cout << "Insertion point now has points: { " << std::endl;
-          for( size_t i = 0; i < insertion_point->cur_offset_; i++ ) {
-              std::cout << insertion_point->entries.at(i) << std::endl;
-          }
-          std::cout << "}" << std::endl;
-          */
-
       unsigned num_els = insertion_point->cur_offset_;
 
       // If we exceed treeRef->maxBranchFactor we need to do something about it
       if (num_els > max_branch_factor) {
-        // We call overflow treatment to determine how our sibling node is treated. If we do a
-        // reInsert, sibling is nullptr. This is properly dealt with in adjustTree.
-        sibling_handle = insertion_point->overflowTreatment(
-                treeRef,
-                insertion_point_handle,
-                parentHandles,
-                hasReinsertedOnLevel
-        );
-      }
+        SplitResult split;
+        SplitResult finalSplit = {
+            {Rectangle(), tree_node_handle(nullptr)},
+            {Rectangle(), tree_node_handle(nullptr)}
+        };
 
-      // I3 [Propogate overflow treatment changes upward]
-      sibling_handle = insertion_point->adjustTree(
-              treeRef,
-              insertion_point_handle,
-              sibling_handle,
-              parentHandles,
-              hasReinsertedOnLevel
-      );
+        // Split the leaf node where the new point was inserted
+        split = insertion_point->splitNode(treeRef, current_handle, insertion_point->partitionNode());
+        // Adjust the tree from bottom-to-top, splitting nodes if they are full
+        finalSplit = insertion_point->adjustTree(treeRef, insertion_point_handle, parentHandles, split);
 
-      // I4 [Grow tree taller]
-      if (sibling_handle) {
-        // Sanity check that we're still the root
-        assert(treeRef->root == current_handle);
+        // If the root was split in adjustTree, create a new root
+        if (finalSplit.leftBranch.child != nullptr and finalSplit.rightBranch.child != nullptr) {
+          // Sanity check that we're still the root
+          assert(treeRef->root == current_handle);
 
-        auto alloc_data =
-                allocator->create_new_tree_node<BranchNode<min_branch_factor, max_branch_factor>>(
-                        NodeHandleType(BRANCH_NODE));
-        auto newRoot = alloc_data.first;
-        tree_node_handle new_root_handle = alloc_data.second;
-        new_root_handle.set_level(current_level + 1);
+          auto node_type = NodeHandleType(BRANCH_NODE);
+          auto alloc_data =
+                  allocator->create_new_tree_node<BranchNode<min_branch_factor, max_branch_factor>>(node_type);
+          auto new_root_node = alloc_data.first;
+          auto new_root_handle = alloc_data.second;
+          new_root_handle.set_level(current_level + 1);
 
-        auto sibling = treeRef->get_branch_node(sibling_handle);
+          new (&(*(new_root_node))) BranchNode<min_branch_factor, max_branch_factor>();
 
-        new (&(*(newRoot))) BranchNode<min_branch_factor, max_branch_factor>();
+          new_root_node->entries.at(new_root_node->cur_offset_++) = finalSplit.leftBranch;
+          new_root_node->entries.at(new_root_node->cur_offset_++) = finalSplit.rightBranch;
 
-        // Make the existing root a child of newRoot
-        Branch b1(boundingBox(), current_handle);
-        newRoot->addBranchToNode(b1);
-
-        // Make the new sibling node a child of newRoot
-        Branch b2(sibling->boundingBox(), sibling_handle);
-        newRoot->addBranchToNode(b2);
-
-        // Ensure newRoot has both children
-        assert(newRoot->cur_offset_ == 2);
-        assert(sibling_handle.get_level() + 1 == new_root_handle.get_level());
-
-        // Fix the reinserted length
-        hasReinsertedOnLevel.push_back(false);
-
-        return new_root_handle;
+          return new_root_handle;
+        }
       }
 
       return treeRef->root;
