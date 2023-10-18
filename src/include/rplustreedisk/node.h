@@ -687,7 +687,7 @@ namespace rplustreedisk {
     }
 
     template <int min_branch_factor, int max_branch_factor>
-    SplitResult adjustTreeSub(
+    SplitResult adjustTree(
       RPlusTreeDisk<min_branch_factor, max_branch_factor> *treeRef,
       tree_node_handle current_handle,
       std::stack<tree_node_handle> parentHandles,
