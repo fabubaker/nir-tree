@@ -23,6 +23,9 @@ namespace rplustreedisk {
         std::unique_ptr<tree_node_allocator> node_allocator_;
         std::string backing_file_;
 
+        // R+ doesn't need this, but we keep it for a unified interface
+        std::vector<bool> hasReinsertedOnLevel;
+
         // Constructors and destructors
         RPlusTreeDisk(size_t memory_budget, std::string backing_file) : backing_file_(backing_file) {
           node_allocator_ = std::make_unique<tree_node_allocator>(memory_budget, backing_file);
