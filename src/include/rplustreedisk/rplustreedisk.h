@@ -108,7 +108,7 @@ namespace rplustreedisk {
         root_ptr->exhaustiveSearch(requestedPoint, v);
       } else {
         auto root_ptr = get_branch_node(root);
-        root_ptr->exhaustiveSearch(requestedPoint, v);
+        root_ptr->exhaustiveSearch(requestedPoint, v, this);
       }
 
       return v;

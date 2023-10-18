@@ -187,7 +187,9 @@ namespace rplustreedisk {
         Partition partitionNode();
 
         // Datastructure interface functions
-        void exhaustiveSearch(const Point &requestedPoint, std::vector<Point> &accumulator) const;
+        void exhaustiveSearch(
+          const Point &requestedPoint, std::vector<Point> &accumulator, RPlusTreeDisk<min_branch_factor, max_branch_factor> *treeRef
+        ) const;
 
         // These return the root of the tree.
         tree_node_handle insert(
@@ -1095,22 +1097,21 @@ namespace rplustreedisk {
     }
 
     template <int min_branch_factor, int max_branch_factor>
-    void BranchNode<min_branch_factor, max_branch_factor>::exhaustiveSearch(const Point &requestedPoint, std::vector<Point> &accumulator) const {
-#if 0
+    void BranchNode<min_branch_factor, max_branch_factor>::exhaustiveSearch(
+        const Point &requestedPoint, std::vector<Point> &accumulator,
+        RPlusTreeDisk<min_branch_factor, max_branch_factor> *treeRef
+    ) const {
       for (unsigned i = 0; i < cur_offset_; i++) {
-    tree_node_handle child_handle = entries.at(i).child;
-    if (child_handle.get_type() == LEAF_NODE) {
-      auto child = treeRef->get_leaf_node(child_handle);
-      child->exhaustiveSearch(requestedPoint, accumulator);
-    } else {
-      auto child = treeRef->get_branch_node(child_handle);
-      child->exhaustiveSearch(requestedPoint, accumulator);
-    }
-  }
-#endif
+        tree_node_handle child_handle = entries.at(i).child;
 
-      // Unsupported
-      abort();
+        if (child_handle.get_type() == LEAF_NODE) {
+          auto child = treeRef->get_leaf_node(child_handle);
+          child->exhaustiveSearch(requestedPoint, accumulator);
+        } else {
+          auto child = treeRef->get_branch_node(child_handle);
+          child->exhaustiveSearch(requestedPoint, accumulator, treeRef);
+        }
+      }
     }
 
     template <int min_branch_factor, int max_branch_factor>
