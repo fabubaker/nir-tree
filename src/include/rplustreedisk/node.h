@@ -704,14 +704,38 @@ namespace rplustreedisk {
     SplitResult adjustTreeSub(
       RPlusTreeDisk<min_branch_factor, max_branch_factor> *treeRef,
       tree_node_handle current_handle,
-      std::stack<tree_node_handle> parentHandles
+      std::stack<tree_node_handle> parentHandles,
+      SplitResult propagationSplit
     ) {
-      SplitResult propagationSplit = {
-        {Rectangle(), tree_node_handle(nullptr)},
-        {Rectangle(), tree_node_handle(nullptr)}
-      };
+      SplitResult currentPropagationSplit = propagationSplit;
 
-      return propagationSplit;
+      for (;;) {
+        assert(current_handle);
+
+        if (parentHandles.empty()) {
+          break;
+        }
+
+        tree_node_handle parent_handle = parentHandles.top();
+        parentHandles.pop();
+
+        if (current_handle.get_type() == LEAF_NODE) {
+          auto current_node = treeRef->get_leaf_node(current_handle);
+
+          currentPropagationSplit = adjustTreeSubHelper(
+                  treeRef, current_node, current_handle, parent_handle, currentPropagationSplit, max_branch_factor
+          );
+        } else {
+          auto current_node = treeRef->get_branch_node(current_handle);
+
+          currentPropagationSplit = adjustTreeSubHelper(
+                  treeRef, current_node, current_handle, parent_handle, currentPropagationSplit, max_branch_factor
+          );
+        }
+      }
+
+      // If the root has been split, this should contain the final split to grow the tree.
+      return currentPropagationSplit;
     }
 
     template <int min_branch_factor, int max_branch_factor>
