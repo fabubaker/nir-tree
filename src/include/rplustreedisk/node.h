@@ -94,13 +94,6 @@ namespace rplustreedisk {
                 tree_node_handle current_handle,
                 Partition p
         );
-        tree_node_handle adjustTree(
-                RPlusTreeDisk<min_branch_factor, max_branch_factor> *treeRef,
-                tree_node_handle current_handle,
-                tree_node_handle sibling_handle,
-                std::stack<tree_node_handle> parentHandles,
-                std::vector<bool> &hasReinsertedOnLevel
-        );
         tree_node_handle overflowTreatment(
                 RPlusTreeDisk<min_branch_factor, max_branch_factor> *treeRef,
                 tree_node_handle current_handle,
@@ -183,13 +176,6 @@ namespace rplustreedisk {
                 RPlusTreeDisk<min_branch_factor, max_branch_factor> *treeRef,
                 tree_node_handle current_handle,
                 Partition p
-        );
-        tree_node_handle adjustTree(
-                RPlusTreeDisk<min_branch_factor, max_branch_factor> *treeRef,
-                tree_node_handle current_handle,
-                tree_node_handle sibling_handle,
-                std::stack<tree_node_handle> parentHandles,
-                std::vector<bool> &hasReinsertedOnLevel
         );
         tree_node_handle overflowTreatment(
                 RPlusTreeDisk<min_branch_factor, max_branch_factor> *treeRef,
@@ -736,28 +722,6 @@ namespace rplustreedisk {
 
       // If the root has been split, this should contain the final split to grow the tree.
       return currentPropagationSplit;
-    }
-
-    template <int min_branch_factor, int max_branch_factor>
-    tree_node_handle LeafNode<min_branch_factor, max_branch_factor>::adjustTree(
-            RPlusTreeDisk<min_branch_factor, max_branch_factor> *treeRef,
-            tree_node_handle current_handle,
-            tree_node_handle sibling_handle,
-            std::stack<tree_node_handle> parentHandles,
-            std::vector<bool> &hasReinsertedOnLevel
-    ) {
-      return adjustTreeSub(treeRef, current_handle, sibling_handle, parentHandles, hasReinsertedOnLevel);
-    }
-
-    template <int min_branch_factor, int max_branch_factor>
-    tree_node_handle BranchNode<min_branch_factor, max_branch_factor>::adjustTree(
-            RPlusTreeDisk<min_branch_factor, max_branch_factor> *treeRef,
-            tree_node_handle current_handle,
-            tree_node_handle sibling_handle,
-            std::stack<tree_node_handle> parentHandles,
-            std::vector<bool> &hasReinsertedOnLevel
-    ) {
-      return adjustTreeSub(treeRef, current_handle, sibling_handle, parentHandles, hasReinsertedOnLevel);
     }
 
 // Overflow treatment for dealing with a node that is too big (overflow)
