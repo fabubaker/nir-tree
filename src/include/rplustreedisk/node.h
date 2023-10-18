@@ -620,24 +620,23 @@ namespace rplustreedisk {
       return std::make_pair(node_handle, tree_node_handle(nullptr));
     }
 
-    template <class TR, class NT>
+    template <int min_branch_factor, int max_branch_factor>
     SplitResult propagateSplit(
-      TR *treeRef,
-      pinned_node_ptr<NT> current_node,
+      RPlusTreeDisk<min_branch_factor, max_branch_factor> *treeRef,
+      pinned_node_ptr<BranchNode<min_branch_factor, max_branch_factor>> current_node,
       tree_node_handle current_handle,
       tree_node_handle parent_handle,
-      SplitResult currentPropagationSplit,
-      int max_branch_factor
+      SplitResult currentPropagationSplit
     ) {
       // Returns a new split that needs to be propagated upwards
       SplitResult newPropagationSplit;
 
+      // If there was a split we were supposed to propagate then propagate it
       if (currentPropagationSplit.leftBranch.child != nullptr and currentPropagationSplit.rightBranch.child != nullptr) {
         if (current_node->cur_offset_ >= max_branch_factor) {
           assert(false);
         }
 
-        // If there was a split we were supposed to propagate then propagate it
         if (currentPropagationSplit.leftBranch.child.get_type() == LEAF_NODE) {
           auto left_node = treeRef->get_leaf_node(currentPropagationSplit.leftBranch.child);
           if (left_node->cur_offset_ > 0) {
@@ -689,6 +688,46 @@ namespace rplustreedisk {
     }
 
     template <int min_branch_factor, int max_branch_factor>
+    SplitResult propagateSplit(
+      RPlusTreeDisk<min_branch_factor, max_branch_factor> *treeRef,
+      pinned_node_ptr<LeafNode<min_branch_factor, max_branch_factor>> current_node,
+      tree_node_handle current_handle,
+      tree_node_handle parent_handle,
+      SplitResult currentPropagationSplit
+    ) {
+      // Returns a new split that needs to be propagated upwards
+      SplitResult newPropagationSplit;
+
+      // Sanity check that there is no split to propagate on us, a leaf node
+      assert(currentPropagationSplit.leftBranch.child == nullptr and
+             currentPropagationSplit.rightBranch.child == nullptr);
+
+      // Early exit if this node does not overflow
+      if (current_node->cur_offset_ <= max_branch_factor) {
+        newPropagationSplit = {
+                {Rectangle(), tree_node_handle( nullptr )},
+                {Rectangle(), tree_node_handle( nullptr )}
+        };
+        return newPropagationSplit;
+      }
+
+      // Otherwise, split node
+      newPropagationSplit = current_node->splitNode(treeRef, current_handle, current_node->partitionNode());
+
+      // The current node has been split into two new nodes, remove it from the parent
+      if (parent_handle != nullptr) {
+        // parent is guaranteed to be a branch node
+        auto parent_node = treeRef->get_branch_node(parent_handle);
+        assert(parent_node->cur_offset_ <= max_branch_factor);
+
+        parent_node->removeChild(current_handle);
+        assert(parent_node->cur_offset_ <= max_branch_factor - 1);
+      }
+
+      return newPropagationSplit;
+    }
+
+    template <int min_branch_factor, int max_branch_factor>
     SplitResult adjustTree(
       RPlusTreeDisk<min_branch_factor, max_branch_factor> *treeRef,
       tree_node_handle current_handle,
@@ -713,7 +752,7 @@ namespace rplustreedisk {
           auto current_node = treeRef->get_leaf_node(current_handle);
 
           currentPropagationSplit = propagateSplit(
-                  treeRef, current_node, current_handle, parent_handle, currentPropagationSplit, max_branch_factor
+                  treeRef, current_node, current_handle, parent_handle, currentPropagationSplit
           );
 
           // Stop adjusting tree if there are no more splits to propagate
@@ -728,7 +767,7 @@ namespace rplustreedisk {
           auto current_node = treeRef->get_branch_node(current_handle);
 
           currentPropagationSplit = propagateSplit(
-                  treeRef, current_node, current_handle, parent_handle, currentPropagationSplit, max_branch_factor
+              treeRef, current_node, current_handle, parent_handle, currentPropagationSplit
           );
 
           // Stop adjusting tree if there are no more splits to propagate
