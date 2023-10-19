@@ -1089,7 +1089,7 @@ runBench(PointGenerator<T> &pointGen,
         std::cout << "L-" << i << ": " << spatialIndex->stats.histogramHit.at(i) << std::endl;
       }
     }
-    std::cout << "Avergae Page Hit Per Level Per Rectangle Search" << std::endl;
+    std::cout << "Average Page Hit Per Level Per Rectangle Search" << std::endl;
     for (unsigned i = 0; i < spatialIndex->stats.histogramHit.size(); i++){
       if (spatialIndex->stats.histogramHit.at(i) > 0){
         std::cout << "L-" << i << ": " << spatialIndex->stats.histogramHit.at(i) / searchRectangles.size() << std::endl;

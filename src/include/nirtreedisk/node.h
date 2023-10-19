@@ -1643,7 +1643,9 @@ std::vector<Point> rectangle_search(
 {
   std::vector<Point> accumulator;
 
+  // context that range search is traversing
   std::stack<tree_node_handle> context;
+  // conext at the next level that range search needs to traverse
   std::stack<tree_node_handle> next_level_context;
   tree_node_allocator *allocator = treeRef->node_allocator_.get();
 
@@ -1672,7 +1674,7 @@ std::vector<Point> rectangle_search(
     } else {
       assert(false);
     }
-
+    // breadth-first traversal
     if (context.empty()) {
       // done with current level
       if (should_track_search){
@@ -1682,6 +1684,7 @@ std::vector<Point> rectangle_search(
           treeRef->stats.histogramHit.at(level) += next_level_context.size();
         }
       }
+      // work with next level
       while (not next_level_context.empty()) {
         context.push(next_level_context.top());
         next_level_context.pop();
