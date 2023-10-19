@@ -1222,9 +1222,9 @@ void sequential_insert_tree(
   uint64_t print_count = pow(10, int(log10(num_els)) - 1);
   std::chrono::high_resolution_clock::time_point begin_time = std::chrono::high_resolution_clock::now();
   std::chrono::high_resolution_clock::time_point section_begin_time = begin_time;
-  for(auto iter = begin ; iter < end; iter++){
+  for (auto iter = begin ; iter < end; iter++) {
       tree->insert(*iter);
-      total_insert ++;
+      total_insert++;
     if (total_insert % print_count == 0) {
       std::chrono::high_resolution_clock::time_point section_end_time = std::chrono::high_resolution_clock::now();
       auto delta =  std::chrono::duration_cast<std::chrono::duration<double>>(section_end_time - section_begin_time);
