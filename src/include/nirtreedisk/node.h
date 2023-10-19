@@ -2662,14 +2662,13 @@ SplitResult BranchNode<min_branch_factor, max_branch_factor>::splitNode(
       Point right_UR = branch_mbb.upperRight;
       left_UR[p.dimension] = p.location;
       right_LL[p.dimension] = p.location;
+      // mbb of left and right nodes
       Rectangle left_mbb(left_LL, left_UR);
       Rectangle right_mbb(right_LL, right_UR);
       double left_intersection = branch_poly.computeIntersectionArea(left_mbb);
       double right_intersection = branch_poly.computeIntersectionArea(right_mbb);
       if (left_intersection > right_intersection) {
         index = index + 1;
-        // Rectangle intersection_rec = branch_mbb.intersection(right_mbb);
-        // left_mbb_extra.push_back(intersection_rec);
         std::vector<Rectangle> intersection_rec = branch_poly.intersection(right_mbb);
         for (auto rec : intersection_rec){
           left_mbb_extra.push_back(rec);
@@ -2678,8 +2677,6 @@ SplitResult BranchNode<min_branch_factor, max_branch_factor>::splitNode(
         sibling_node->addBranchToNode(branch);
         this->removeBranch(index); //update cur_offset_
         // index isn't updated here as removeBranch() decrements cur_offset_
-        // Rectangle intersection_rec = branch_mbb.intersection(left_mbb);
-        // right_mbb_extra.push_back(intersection_rec);
         std::vector<Rectangle> intersection_rec = branch_poly.intersection(left_mbb);
         for (auto rec : intersection_rec){
           right_mbb_extra.push_back(rec);
@@ -2691,8 +2688,6 @@ SplitResult BranchNode<min_branch_factor, max_branch_factor>::splitNode(
         unsigned right_count = sibling_node->cur_offset_;
         if (left_count <= right_count) {
           index = index + 1;
-          // Rectangle intersection_rec = branch_mbb.intersection(right_mbb);
-          // left_mbb_extra.push_back(intersection_rec);
           std::vector<Rectangle> intersection_rec = branch_poly.intersection(right_mbb);
           for (auto rec : intersection_rec){
             left_mbb_extra.push_back(rec);
@@ -2701,64 +2696,12 @@ SplitResult BranchNode<min_branch_factor, max_branch_factor>::splitNode(
           sibling_node->addBranchToNode(branch);
           this->removeBranch(index); //update cur_offset_
           // index isn't updated here as removeBranch() decrements cur_offset_
-          // Rectangle intersection_rec = branch_mbb.intersection(left_mbb);
-          // right_mbb_extra.push_back(intersection_rec);
           std::vector<Rectangle> intersection_rec = branch_poly.intersection(left_mbb);
           for (auto rec : intersection_rec){
             right_mbb_extra.push_back(rec);
           }
         }
       }
-      // Partially spanned by both nodes, need to downsplit
-      // Downward Split
-      // SplitResult downwardSplit;
-      // if (branch.child.get_type() == LEAF_NODE) {
-      //   auto child_node = treeRef->get_leaf_node(branch.child);
-      //   downwardSplit = child_node->splitNode(treeRef, branch.child, current_handle, p, true);
-      //   Branch child_updated = downwardSplit.leftBranch;
-      //   Branch child_sibling = downwardSplit.rightBranch;
-      //   assert(child_updated.child == branch.child);
-      //   assert(child_sibling.child.get_type() == LEAF_NODE);
-
-      //   // check if child_node is empty after downward split
-      //   if (child_node->cur_offset_ > 0) {
-      //     this->updateBranch(child_updated);
-      //     index = index + 1;
-      //   } else {
-      //     this->removeAndFreeBranch(treeRef, branch.child); //update cur_offset_
-      //   }
-
-      //   // check if child_sibling_node is empty after downward split 
-      //   auto child_sibling_node = treeRef->get_leaf_node(child_sibling.child);
-      //   if (child_sibling_node->cur_offset_ > 0){
-      //     sibling_node->addBranchToNode(child_sibling);
-      //   } else {
-      //     allocator->free(child_sibling.child, sizeof(LeafNode<min_branch_factor, max_branch_factor>));
-      //   }
-      // } else {
-      //   auto child_node = treeRef->get_branch_node(branch.child);
-      //   downwardSplit = child_node->splitNode(treeRef, branch.child, current_handle, p, true);
-      //   Branch child_updated = downwardSplit.leftBranch;
-      //   Branch child_sibling = downwardSplit.rightBranch;
-      //   assert(child_updated.child == branch.child);
-      //   assert(child_sibling.child.get_type() == BRANCH_NODE);
-
-      //   // check if child_node is empty after downward split
-      //   if (child_node->cur_offset_ > 0) {
-      //     this->updateBranch(child_updated);
-      //     index = index + 1;
-      //   } else {
-      //     this->removeAndFreeBranch(treeRef, branch.child);
-      //   }
-
-      //   // check if child_sibling_node is empty after downward split 
-      //   auto child_sibling_node = treeRef->get_branch_node(child_sibling.child);
-      //   if (child_sibling_node->cur_offset_ > 0){
-      //     sibling_node->addBranchToNode(child_sibling);
-      //   } else {
-      //     allocator->free(child_sibling.child, sizeof(BranchNode<min_branch_factor, max_branch_factor>));
-      //   }
-      // }
 
 #if DEBUG_TEST
   IsotheticPolygon left_polygon = find_polygon(treeRef, downwardSplit.leftBranch);
@@ -2766,9 +2709,10 @@ SplitResult BranchNode<min_branch_factor, max_branch_factor>::splitNode(
   assert(left_polygon.disjoint(right_polygon));
 #endif
 
-    } //downsplit
+    } 
 
   }  //split
+
   // It is possible that after splitting on the geometric median,
   // we still end up with an overfull node. This can happen
   // everything gets assigned to the left node except for one
@@ -2783,79 +2727,81 @@ SplitResult BranchNode<min_branch_factor, max_branch_factor>::splitNode(
   assert(this->cur_offset_ <= max_branch_factor and
          sibling_node->cur_offset_ <= max_branch_factor);
   
-  // IsotheticPolygon left_polygon;
-  // IsotheticPolygon right_polygon;
-  // Rectangle left_mbb = this->boundingBox();
-  // Rectangle right_mbb = sibling_node->boundingBox();
-  // Rectangle left_mbb_updated;
-  // Rectangle right_mbb_updated;  
+  // Option 1 for clipping left and right polygons
+  IsotheticPolygon left_polygon;
+  IsotheticPolygon right_polygon;
+  Rectangle left_mbb = this->boundingBox();
+  Rectangle right_mbb = sibling_node->boundingBox();
+  Rectangle left_mbb_updated;
+  Rectangle right_mbb_updated;  
 
-  // if (left_mbb_extra.empty()){
-  //   left_polygon = IsotheticPolygon(left_mbb);
-  // } else {
-  //   Point left_LL = left_mbb.lowerLeft;
-  //   Point left_UR = left_mbb.upperRight;
-  //   left_UR[p.dimension] = p.location;
+  if (left_mbb_extra.empty()){
+    left_polygon = IsotheticPolygon(left_mbb);
+  } else {
+    Point left_LL = left_mbb.lowerLeft;
+    Point left_UR = left_mbb.upperRight;
+    left_UR[p.dimension] = p.location;
 
-  //   left_mbb_updated = Rectangle(left_LL, left_UR);
-  //   left_mbb_extra.push_back(left_mbb_updated);
-  //   left_polygon = IsotheticPolygon(left_mbb_extra);
-  // }
+    left_mbb_updated = Rectangle(left_LL, left_UR);
+    left_mbb_extra.push_back(left_mbb_updated);
+    left_polygon = IsotheticPolygon(left_mbb_extra);
+  }
 
-  // if (right_mbb_extra.empty()){
-  //   right_polygon = IsotheticPolygon(right_mbb);
-  // } else {
-  //   Point right_LL = right_mbb.lowerLeft;
-  //   Point right_UR = right_mbb.upperRight;
-  //   right_LL[p.dimension] = p.location;
+  if (right_mbb_extra.empty()){
+    right_polygon = IsotheticPolygon(right_mbb);
+  } else {
+    Point right_LL = right_mbb.lowerLeft;
+    Point right_UR = right_mbb.upperRight;
+    right_LL[p.dimension] = p.location;
 
-  //   right_mbb_updated = Rectangle(right_LL, right_UR);
-  //   right_mbb_extra.push_back(right_mbb_updated);
-  //   right_polygon = IsotheticPolygon(right_mbb_extra);
-  // }
-  // std::cout << "left_polygon size before clipping: " << left_polygon.basicRectangles.size() << std::endl;
-  // std::cout << "right_polygon size before clipping: " << right_polygon.basicRectangles.size() << std::endl;
+    right_mbb_updated = Rectangle(right_LL, right_UR);
+    right_mbb_extra.push_back(right_mbb_updated);
+    right_polygon = IsotheticPolygon(right_mbb_extra);
+  }
+  std::cout << "left_polygon size before clipping: " << left_polygon.basicRectangles.size() << std::endl;
+  std::cout << "right_polygon size before clipping: " << right_polygon.basicRectangles.size() << std::endl;
 
-  // // Clipping Left polygon
-  // if (not right_mbb_extra.empty()) {
-  //   right_mbb_extra.pop_back();
-  //   for (auto right_rect : right_mbb_extra) {
-  //     left_polygon.increaseResolution(Point::atInfinity, right_rect);
-  //   }
-  //   assert(left_polygon.basicRectangles.size() > 0);
-  //   // remove duplicated rectangles
-  //   left_polygon.refine();
-  //   assert(left_polygon.basicRectangles.size() > 0);
-  //   left_polygon.simplify();
-  //   assert(left_polygon.basicRectangles.size() > 0);
-  //   // recompute bounding box
-  //   left_polygon.recomputeBoundingBox();
-  // }
+  // Clipping Left polygon
+  if (not right_mbb_extra.empty()) {
+    right_mbb_extra.pop_back();
+    for (auto right_rect : right_mbb_extra) {
+      left_polygon.increaseResolution(Point::atInfinity, right_rect);
+    }
+    assert(left_polygon.basicRectangles.size() > 0);
+    // remove duplicated rectangles
+    left_polygon.refine();
+    assert(left_polygon.basicRectangles.size() > 0);
+    left_polygon.simplify();
+    assert(left_polygon.basicRectangles.size() > 0);
+    // recompute bounding box
+    left_polygon.recomputeBoundingBox();
+  }
 
-  // // Clipping Right polygon
-  // if (not left_mbb_extra.empty()) {
-  //   left_mbb_extra.pop_back();
-  //   for (auto left_rect : left_mbb_extra) {
-  //     right_polygon.increaseResolution(Point::atInfinity, left_rect);
-  //   }
-  //   assert(right_polygon.basicRectangles.size() > 0);
-  //   // remove duplicated rectangles
-  //   right_polygon.refine();
-  //   assert(right_polygon.basicRectangles.size() > 0);
-  //   right_polygon.simplify();
-  //   assert(right_polygon.basicRectangles.size() > 0);
-  //   // recompute bounding box
-  //   right_polygon.recomputeBoundingBox();
-  // }
-  // assert(left_polygon.disjoint(right_polygon));
-  // std::cout << "left_polygon size before disjoint: " << left_polygon.basicRectangles.size() << std::endl;
-  // std::cout << "right_polygon size before disjoint: " << right_polygon.basicRectangles.size() << std::endl;
+  // Clipping Right polygon
+  if (not left_mbb_extra.empty()) {
+    left_mbb_extra.pop_back();
+    for (auto left_rect : left_mbb_extra) {
+      right_polygon.increaseResolution(Point::atInfinity, left_rect);
+    }
+    assert(right_polygon.basicRectangles.size() > 0);
+    // remove duplicated rectangles
+    right_polygon.refine();
+    assert(right_polygon.basicRectangles.size() > 0);
+    right_polygon.simplify();
+    assert(right_polygon.basicRectangles.size() > 0);
+    // recompute bounding box
+    right_polygon.recomputeBoundingBox();
+  }
+
+  assert(left_polygon.disjoint(right_polygon));
+  std::cout << "left_polygon size after clipping: " << left_polygon.basicRectangles.size() << std::endl;
+  std::cout << "right_polygon size after clipping: " << right_polygon.basicRectangles.size() << std::endl;
 
 
   // treat old node as left of partition and sibling node as right
   // of the partition
-  IsotheticPolygon left_polygon(this->boundingBox());
-  IsotheticPolygon right_polygon(sibling_node->boundingBox());
+  // IsotheticPolygon left_polygon(this->boundingBox());
+  // IsotheticPolygon right_polygon(sibling_node->boundingBox());
   
   // When downsplitting our node, one part of this node goes
   // to the "left parent", and one part of the node goes to
@@ -2915,28 +2861,28 @@ SplitResult BranchNode<min_branch_factor, max_branch_factor>::splitNode(
     }
   }
 
-  std::cout << "left_polygon size after disjoint with siblings: " << left_polygon.basicRectangles.size() << std::endl;
-  std::cout << "right_polygon size after disjoint with siblings: " << right_polygon.basicRectangles.size() << std::endl;
-  std::vector<Rectangle> &existing_rects_a = left_polygon.basicRectangles;
-  std::vector<Rectangle> &existing_rects_b = right_polygon.basicRectangles;
+  // Option 2 for clipping left and right polygon with make_all_rects_disjoint
+  // std::vector<Rectangle> &existing_rects_a = left_polygon.basicRectangles;
+  // std::vector<Rectangle> &existing_rects_b = right_polygon.basicRectangles;
   
-  make_all_rects_disjoint(
-      treeRef,
-      existing_rects_a,
-      current_handle,
-      existing_rects_b,
-      sibling_handle
-  );
-  //all branches should intersections with parents 
-  assert(left_polygon.basicRectangles.size() > 0);
-  left_polygon.refine();
-  assert(left_polygon.basicRectangles.size() > 0);
-  left_polygon.recomputeBoundingBox();
-  assert(left_polygon.disjoint(right_polygon));
-  assert(right_polygon.basicRectangles.size() > 0);
-  right_polygon.refine();
-  assert(right_polygon.basicRectangles.size() > 0);
-  right_polygon.recomputeBoundingBox();
+  // make_all_rects_disjoint(
+  //     treeRef,
+  //     existing_rects_a,
+  //     current_handle,
+  //     existing_rects_b,
+  //     sibling_handle
+  // );
+
+  // //all branches should intersections with parents 
+  // assert(left_polygon.basicRectangles.size() > 0);
+  // left_polygon.refine();
+  // assert(left_polygon.basicRectangles.size() > 0);
+  // left_polygon.recomputeBoundingBox();
+  // assert(left_polygon.disjoint(right_polygon));
+  // assert(right_polygon.basicRectangles.size() > 0);
+  // right_polygon.refine();
+  // assert(right_polygon.basicRectangles.size() > 0);
+  // right_polygon.recomputeBoundingBox();
 
 
   std::cout << "left_polygon size after disjoint with right: " << left_polygon.basicRectangles.size() << std::endl;

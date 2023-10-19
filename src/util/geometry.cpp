@@ -1196,12 +1196,6 @@ void IsotheticPolygon::simplify()
 				// skip it
 				skip = true;
 				break;
-			// } else if (cmp_rect.alignedForMerging(current_rect)) {
-			// 	// current rect aligned with a larger rectangle 
-			// 	// expand the larger rectangle and skip 
-			// 	cmp_rect.expand(current_rect);
-			// 	skip = true;
-			// 	break;
 			} else if (cmp_rect.intersectsRectangle(current_rect)) {
 				// current rect is partially contained in larger rectangle
 				std::vector<Rectangle> frag_rects = current_rect.fragmentRectangle(cmp_rect);
