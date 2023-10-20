@@ -741,14 +741,18 @@ namespace rplustreedisk {
       };
 
       for (;;) {
-        assert(current_handle);
-
-        if (parentHandles.empty()) {
+        if (!current_handle) {
           break;
         }
 
-        tree_node_handle parent_handle = parentHandles.top();
-        parentHandles.pop();
+        tree_node_handle parent_handle;
+
+        if (parentHandles.empty()) {
+          parent_handle = tree_node_handle(nullptr);
+        } else {
+          parent_handle = parentHandles.top();
+          parentHandles.pop();
+        }
 
         if (current_handle.get_type() == LEAF_NODE) {
           auto current_node = treeRef->get_leaf_node(current_handle);
