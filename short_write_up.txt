@@ -1,0 +1,7 @@
+We are trying to support point reinsertion and branch reinsertion in this branch in order to guarantee min_branch_factor after downsplit. 
+We later realize that branch reinsertion requires a more efficient way to clip polygons recursively, therefore we support only point reinsertion here.
+Although point reinsertion can guarantee min_branch_factor, eliminates all nodes with small fanouts, and generates a smaller tree, it doesn't provide boost to range search performance.
+We think the reason is that doing point reinsertion after split doesn't generate good data layout which results into poorer range performance. 
+Therefore, we abandon the idea of using point reinsertion to eliminate node with small fanouts after downsplit. 
+
+Another idea is that we can try reinsertion before split like R*tree 
