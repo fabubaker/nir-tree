@@ -196,6 +196,7 @@ void generate_tree(std::map<std::string, size_t> &configU, std::map<std::string,
   // Quick Test: Searching first 5000 points which are bulk loaded 
   unsigned totalSearchesLoaded = 0;
   double totalTimeSearches = 0.0;
+  std::cout << "Searching for bulk-loaded points..." << std::endl;
   for (auto iter = all_points.begin(); iter < all_points.begin() + cut_off_bulk_load; iter++ ) {
     Point p = *iter; 
     std::chrono::high_resolution_clock::time_point begin = std::chrono::high_resolution_clock::now();
@@ -217,8 +218,9 @@ void generate_tree(std::map<std::string, size_t> &configU, std::map<std::string,
   }
 
   // Quick Test: Searching first 5000 points which are inserted
+  std::cout << "Searching for inserted points..." << std::endl;
   unsigned totalSearchesInserted = 0;
-  for (auto iter = all_points.begin()+ cut_off_bulk_load; iter < all_points.end(); iter++ ) {
+  for (auto iter = all_points.begin() + cut_off_bulk_load; iter < all_points.end(); iter++ ) {
     Point p = *iter; 
     std::chrono::high_resolution_clock::time_point begin = std::chrono::high_resolution_clock::now();
     std::vector<Point> out = spatialIndex->search(p);
