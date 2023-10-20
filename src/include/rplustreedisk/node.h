@@ -509,10 +509,13 @@ namespace rplustreedisk {
     ) {
       using NodeType = LeafNode<min_branch_factor, max_branch_factor>;
 
+      std::vector<Point> entriesCopy;
       tree_node_allocator *allocator = get_node_allocator(treeRef);
 
       // Create a copy of entries
-      std::vector<Point> entriesCopy(entries.begin(), entries.end());
+      for (unsigned i = 0; i < cur_offset_; i++) {
+        entriesCopy.push_back(entries.at(i));
+      }
 
       // We are the left child
       auto left_handle = current_handle;
@@ -1664,10 +1667,13 @@ namespace rplustreedisk {
     ) {
       using NodeType = BranchNode<min_branch_factor, max_branch_factor>;
 
+      std::vector<Branch> entriesCopy;
       tree_node_allocator *allocator = get_node_allocator(treeRef);
 
       // Create a copy of entries
-      std::vector<Branch> entriesCopy(entries.begin(), entries.end());
+      for (unsigned i = 0; i < cur_offset_; i++) {
+        entriesCopy.push_back(entries.at(i));
+      }
 
       // We are the left child
       auto left_handle = current_handle;
