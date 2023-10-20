@@ -170,6 +170,7 @@ void generate_tree(std::map<std::string, size_t> &configU, std::map<std::string,
     std::chrono::high_resolution_clock::time_point begin = std::chrono::high_resolution_clock::now();
     std::vector<Point> out = spatialIndex->search(p);
     if (out.size() != 1) {
+      // for debugging
       spatialIndex->print();
       int index = std::distance(all_points.begin(), iter);
       std::cout << "Could not find bulk loaded point " << p << " at index "<< index << std::endl;
@@ -193,6 +194,7 @@ void generate_tree(std::map<std::string, size_t> &configU, std::map<std::string,
     std::chrono::high_resolution_clock::time_point begin = std::chrono::high_resolution_clock::now();
     std::vector<Point> out = spatialIndex->search(p);
     if (out.size() != 1) {
+      // for debugging
       spatialIndex->print();
       int index = std::distance(all_points.begin(), iter);
       std::cout << "Could not find inserted point" << p << " at index "<< index << std::endl;

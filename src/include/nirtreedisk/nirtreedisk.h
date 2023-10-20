@@ -50,9 +50,9 @@ public:
   std::map<tree_node_handle, IsotheticPolygon> polygons;
   BranchPartitionStrategy strategy;
   // [REINSERTION]
-  std::vector<Point> pointQ;
-  std::vector<Branch> branchQ;
-  unsigned reinsertionAttempt;
+  std::vector<Point> pointQ; // Queues for Points reinsertion
+  std::vector<Branch> branchQ; // Queues for Branches reinsertion
+  unsigned reinsertionAttempt; // global variables for reinsertion attempts
 
   // Constructors and destructors
   NIRTreeDisk(size_t memory_budget, std::string backing_file, BranchPartitionStrategy partition_strategy) : 
@@ -64,6 +64,7 @@ public:
 
     hasReinsertedOnLevel = {false};
     reinsertionAttempt = 0;
+    
     // If this is a fresh tree, we need a root
     // Update: We disable this for bulk-loading since the root node
     // will be created anyways.
