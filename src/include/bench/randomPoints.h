@@ -1082,6 +1082,19 @@ runBench(PointGenerator<T> &pointGen,
       rangeSearchChecksum += v.size();
     }
     std::cout << "Range search OK. Checksum = " << rangeSearchChecksum << std::endl;
+    std::cout << std::endl;
+    std::cout << "Total Page Hit Per Level" << std::endl;
+    for (unsigned i = 0; i < spatialIndex->stats.histogramHit.size(); i++){
+      if (spatialIndex->stats.histogramHit.at(i) > 0){
+        std::cout << "L-" << i << ": " << spatialIndex->stats.histogramHit.at(i) << std::endl;
+      }
+    }
+    std::cout << "Average Page Hit Per Level Per Rectangle Search" << std::endl;
+    for (unsigned i = 0; i < spatialIndex->stats.histogramHit.size(); i++){
+      if (spatialIndex->stats.histogramHit.at(i) > 0){
+        std::cout << "L-" << i << ": " << spatialIndex->stats.histogramHit.at(i) / searchRectangles.size() << std::endl;
+      }
+    }
   } else {
     std::cout << "Test for range search is disabled" << std::endl; 
   }

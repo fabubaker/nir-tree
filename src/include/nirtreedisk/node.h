@@ -1643,8 +1643,12 @@ std::vector<Point> rectangle_search(
 {
   std::vector<Point> accumulator;
 
+  // context that range search is traversing
   std::stack<tree_node_handle> context;
+  // conext at the next level that range search needs to traverse
+  std::stack<tree_node_handle> next_level_context;
   tree_node_allocator *allocator = treeRef->node_allocator_.get();
+
   context.push(start_point);
 
   while (not context.empty()) {
@@ -1661,7 +1665,7 @@ std::vector<Point> rectangle_search(
 #endif
     } else if (current_handle.get_type() == BRANCH_NODE) {
       auto current_node = treeRef->get_branch_node(current_handle);
-      rectangle_search_branch_node(*current_node, requestedRectangle, context, treeRef);
+      rectangle_search_branch_node(*current_node, requestedRectangle, next_level_context, treeRef);
 #ifdef STAT
       if (should_track_search) {
         treeRef->stats.markNonLeafNodeSearched();
@@ -1669,6 +1673,22 @@ std::vector<Point> rectangle_search(
 #endif
     } else {
       assert(false);
+    }
+    // breadth-first traversal
+    if (context.empty()) {
+      // done with current level
+      if (should_track_search){
+        if (not next_level_context.empty()){
+          unsigned level = current_handle.get_level() - 1; 
+          std::cout << "L-" << level << ": " << next_level_context.size() << std::endl;
+          treeRef->stats.histogramHit.at(level) += next_level_context.size();
+        }
+      }
+      // work with next level
+      while (not next_level_context.empty()) {
+        context.push(next_level_context.top());
+        next_level_context.pop();
+      }
     }
   }
 #ifdef STAT
