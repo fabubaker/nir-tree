@@ -926,7 +926,7 @@ runBench(PointGenerator<T> &pointGen,
             configU["buffer_pool_memory"], configS["db_file_name"]
     );
   } else if (configU["tree"] == R_PLUS_TREE) {
-    auto tree = new rplustreedisk::RPlusTreeDisk<5, R_STAR_MAX_FANOUT>(
+    auto tree = new rplustreedisk::RPlusTreeDisk<R_PLUS_MIN_FANOUT, R_PLUS_MAX_FANOUT>(
             configU["buffer_pool_memory"], configS["db_file_name"]
     );
     bufferPool = &(tree->node_allocator_->buffer_pool_);
