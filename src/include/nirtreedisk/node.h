@@ -608,47 +608,6 @@ SplitResult LeafNode<min_branch_factor, max_branch_factor>::splitNode(
   // left and right polygon should be disjoint 
   assert(left_polygon.disjoint(right_polygon));
 
-  // If we have a parent, we need to make these disjoint from our
-  // siblings. If we don't, then we are automatically disjoint
-  // from our siblings since these are the only two polys and they
-  // are disjoint from each other now.
-  if (parent_handle) {
-    if (not is_downsplit) {
-      auto parent_node = treeRef->get_branch_node(parent_handle);
-
-      // make left_polygon disjoint from its siblings 
-      parent_node->make_disjoint_from_children(treeRef, current_handle, left_polygon);
-      // make right_polygon disjoint from its siblings 
-      parent_node->make_disjoint_from_children(treeRef, current_handle, right_polygon);
-    } else {
-      // Intersect with our existing poly to avoid intersect
-      // with other siblings, as the existing polygon is disjoint
-      // with its siblings 
-      assert(polygon_before_split.basicRectangles.size() > 0);
-      
-      // left side
-      assert(left_polygon.basicRectangles.size() > 0);
-      IsotheticPolygon poly_backup = left_polygon;
-      left_polygon.intersection(polygon_before_split);
-      if (left_polygon.basicRectangles.size() == 0) {
-        std::cout << "Weird situation: " << poly_backup << " is disjoint from existing polygon: " << polygon_before_split << std::endl;
-      }
-      assert(left_polygon.basicRectangles.size() > 0);
-      left_polygon.refine();
-      assert(left_polygon.basicRectangles.size() > 0);
-
-      // right side
-      assert(right_polygon.basicRectangles.size() > 0);
-      right_polygon.intersection(polygon_before_split);
-      assert(right_polygon.basicRectangles.size() > 0);
-      right_polygon.refine();
-      assert(right_polygon.basicRectangles.size() > 0);
-      assert(left_polygon.disjoint(right_polygon));
-    }
-  }
-  update_polygon(treeRef, current_handle, left_polygon);
-  update_polygon(treeRef, sibling_handle, right_polygon);
-
   SplitResult split = {{left_polygon.boundingBox, current_handle},
                        {right_polygon.boundingBox, sibling_handle}};
   return split;
