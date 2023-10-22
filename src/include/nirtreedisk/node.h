@@ -613,8 +613,9 @@ SplitResult LeafNode<min_branch_factor, max_branch_factor>::splitNode(
   // from our siblings since these are the only two polys and they
   // are disjoint from each other now.
   if (parent_handle) {
-    auto parent_node = treeRef->get_branch_node(parent_handle);
     if (not is_downsplit) {
+      auto parent_node = treeRef->get_branch_node(parent_handle);
+
       // make left_polygon disjoint from its siblings 
       parent_node->make_disjoint_from_children(treeRef, current_handle, left_polygon);
       // make right_polygon disjoint from its siblings 
@@ -1701,14 +1702,17 @@ BranchNode<min_branch_factor, max_branch_factor>::chooseNodePoint(
   // CN1 [Initialize]
   assert(selfHandle != nullptr);
   assert(treeRef->root == selfHandle); 
-  tree_node_handle current_handle = selfHandle; 
+  tree_node_handle current_handle = selfHandle;
+
   // Starting root, searching for a Leaf node for insertion
   for (;;) {
     assert(current_handle != nullptr);
+
     if (current_handle.get_type() == LEAF_NODE) {
       // Found Leaf Node, done
       return current_handle;
     } 
+
     assert(current_handle.get_type() == BRANCH_NODE);
     auto current_node = treeRef->get_branch_node(current_handle);
     assert(current_node->cur_offset_ > 0);
@@ -1717,7 +1721,7 @@ BranchNode<min_branch_factor, max_branch_factor>::chooseNodePoint(
     // This is the minimum amount of additional area we need in
     // one of the branches to encode our expansion
     double minimal_area_expansion = std::numeric_limits<double>::max();
-    // This is the list of optimal expansiosn we need to perform
+    // This is the list of optimal expansions we need to perform
     // to get the bounding box/bounding polygon
     std::vector<IsotheticPolygon::OptimalExpansion> expansions;
 
@@ -2559,7 +2563,7 @@ SplitResult BranchNode<min_branch_factor, max_branch_factor>::splitNode(
   // So we are going to split all branches at this branch node.
   // Cautious: both of index and cur_offset_ can be updated within the loop 
   unsigned index = 0;
-  while( index < this->cur_offset_ ){
+  while (index < this->cur_offset_) {
     Branch &branch = entries.at(index);
     Rectangle branch_mbb = branch.boundingBox;
     bool is_contained_left = branch_mbb.upperRight[p.dimension] <= p.location;
@@ -2690,8 +2694,9 @@ SplitResult BranchNode<min_branch_factor, max_branch_factor>::splitNode(
   // polygon, which is already guaranteed to be disjoint from
   // our siblings. So, we do the latter.
   if (parent_handle) {
-    auto parent_node = treeRef->get_branch_node(parent_handle);
     if (not is_downsplit) {
+      auto parent_node = treeRef->get_branch_node(parent_handle);
+
       // Left node
       parent_node->make_disjoint_from_children(treeRef,
                                                current_handle,
@@ -2700,6 +2705,7 @@ SplitResult BranchNode<min_branch_factor, max_branch_factor>::splitNode(
       parent_node->make_disjoint_from_children(treeRef,
                                                current_handle,
                                                right_polygon);
+
       assert(left_polygon.disjoint(right_polygon));
     } else { 
       // Intersect with our existing poly to avoid intersect
@@ -2771,7 +2777,7 @@ tree_node_handle BranchNode<min_branch_factor, max_branch_factor>::insert(
   tree_node_handle current_handle;
 
   // choose the best node for insertion
-  if (givenIsPoint){
+  if (givenIsPoint) {
     current_handle = chooseNodePoint(treeRef, 
                                      selfHandle, 
                                      parentHandles, 
@@ -2795,7 +2801,7 @@ tree_node_handle BranchNode<min_branch_factor, max_branch_factor>::insert(
   tree_node_allocator *allocator = get_node_allocator(treeRef);
   SplitResult finalSplit;
 
-  if ( givenIsPoint ) {
+  if (givenIsPoint) {
     assert(current_handle.get_type() == LEAF_NODE);
     auto current_node = treeRef->get_leaf_node(current_handle);
     
