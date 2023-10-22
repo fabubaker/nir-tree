@@ -1492,11 +1492,17 @@ void point_search_branch_node(BranchNode<min_branch_factor, max_branch_factor> &
     if (b.boundingBox.containsPoint(requestedPoint)) {
       auto itr = treeRef->polygons.find(b.child);
 
-      // This branch has no polygons, just use info from native MBR
-      if (itr == treeRef->polygons.end()) {
+      // This branch has no polygons or we are looking at leaf nodes,
+      // so just use info from native MBR
+      if (itr == treeRef->polygons.end() || b.child.get_level() == 0) {
         context.push(b.child);
         matching_branch_counter++;
-        break;
+
+        if (b.child.get_level() == 0) {
+          continue;
+        } else {
+          break;
+        }
       }
 
       IsotheticPolygon polygon = itr->second;
@@ -1617,8 +1623,9 @@ void rectangle_search_branch_node(BranchNode<min_branch_factor, max_branch_facto
     if (b.boundingBox.intersectsRectangle(requestedRectangle)) {
       auto itr = treeRef->polygons.find(b.child);
 
-      // This branch has no polygons, just use info from native MBR
-      if (itr == treeRef->polygons.end()) {
+      // This branch has no polygons or we are looking at leaf nodes,
+      // just use info from native MBR
+      if (itr == treeRef->polygons.end() || b.child.get_level() == 0) {
         context.push(b.child);
         continue;
       }
