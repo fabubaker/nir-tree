@@ -1454,7 +1454,7 @@ void point_search_branch_node(BranchNode<min_branch_factor, max_branch_factor> &
 
       // This branch has no polygons or we are looking at leaf nodes,
       // so just use info from native MBR
-      if (itr == treeRef->polygons.end() || b.child.get_level() == 0) {
+      if (itr == treeRef->polygons.end()) {
         context.push(b.child);
         matching_branch_counter++;
 
@@ -1585,7 +1585,7 @@ void rectangle_search_branch_node(BranchNode<min_branch_factor, max_branch_facto
 
       // This branch has no polygons or we are looking at leaf nodes,
       // just use info from native MBR
-      if (itr == treeRef->polygons.end() || b.child.get_level() == 0) {
+      if (itr == treeRef->polygons.end()) {
         context.push(b.child);
         continue;
       }
