@@ -608,6 +608,9 @@ SplitResult LeafNode<min_branch_factor, max_branch_factor>::splitNode(
   // left and right polygon should be disjoint 
   assert(left_polygon.disjoint(right_polygon));
 
+  /* N.B: We do not need to make left and right disjoint from the rest
+   * of their siblings since we don't care about overlap at the leaf level */
+
   SplitResult split = {{left_polygon.boundingBox, current_handle},
                        {right_polygon.boundingBox, sibling_handle}};
   return split;
