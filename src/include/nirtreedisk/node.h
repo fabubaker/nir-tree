@@ -1734,18 +1734,8 @@ BranchNode<min_branch_factor, max_branch_factor>::chooseNodePoint(
 
       // If the chosen branch node is not at level 0, fragment it into polygons
       if (chosen_branch.child.get_level() != 0) {
-        for (unsigned i = 0; i < current_node->cur_offset_; i++) {
-          if (i == smallestExpansionBranchIndex) {
-            continue;
-          }
+        current_node->make_disjoint_from_children(treeRef, chosen_branch.child, chosen_poly);
 
-          Branch &other_branch = current_node->entries.at(i);
-          IsotheticPolygon other_poly = find_polygon(treeRef, other_branch);
-          chosen_poly.increaseResolution(Point::atInfinity, other_poly);
-        }
-
-        chosen_poly.refine();
-        chosen_poly.recomputeBoundingBox();
         assert(chosen_poly.containsPoint(point));
         update_polygon(treeRef, chosen_branch.child, chosen_poly);
       }
