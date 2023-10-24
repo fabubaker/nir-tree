@@ -1008,34 +1008,8 @@ SplitResult adjustTreeSub(
   
   // Loop from the bottom to the very top (root)
   while (current_handle != nullptr) {
-    if (propagationSplit.leftBranch.child == nullptr){
-      assert(propagationSplit.rightBranch.child == nullptr);
-    }
-    // If there was a split we were supposed to propagate
-    if (propagationSplit.leftBranch.child != nullptr and propagationSplit.rightBranch.child != nullptr) {
-      assert(current_handle.get_type() == BRANCH_NODE);
-      auto current_branch_node = treeRef->get_branch_node(current_handle);
-      
-      if (propagationSplit.leftBranch.child.get_type() == LEAF_NODE){
-        assert(propagationSplit.rightBranch.child.get_type() == LEAF_NODE);
-        auto left_node = treeRef->get_leaf_node(propagationSplit.leftBranch.child);
-        assert(left_node->cur_offset_ > 0);
-        auto right_node = treeRef->get_leaf_node(propagationSplit.rightBranch.child);
-        assert(right_node->cur_offset_ > 0);
-      } else {
-        assert(propagationSplit.rightBranch.child.get_type() == BRANCH_NODE);
-        auto left_node = treeRef->get_branch_node(propagationSplit.leftBranch.child, false);
-        assert(left_node->cur_offset_ > 0);
-        auto right_node = treeRef->get_branch_node(propagationSplit.rightBranch.child, false);
-        assert(right_node->cur_offset_ > 0);
-      }
-      // Update updated child branch at Parent node
-      // Add splitted sibling branch to Parent node
-      current_branch_node->updateBranch(propagationSplit.leftBranch);
-      current_branch_node->addBranchToNode(propagationSplit.rightBranch);
-    }
-
     std::pair<SplitResult, tree_node_handle> split_res_and_new_handle;
+
     if (current_handle.get_type() == LEAF_NODE ) {
       auto current_leaf_node = treeRef->get_leaf_node(current_handle);
       split_res_and_new_handle = adjust_tree_bottom_half(
@@ -1048,6 +1022,14 @@ SplitResult adjustTreeSub(
     } else {
       assert(current_handle.get_type() == BRANCH_NODE);
       auto current_branch_node = treeRef->get_branch_node(current_handle);
+      // If there was a split from previous split, we were supposed to propagate
+      if (propagationSplit.leftBranch.child != nullptr and propagationSplit.rightBranch.child != nullptr) {
+      
+        // Update updated child branch at Parent node
+        // Add splitted sibling branch to Parent node
+        current_branch_node->updateBranch(propagationSplit.leftBranch);
+        current_branch_node->addBranchToNode(propagationSplit.rightBranch);
+      }
       split_res_and_new_handle = adjust_tree_bottom_half(
                                   treeRef,
                                   current_branch_node,
@@ -1056,9 +1038,11 @@ SplitResult adjustTreeSub(
                                   hasReinsertedOnLevel,
                                   max_branch_factor);
     }
+
     propagationSplit = split_res_and_new_handle.first;
     current_handle = split_res_and_new_handle.second;
   }
+
   return propagationSplit;
 }
 
