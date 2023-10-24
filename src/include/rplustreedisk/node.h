@@ -102,7 +102,6 @@ namespace rplustreedisk {
         // Miscellaneous
         unsigned checksum() const;
         void print() const;
-        void printTree() const;
         unsigned height() const;
 
         // Operators
@@ -169,7 +168,6 @@ namespace rplustreedisk {
         // Miscellaneous
         unsigned checksum() const;
         void print() const;
-        void printTree() const;
         unsigned height(tree_node_handle self_handle) const;
     };
 
@@ -705,11 +703,6 @@ namespace rplustreedisk {
       }
       std::cout << std::endl
                 << indentation << "}" << std::endl;
-    }
-
-    template <int min_branch_factor, int max_branch_factor>
-    void LeafNode<min_branch_factor, max_branch_factor>::printTree() const {
-      // No op
     }
 
     template <int min_branch_factor, int max_branch_factor>
@@ -1331,7 +1324,6 @@ namespace rplustreedisk {
       std::cout << indentation << "Node " << (void *)this << std::endl;
       std::cout << indentation << "{" << std::endl;
       std::cout << indentation << "    BoundingBox: " << boundingBox() << std::endl;
-//  std::cout << indentation << "    Parent: " << parent << std::endl;
       std::cout << indentation << "    Entries: " << std::endl;
 
       for (unsigned i = 0; i < cur_offset_; i++) {
@@ -1340,64 +1332,6 @@ namespace rplustreedisk {
       }
       std::cout << std::endl
                 << indentation << "}" << std::endl;
-    }
-
-    template <int min_branch_factor, int max_branch_factor>
-    void BranchNode<min_branch_factor, max_branch_factor>::printTree() const {
-#if 0
-      // Print this node first
-  struct Printer {
-    void operator()(RPlusTreeDisk<min_branch_factor, max_branch_factor> *treeRef, tree_node_handle node_handle) {
-      if (node_handle.get_type() == LEAF_NODE) {
-        auto node = treeRef->get_leaf_node(node_handle);
-        node->print();
-      } else {
-        auto node = treeRef->get_branch_node(node_handle);
-        node->print();
-      }
-    }
-  };
-
-  Printer p;
-  treeWalker<min_branch_factor, max_branch_factor>(treeRef, self_handle_, p);
-#endif
-
-      // Unsupported
-      abort();
-    }
-
-    template <int min_branch_factor, int max_branch_factor>
-    void printPackedNodes(
-            RPlusTreeDisk<min_branch_factor, max_branch_factor> *treeRef,
-            tree_node_handle node_handle,
-            std::ofstream &printFile
-    ) {
-#if 0
-      tree_node_allocator *allocator = treeRef->node_allocator_.get();
-  auto node = allocator->get_tree_node<packed_node>(node_handle);
-  char *data = node->buffer_;
-  decode_entry_count_and_offset_packed_node(data);
-
-  if (node_handle.get_type() == REPACKED_BRANCH_NODE) {
-    for (size_t i = 0; i < count; i++) {
-      Branch *b = (Branch *)(data + offset);
-
-      // Only print the last layer of branch nodes, this is where intersection
-      // happens the most.
-      if (b->child.get_type() == REPACKED_LEAF_NODE) {
-        printFile << b->boundingBox << std::endl;
-      }
-
-      offset += sizeof(Branch);
-    }
-  } else if (node_handle.get_type() == REPACKED_LEAF_NODE) {
-    for (size_t i = 0; i < count; i++) {
-      Point *p = (Point *)(data + offset);
-      printFile << *p << std::endl;
-      offset += sizeof(Point);
-    }
-  }
-#endif
     }
 
     template <int min_branch_factor, int max_branch_factor>
