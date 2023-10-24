@@ -1401,7 +1401,7 @@ namespace rplustreedisk {
 
       histogramFanoutAtLevel.resize(treeHeight);
       for (unsigned lvl = 0; lvl < treeHeight; lvl++) {
-        histogramFanoutAtLevel.at(lvl).resize(10000,0);
+        histogramFanoutAtLevel.at(lvl).resize(max_branch_factor + 1, 0);
       }
 
       while (!context.empty()) {
@@ -1414,10 +1414,6 @@ namespace rplustreedisk {
           auto current_node = treeRef->get_leaf_node(currentContext);
           unsigned fanout = current_node->cur_offset_;
 
-          if (fanout >= histogramFanoutAtLevel.at(lvl).size()) {
-            histogramFanoutAtLevel.at(lvl).resize(2 * fanout, 0);
-          }
-
           histogramFanoutAtLevel.at(lvl).at(fanout)++;
           memoryFootprint += sizeof(LeafNode<min_branch_factor, max_branch_factor>);
           deadSpace += (sizeof(Point) * (max_branch_factor - current_node->cur_offset_));
@@ -1425,10 +1421,6 @@ namespace rplustreedisk {
         } else if (currentContext.get_type() == BRANCH_NODE) {
           auto current_node = treeRef->get_branch_node(currentContext);
           unsigned fanout = current_node->cur_offset_;
-
-          if (fanout >= histogramFanoutAtLevel.at(lvl).size()) {
-            histogramFanoutAtLevel.at(lvl).resize(2 * fanout, 0);
-          }
 
           histogramFanoutAtLevel.at(lvl).at(fanout)++;
           memoryFootprint += sizeof(BranchNode<min_branch_factor, max_branch_factor>);
