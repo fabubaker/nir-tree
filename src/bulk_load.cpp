@@ -355,9 +355,7 @@ std::vector<uint64_t> find_bounding_lines(
     unsigned sub_partitions,
     unsigned length) {
   std::sort(start, stop, [d](const Point &p1, const Point &p2) {
-                         if (d == 0 && p1[0] == p2[0]) {return p1[1] < p2[1]; } 
-                         else if (d == 1 && p1[1] == p2[1]) {return p1[0] < p2[0]; }
-                         return p1[d] < p2[d]; });
+                         return p1.orderedCompare(p2, d); });
 
   std::vector<uint64_t> lines;
   lines.reserve(partitions + 2); // We include x = 0 and x = count
@@ -370,6 +368,7 @@ std::vector<uint64_t> find_bounding_lines(
   unsigned remaining_branches = min_branches % partitions; // Any leftover branches?
 
   unsigned partition_index = 0;
+  // is partitions - 1 correct ? 
   for (unsigned partition = 0; partition < partitions - 1; partition++) {
     uint64_t partition_size = optimally_filled_branch * branches_per_partition;
 
@@ -391,6 +390,72 @@ std::vector<uint64_t> find_bounding_lines(
   assert(remaining_branches == 0);
 
   return lines;
+}
+
+template <typename T, typename LN, typename BN>
+void quad_tree_style_fill_branch(
+  T *tree,
+  std::vector<Point>::iterator start,
+  std::vector<Point>::iterator stop,
+  unsigned branch_factor,
+  unsigned cur_level,
+  unsigned cur_dimension,
+  unsigned partitions,
+  unsigned sub_partitions,
+  LN *leaf_node_type,
+  pinned_node_ptr<BN> branch_node
+) {
+  std::vector<uint64_t> line_candidates = find_bounding_lines(start, 
+                                                              stop, 
+                                                              cur_dimension, 
+                                                              branch_factor, 
+                                                              partitions, 
+                                                              sub_partitions, 
+                                                              cur_level);
+  for (unsigned i = 0; i < line_candidates.size() - 1; i++) {
+    
+    // find next sub range
+    unsigned start_ind = line_candidates.at(i);
+    unsigned end_ind = line_candidates.at(i + 1); /* not inclusive */
+    std::vector<Point>::iterator sub_start = start + start_ind;
+    std::vector<Point>::iterator sub_stop = start + end_ind;
+
+    // most inner dimension 
+    if (cur_dimension == dimensions - 1) {
+      if (sub_start == sub_stop) {
+        // I think this can happen when we run out of points in
+        // the lowest layer to split among children.
+        return;
+      }
+
+      // This needs to return the box and handle.
+      auto ret = quad_tree_style_load(
+        tree, sub_start, sub_stop,
+        branch_factor, cur_level - 1,
+        leaf_node_type, branch_node_type
+      );
+
+      Rectangle boundingBox = ret.second;
+      tree_node_handle child = ret.first;
+      branch_node->addBranchToNode(boundingBox, child);
+
+    } else {
+      // recursive on next dimension
+      // how to get sub_partitions for next dimension ??? 
+      unsigned sub_sub_partions = 1;
+      quad_tree_style_fill_branch(tree,
+                                  sub_start,
+                                  sub_stop,
+                                  branch_factor,
+                                  cur_level,
+                                  cur_dimension + 1,
+                                  sub_partitions,
+                                  sub_sub_partions,
+                                  leaf_node_type,
+                                  branch_node);
+
+    }
+  }
 }
 
 template <typename T, typename LN, typename BN>
@@ -442,40 +507,53 @@ std::pair<tree_node_handle, Rectangle> quad_tree_style_load(
   uint64_t partitions = std::ceil(sqrt(branch_factor));
   uint64_t sub_partitions = std::ceil(branch_factor / (float) partitions);
 
-  std::vector<uint64_t> x_lines = find_bounding_lines(start, stop, 0, branch_factor, partitions, sub_partitions, cur_level);
+  // std::vector<uint64_t> x_lines = find_bounding_lines(start, stop, 0, branch_factor, partitions, sub_partitions, cur_level);
 
-  for (uint64_t i = 0; i < x_lines.size() - 1; i++) {
-    uint64_t x_start = x_lines.at(i);
-    uint64_t x_end = x_lines.at(i + 1); /* not inclusive */
+  // for (uint64_t i = 0; i < x_lines.size() - 1; i++) {
+  //   uint64_t x_start = x_lines.at(i);
+  //   uint64_t x_end = x_lines.at(i + 1); /* not inclusive */
 
-    std::vector<uint64_t> y_lines = find_bounding_lines(
-        start + x_start, start + x_end, 1, branch_factor, sub_partitions, 1, cur_level);
-    for (uint64_t j = 0; j < y_lines.size() - 1; j++) {
-      uint64_t y_start = y_lines.at(j);
-      uint64_t y_end = y_lines.at(j + 1); /* not inclusive */
+  //   std::vector<uint64_t> y_lines = find_bounding_lines(
+  //       start + x_start, start + x_end, 1, branch_factor, sub_partitions, 1, cur_level);
+  //   for (uint64_t j = 0; j < y_lines.size() - 1; j++) {
+  //     uint64_t y_start = y_lines.at(j);
+  //     uint64_t y_end = y_lines.at(j + 1); /* not inclusive */
 
-      std::vector<Point>::iterator sub_start = start + x_start + y_start;
-      std::vector<Point>::iterator sub_stop = start + x_start + y_end;
+  //     std::vector<Point>::iterator sub_start = start + x_start + y_start;
+  //     std::vector<Point>::iterator sub_stop = start + x_start + y_end;
 
-      if (sub_start == sub_stop) {
-        // I think this can happen when we run out of points in
-        // the lowest layer to split among children.
-        continue;
-      }
+  //     if (sub_start == sub_stop) {
+  //       // I think this can happen when we run out of points in
+  //       // the lowest layer to split among children.
+  //       continue;
+  //     }
 
-      // This needs to return the box and handle.
-      auto ret = quad_tree_style_load(
-        tree, sub_start, sub_stop,
-        branch_factor, cur_level - 1,
-        leaf_node_type, branch_node_type
-      );
+  //     // This needs to return the box and handle.
+  //     auto ret = quad_tree_style_load(
+  //       tree, sub_start, sub_stop,
+  //       branch_factor, cur_level - 1,
+  //       leaf_node_type, branch_node_type
+  //     );
 
-      Rectangle boundingBox = ret.second;
-      tree_node_handle child = ret.first;
+  //     Rectangle boundingBox = ret.second;
+  //     tree_node_handle child = ret.first;
 
-      branch_node->addBranchToNode(boundingBox, child);
-    }
-  }
+  //     branch_node->addBranchToNode(boundingBox, child);
+  //   }
+  // }
+
+  unsigned start_dimension = 0;
+  quad_tree_style_fill_branch(tree,
+                              start,
+                              stop,
+                              branch_factor,
+                              cur_level,
+                              start_dimension,
+                              partitions,
+                              sub_partitions,
+                              leaf_node_type,
+                              branch_node);
+
   Rectangle bbox = branch_node->boundingBox();
   return std::make_pair(branch_handle, bbox);
 }
@@ -531,108 +609,171 @@ std::pair<tree_node_handle, Rectangle> quad_tree_style_load(
   uint64_t partitions = std::ceil(sqrt(branch_factor));
   uint64_t sub_partitions = std::ceil(branch_factor / (float) partitions);
 
-  std::vector<uint64_t> x_lines = find_bounding_lines(start, stop, 0, branch_factor, partitions, sub_partitions, cur_level);
+  // std::vector<uint64_t> x_lines = find_bounding_lines(start, stop, 0, branch_factor, partitions, sub_partitions, cur_level);
 
-  std::vector<std::pair<IsotheticPolygon, tree_node_handle>> branch_handles;
-  branch_handles.reserve(NIR_MAX_FANOUT);
+  // std::vector<std::pair<IsotheticPolygon, tree_node_handle>> branch_handles;
+  // branch_handles.reserve(NIR_MAX_FANOUT);
 
-  for (uint64_t i = 0; i < x_lines.size() - 1; i++) {
-    uint64_t x_start = x_lines.at(i);
-    uint64_t x_end = x_lines.at(i + 1); /* not inclusive */
+  // for (uint64_t i = 0; i < x_lines.size() - 1; i++) {
+  //   uint64_t x_start = x_lines.at(i);
+  //   uint64_t x_end = x_lines.at(i + 1); /* not inclusive */
 
-    std::vector<uint64_t> y_lines = find_bounding_lines(
-            start + x_start, start + x_end, 1, branch_factor, sub_partitions, 1, cur_level);
-    for (uint64_t j = 0; j < y_lines.size() - 1; j++) {
-      uint64_t y_start = y_lines.at(j);
-      uint64_t y_end = y_lines.at(j + 1); /* not inclusive */
+  //   std::vector<uint64_t> y_lines = find_bounding_lines(
+  //           start + x_start, start + x_end, 1, branch_factor, sub_partitions, 1, cur_level);
+  //   for (uint64_t j = 0; j < y_lines.size() - 1; j++) {
+  //     uint64_t y_start = y_lines.at(j);
+  //     uint64_t y_end = y_lines.at(j + 1); /* not inclusive */
 
-      std::vector<Point>::iterator sub_start = start + x_start + y_start;
-      std::vector<Point>::iterator sub_stop = start + x_start + y_end;
+  //     std::vector<Point>::iterator sub_start = start + x_start + y_start;
+  //     std::vector<Point>::iterator sub_stop = start + x_start + y_end;
 
-      if (sub_start == sub_stop) {
-        // I think this can happen when we run out of points in
-        // the lowest layer to split among children.
-        continue;
-      }
+  //     if (sub_start == sub_stop) {
+  //       // I think this can happen when we run out of points in
+  //       // the lowest layer to split among children.
+  //       continue;
+  //     }
 
-      // This needs to return the box and handle.
-      auto ret = quad_tree_style_load(
-        tree, sub_start, sub_stop,
-        branch_factor, cur_level - 1,
-        leaf_node_type, branch_node_type
-      );
+  //     // This needs to return the box and handle.
+  //     auto ret = quad_tree_style_load(
+  //       tree, sub_start, sub_stop,
+  //       branch_factor, cur_level - 1,
+  //       leaf_node_type, branch_node_type
+  //     );
 
-      tree_node_handle child_handle = ret.first;
-      Rectangle bbox = ret.second;
+  //     tree_node_handle child_handle = ret.first;
+  //     Rectangle bbox = ret.second;
 
+  //     // Produce a polygon using bbox.
+  //     IsotheticPolygon ip = IsotheticPolygon(bbox);
+
+  //     // Look at each of the existing children's polygons, and figure out if
+  //     // any of their polygons overlap with our polygon. If so, we need to
+  //     // figure out who owns the overlapping region.
+  //     for (uint64_t i = 0; i < branch_handles.size(); i++) {
+  //       std::vector<Rectangle> &existing_rects = branch_handles.at(i).first.basicRectangles;
+
+  //       if (branch_handles.at(i).first.intersectsPolygon(ip)) {
+  //         // It is imperative that the references here are set carefully.
+  //         // make_all_rects_disjoint updates the second and fourth arguments,
+  //         // so these should point to the basicRectangles vector of the polygons.
+  //         intersection_count += 1;
+  //         make_all_rects_disjoint(
+  //                 tree,
+  //                 existing_rects,              // Existing rects of sibling poly
+  //                 branch_handles.at(i).second, // Sibling handle
+  //                 ip.basicRectangles,          // Existing rects of our poly
+  //                 child_handle                 // our handle
+  //         );
+
+  //         // These may have been updated. Update the metadata.
+  //         ip.recomputeBoundingBox();
+  //         branch_handles.at(i).first.recomputeBoundingBox();
+  //       }
+  //     }
+
+  //     branch_handles.push_back(std::make_pair(ip, child_handle));
+  //   }
+  // }
+  // for (uint64_t i = 0; i < branch_handles.size(); i++) {
+  //   IsotheticPolygon constructed_poly = branch_handles.at(i).first;
+
+  //   Rectangle boundingBox = constructed_poly.boundingBox;
+  //   tree_node_handle child = branch_handles.at(i).second;
+
+  //   // If the MBR has not been split into a polygon, don't keep it in the map.
+  //   if (constructed_poly.basicRectangles.size() != 1) {
+  //     tree->polygons.insert({child, constructed_poly});
+  //   }
+
+  //   branch_node->addBranchToNode(boundingBox, child);
+  // }
+
+  unsigned start_dimension = 0;
+  quad_tree_style_fill_branch(tree,
+                              start,
+                              stop,
+                              branch_factor,
+                              cur_level,
+                              start_dimension,
+                              partitions,
+                              sub_partitions,
+                              leaf_node_type,
+                              branch_node);
+
+  if (child_handle.get_level() != 0) {
+    std::vector<std::pair<IsotheticPolygon, tree_node_handle>> fixed_bb_and_handles;
+    //branch_handles.reserve(NIR_MAX_FANOUT);
+
+    for (unsigned i = 0; i < branch_node->cur_offset_; i++) {
+      tree_node_handle child_handle = branch_node->entries.at(i).child;
+      Rectangle bbox = branch_node->entries.at(i).boundingBox;
       // Produce a polygon using bbox.
       IsotheticPolygon ip = IsotheticPolygon(bbox);
+      fixed_bb_and_handles.push_back(std::make_pair(ip, child_handle));
+    }
 
-      // Look at each of the existing children's polygons, and figure out if
-      // any of their polygons overlap with our polygon. If so, we need to
-      // figure out who owns the overlapping region.
-      for (uint64_t i = 0; i < branch_handles.size(); i++) {
-        std::vector<Rectangle> &existing_rects = branch_handles.at(i).first.basicRectangles;
-
-        if (branch_handles.at(i).first.intersectsPolygon(ip)) {
+    // make all branches polygon disjoint
+    for (unsigned i = 0; i < fixed_bb_and_handles.size(); i++) {
+      for (unsigned j = i + 1; j < fixed_bb_and_handles.size(); j++) {
+        IsotheticPolygon &poly_a = fixed_bb_and_handles.at(i);
+        IsotheticPolygon &poly_b = fixed_bb_and_handles.at(j);
+        if (poly_a.intersectsPolygon(poly_b)) {
+          std::vector<Rectangle> &existing_rects_a = poly_a.basicRectangles;
+          std::vector<Rectangle> &existing_rects_b = poly_b.basicRectangles; 
           // It is imperative that the references here are set carefully.
           // make_all_rects_disjoint updates the second and fourth arguments,
           // so these should point to the basicRectangles vector of the polygons.
-          intersection_count += 1;
           make_all_rects_disjoint(
-                  tree,
-                  existing_rects,              // Existing rects of sibling poly
-                  branch_handles.at(i).second, // Sibling handle
-                  ip.basicRectangles,          // Existing rects of our poly
-                  child_handle                 // our handle
+              treeRef,
+              existing_rects_a,
+              poly_a.second,
+              existing_rects_b,
+              poly_b.second
           );
-
+          intersection_count += 1;
           // These may have been updated. Update the metadata.
-          ip.recomputeBoundingBox();
-          branch_handles.at(i).first.recomputeBoundingBox();
+          poly_a.recomputeBoundingBox();
+          poly_b.recomputeBoundingBox();
         }
       }
+    }
 
-      branch_handles.push_back(std::make_pair(ip, child_handle));
+    // save polygon in map and update boundingBox
+    for(unsigned i = 0; i < fixed_bb_and_handles.size(); i++) {
+      IsotheticPolygon constructed_poly = fixed_bb_and_handles.at(i).first;
+      Rectangle boundingBox = constructed_poly.boundingBox;
+      tree_node_handle child = fixed_bb_and_handles.at(i).second;
+      
+      // If the MBR has not been split into a polygon, don't keep it in the map.
+      if (constructed_poly.basicRectangles.size() != 1) {
+        tree->polygons.insert({child, constructed_poly});
+      }
+      branch_node->entries.at(i).boundingBox = constructed_poly.boundingBox;
+    }
 
-#ifndef NDEBUG
-      // Double check non-intersection - Really inefficient, but I don't see a better way
-      // of doing this.
-      for (uint64_t i = 0; i < branch_handles.size(); i++) {
-        for (uint64_t j = i + 1; j < branch_handles.size(); j++) {
-          std::vector<Rectangle> &existing_rects_a =
-                  branch_handles.at(i).first.basicRectangles;
-          std::vector<Rectangle> &existing_rects_b =
-                  branch_handles.at(j).first.basicRectangles;
-          for (Rectangle &rect_a : existing_rects_a) {
-            for (Rectangle &rect_b : existing_rects_b) {
-              if (rect_b.intersectsRectangle(rect_a)) {
-                std::cout << rect_b << " intersects: " << rect_a << std::endl;
-                std::cout << "Cur y_lo: " << (*(start + x_start + y_start))[1] << std::endl;
-                std::cout << "Prev y: " << (*(start + x_start + y_start - 1))[1] << std::endl;
-                abort();
-              }
+  #ifndef NDEBUG
+    // Double check non-intersection - Really inefficient, but I don't see a better way
+    // of doing this.
+    for (uint64_t i = 0; i < fixed_bb_and_handles.size(); i++) {
+      for (uint64_t j = i + 1; j < fixed_bb_and_handles.size(); j++) {
+        std::vector<Rectangle> &existing_rects_a =
+                fixed_bb_and_handles.at(i).first.basicRectangles;
+        std::vector<Rectangle> &existing_rects_b =
+                fixed_bb_and_handles.at(j).first.basicRectangles;
+        for (Rectangle &rect_a : existing_rects_a) {
+          for (Rectangle &rect_b : existing_rects_b) {
+            if (rect_b.intersectsRectangle(rect_a)) {
+              std::cout << rect_b << " intersects: " << rect_a << std::endl;
+              std::cout << "Cur y_lo: " << (*(start + x_start + y_start))[1] << std::endl;
+              std::cout << "Prev y: " << (*(start + x_start + y_start - 1))[1] << std::endl;
+              abort();
             }
           }
         }
       }
+    }
 #endif
-    }
-  }
-
-  for (uint64_t i = 0; i < branch_handles.size(); i++) {
-    IsotheticPolygon constructed_poly = branch_handles.at(i).first;
-
-    Rectangle boundingBox = constructed_poly.boundingBox;
-    tree_node_handle child = branch_handles.at(i).second;
-
-    // If the MBR has not been split into a polygon, don't keep it in the map.
-    if (constructed_poly.basicRectangles.size() != 1) {
-      tree->polygons.insert({child, constructed_poly});
-    }
-
-    branch_node->addBranchToNode(boundingBox, child);
-  }
+  } // if (child_handle.get_level() != 0)
 
   Rectangle bbox = branch_node->boundingBox();
   return std::make_pair(branch_handle, bbox);
