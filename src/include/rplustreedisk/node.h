@@ -1018,95 +1018,61 @@ namespace rplustreedisk {
 
     template <int min_branch_factor, int max_branch_factor>
     Partition BranchNode<min_branch_factor, max_branch_factor>::partitionNode() {
+
       Partition defaultPartition;
-      unsigned costMetric = std::numeric_limits<unsigned>::max();
-      double location;
-      std::vector<Rectangle> sortableBoundingBoxes;
-
-      for (unsigned i = 0; i < cur_offset_; i++) {
-        Branch &b = entries.at(i);
-        sortableBoundingBoxes.push_back(b.boundingBox);
+      std::vector<Rectangle> all_branch_mbb;
+      for (unsigned i = 0; i < this->cur_offset_; i++) {
+        Branch &b_i = entries.at(i);
+        all_branch_mbb.push_back(b_i.boundingBox);
       }
 
+      double best_candidate = 0.0;
+      unsigned best_dimension = 0;
+      double min_cost = std::numeric_limits<double>::max();
+      unsigned cut_imbalance = std::numeric_limits<unsigned>::max();
+      double cut_distance = std::numeric_limits<double>::max();
+      
+      // O(D * M^2)
       for (unsigned d = 0; d < dimensions; d++) {
-        // Sort along d
-        std::sort(sortableBoundingBoxes.begin(), sortableBoundingBoxes.end(),
-                   [d](Rectangle a, Rectangle b){ return a.isUpperRightSmaller(b, d); });
-
-
-        // By picking a line based on the upper bounding point, we
-        // guaranteed that at least some of the entries will go to the
-        // left. But we can't guarantee that *all* entries won't go to the
-        // left, because we might have to downsplit the remaining
-        // entries in the array (R+ nodes are not guaranteed to be disjoint).
-        // This would result in a split not actually reducing the number
-        // of entries in our new split nodes, which defeats the whole
-        // point.
-        // I'm not sure we can even guarantee that a line partitions the
-        // data in a way such that we DONT overflow --- presumably every
-        // box isn't on top of each other but I'm not sure that's a
-        // property you rely on.
-        // But even if we could guarantee that, we still can't check
-        // every cut point to figure it out because that would be N^2
-        // and this is D N LOG N.
-
-        location = sortableBoundingBoxes[sortableBoundingBoxes.size() / 2 - 1].upperRight[d];
-
-        // Compute cost, # of splits if d is chosen
-        unsigned currentInducedSplits = 0;
-        unsigned left_count = 0;
-        unsigned right_count = 0;
-        for (unsigned i = 0; i < sortableBoundingBoxes.size(); i++) {
-          bool is_contained_left = sortableBoundingBoxes[i].upperRight[d] <= location;
-          bool is_contained_right = sortableBoundingBoxes[i].lowerLeft[d] >= location;
-
-          if (is_contained_left) {
-            left_count++;
-          } else if(is_contained_right) {
-            right_count++;
-          } else if (sortableBoundingBoxes[i].lowerLeft[d] <= location and
-                     location <= sortableBoundingBoxes[i].upperRight[d]) {
-            currentInducedSplits++;
-            left_count++;
-            right_count++;
-          }
+        // consider all bound points (LowerLeft and UpperRight)
+        std::vector<double> partition_candidates;
+        double running_total = 0.0;
+        for (unsigned i = 0; i < all_branch_mbb.size(); i++) {
+          partition_candidates.push_back(all_branch_mbb.at(i).lowerLeft[d]);
+          partition_candidates.push_back(all_branch_mbb.at(i).upperRight[d]);
+          running_total += all_branch_mbb.at(i).lowerLeft[d] + all_branch_mbb.at(i).upperRight[d];
         }
-
-        // Compare cost
-        if (left_count <= max_branch_factor and right_count <= max_branch_factor and
-            currentInducedSplits < costMetric) {
-          defaultPartition.dimension = d;
-          defaultPartition.location = location;
-          costMetric = currentInducedSplits;
-        }
-      }
-
-      // If there was a default split point that didnt' overflow children,
-      // use that
-      if (costMetric < std::numeric_limits<unsigned>::max()) {
-        return defaultPartition;
-      }
-
-      // It's time to get fancy
-      for (unsigned d = 0; d < dimensions; d++) {
-        for (unsigned i = 0; i < sortableBoundingBoxes.size(); i++) {
+        // distance to mean pt
+        double mean_d_pt = running_total / (2 * all_branch_mbb.size());
+        
+        // consider each partition candidate
+        for (double partition_candidate : partition_candidates) {
+          // split count 
+          double cost = 0;
           unsigned left_count = 0;
           unsigned right_count = 0;
-          double partition_candidate = sortableBoundingBoxes[i].upperRight[d];
-          unsigned cost = 0;
 
-          for (unsigned j = 0; j < sortableBoundingBoxes.size(); j++) {
-            Rectangle &bounding_rect = sortableBoundingBoxes[j];
-            bool greater_than_left = bounding_rect.lowerLeft[d] < partition_candidate;
-            bool less_than_right = bounding_rect.upperRight[d] > partition_candidate;
+          for (unsigned j = 0; j < all_branch_mbb.size(); j++) {
+            Rectangle &branch_mbb = all_branch_mbb.at(j);
+            bool greater_than_left = branch_mbb.lowerLeft[d] < partition_candidate;
+            bool less_than_right = partition_candidate < branch_mbb.upperRight[d];
             bool requires_split = greater_than_left and less_than_right;
-            bool should_go_left = bounding_rect.upperRight[d] <= partition_candidate;
-            bool should_go_right = bounding_rect.lowerLeft[d] >= partition_candidate;
+            bool should_go_left = branch_mbb.upperRight[d] <= partition_candidate;
+            bool should_go_right = branch_mbb.lowerLeft[d] >= partition_candidate;
+            bool is_zero_area = (branch_mbb.lowerLeft[d] == branch_mbb.upperRight[d]);
 
             if (requires_split) {
               left_count++;
               right_count++;
               cost++;
+            } else if (is_zero_area and branch_mbb.upperRight[d] == partition_candidate) {
+              // Partition on a zero-area thing, can
+              // pick either side as convenient
+              if (left_count <= right_count) {
+                left_count++;
+              } else {
+                right_count++;
+              }
             } else if (should_go_left) {
               left_count++;
             } else if (should_go_right) {
@@ -1114,19 +1080,58 @@ namespace rplustreedisk {
             } else {
               assert(false);
             }
-          } //j
 
-          if (left_count <= max_branch_factor and
-              right_count <= max_branch_factor and
-              left_count > 0 and right_count > 0 ) {
-            if (cost < costMetric) {
-              defaultPartition.dimension = d;
-              defaultPartition.location = partition_candidate;
-              costMetric = cost;
-            }
           }
-        } // i
-      } // d
+
+          // imbalance indicates the absolute difference between entry count in two splitted nodes
+          int diff = left_count - right_count;
+          unsigned imbalance = std::abs(diff);
+          // imbalance threshold for validity check
+          const double imbalance_threshold = 0.25 * (left_count + right_count);
+          // distance indicates the positive distance between partition and geo mean
+          double distance = (mean_d_pt - partition_candidate);
+          distance = distance * distance;
+
+          // check if partition is valid
+          // 1. both contains no more than max_branch_factor
+          // 2. both contains no less than min_branch_factor
+          // 3. the imbalance between two nodes is less than 1/4 * total entries
+          if (left_count <= max_branch_factor and left_count >= min_branch_factor and 
+              right_count <= max_branch_factor and right_count >= min_branch_factor and
+              imbalance < imbalance_threshold)
+          {
+            // priority: downsplit > imbalance > mean distance 
+            if (cost < min_cost) {
+              best_candidate = partition_candidate;
+              best_dimension = d;
+              min_cost = cost;
+              cut_imbalance = imbalance;
+              cut_distance = distance;
+            } else if (cost == min_cost and imbalance < cut_imbalance){
+              best_candidate = partition_candidate;
+              best_dimension = d;
+              min_cost = cost;
+              cut_imbalance = imbalance;
+              cut_distance = distance;
+            } else if (cost == min_cost and imbalance == cut_imbalance and distance < cut_distance){
+              best_candidate = partition_candidate;
+              best_dimension = d;
+              min_cost = cost;
+              cut_imbalance = imbalance;
+              cut_distance = distance;
+            }
+
+          }
+        }
+      }
+      if (min_cost == std::numeric_limits<double>::max()) {
+        // [TODO]
+        // no valid split, should consider other split strategy
+        abort();
+      }
+
+      defaultPartition.dimension = best_dimension;
+      defaultPartition.location = best_candidate;
 
       assert(costMetric < std::numeric_limits<unsigned>::max());
 
