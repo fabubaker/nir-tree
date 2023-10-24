@@ -243,9 +243,6 @@ void generate_tree(std::map<std::string, size_t> &configU, std::map<std::string,
   
   spatialIndex->stat();
 
-  std::cout << "Total time to search: " << totalTimeSearches << "s" << std::endl;
-  std::cout << "Avg time to search: " << totalTimeSearches / (totalSearchesInserted + totalSearchesLoaded) << "s" << std::endl;
-
   return;
 }
 
