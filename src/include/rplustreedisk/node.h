@@ -85,7 +85,7 @@ namespace rplustreedisk {
                 tree_node_handle current_handle,
                 Partition p
         );
-        tree_node_handle condenseTree(std::vector<bool> &hasReinsertedOnLevel);
+        tree_node_handle condenseTree();
         Partition partitionNode();
 
         // Datastructure interface functions
@@ -157,7 +157,7 @@ namespace rplustreedisk {
                 tree_node_handle current_handle,
                 Partition p
         );
-        tree_node_handle condenseTree(std::vector<bool> &hasReinsertedOnLevel);
+        tree_node_handle condenseTree();
         Partition partitionNode();
 
         // Datastructure interface functions
@@ -566,7 +566,7 @@ namespace rplustreedisk {
 
 // To be called on a leaf
     template <int min_branch_factor, int max_branch_factor>
-    tree_node_handle LeafNode<min_branch_factor, max_branch_factor>::condenseTree(std::vector<bool> &hasReinsertedOnLevel) {
+    tree_node_handle LeafNode<min_branch_factor, max_branch_factor>::condenseTree() {
 #if 0
       // CT1 [Initialize]
   tree_node_handle node_handle = self_handle_;
