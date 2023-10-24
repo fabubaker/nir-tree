@@ -551,6 +551,7 @@ namespace rplustreedisk {
         new_root_node->entries.at(new_root_node->cur_offset_++) = split.leftBranch;
         new_root_node->entries.at(new_root_node->cur_offset_++) = split.rightBranch;
 
+        treeRef->root = new_root_handle;
         return new_root_handle;
       }
 
@@ -1266,6 +1267,7 @@ namespace rplustreedisk {
           new_root_node->entries.at(new_root_node->cur_offset_++) = finalSplit.leftBranch;
           new_root_node->entries.at(new_root_node->cur_offset_++) = finalSplit.rightBranch;
 
+          treeRef->root = new_root_handle;
           return new_root_handle;
         }
       }
