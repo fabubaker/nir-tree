@@ -167,7 +167,8 @@ void generate_tree(std::map<std::string, size_t> &configU, std::map<std::string,
     std::cout << "Bulk Loading..." << std::endl;
     std::cout << "Creating tree with " << configU["buffer_pool_memory"] << "bytes" << std::endl;
     bulk_load_tree(
-            tree, configU, all_points.begin(), all_points.begin() + cut_off_bulk_load, R_STAR_MAX_FANOUT,
+            tree, configU, all_points.begin(), all_points.begin() + cut_off_bulk_load,
+            R_PLUS_MAX_FANOUT,
             (rplustreedisk::LeafNode<R_PLUS_MIN_FANOUT, R_PLUS_MAX_FANOUT> *) nullptr,
             (rplustreedisk::BranchNode<R_PLUS_MIN_FANOUT, R_PLUS_MAX_FANOUT> *) nullptr
     );

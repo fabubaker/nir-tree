@@ -1263,7 +1263,7 @@ template void sequential_insert_tree(
 );
 
 template void sequential_insert_tree(
-        rplustreedisk::RPlusTreeDisk<R_STAR_MIN_FANOUT, R_STAR_MAX_FANOUT> *tree,
+        rplustreedisk::RPlusTreeDisk<R_PLUS_MIN_FANOUT, R_PLUS_MAX_FANOUT> *tree,
         std::map<std::string, size_t> &configU,
         std::vector<Point>::iterator begin,
         std::vector<Point>::iterator end,
@@ -1282,7 +1282,7 @@ template void bulk_load_tree(
 );
 
 template void bulk_load_tree(
-        rplustreedisk::RPlusTreeDisk<R_STAR_MIN_FANOUT, R_STAR_MAX_FANOUT> *tree,
+        rplustreedisk::RPlusTreeDisk<R_PLUS_MIN_FANOUT, R_PLUS_MAX_FANOUT> *tree,
         std::map<std::string, size_t> &configU,
         std::vector<Point>::iterator begin,
         std::vector<Point>::iterator end,
