@@ -190,7 +190,7 @@ void generate_tree(std::map<std::string, size_t> &configU, std::map<std::string,
     bufferPool->stat();
     bufferPool->resetStat();
   } else {
-    std::cout << "Only Supports NIR_Tree and R_STAR_TREE for gen_tree" << std::endl; 
+    std::cout << "Unsupported tree! Exiting..." << std::endl;
     abort();
   }
 
