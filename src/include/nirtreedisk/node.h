@@ -2572,8 +2572,7 @@ SplitResult BranchNode<min_branch_factor, max_branch_factor>::splitNode(
         }
 
         // check if child_sibling_node is empty after downward split 
-        auto child_sibling_node = treeRef->get_leaf_node(child_sibling.child);
-        if (child_sibling_node->cur_offset_ > 0){
+        if (child_sibling.boundingBox != Rectangle()){
           sibling_node->addBranchToNode(child_sibling);
         } else {
           allocator->free(child_sibling.child, sizeof(LeafNode<min_branch_factor, max_branch_factor>));
@@ -2595,7 +2594,7 @@ SplitResult BranchNode<min_branch_factor, max_branch_factor>::splitNode(
         }
 
         // check if child_sibling_node is empty after downward split 
-        if (child_sibling.boundingBox == Rectangle()){
+        if (child_sibling.boundingBox != Rectangle()){
           sibling_node->addBranchToNode(child_sibling);
         } else {
           allocator->free(child_sibling.child, sizeof(BranchNode<min_branch_factor, max_branch_factor>));
