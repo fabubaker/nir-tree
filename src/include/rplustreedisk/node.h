@@ -259,7 +259,7 @@ namespace rplustreedisk {
         // Sort along dimension d
         std::sort(
           entries.begin(), entries.begin() + cur_offset_,
-          [d](Point &a, Point &b) { return a[d] < b[d]; }
+          [d](Point &a, Point &b) { return a.orderedCompare(b, d); }
         );
 
         // Pick at least half the data
@@ -1031,7 +1031,7 @@ namespace rplustreedisk {
       for (unsigned d = 0; d < dimensions; d++) {
         // Sort along d
         std::sort(sortableBoundingBoxes.begin(), sortableBoundingBoxes.end(),
-                   [d](Rectangle a, Rectangle b){ return a.upperRight[d] < b.upperRight[d]; });
+                   [d](Rectangle a, Rectangle b){ return a.isUpperRightSmaller(b, d); });
 
 
         // By picking a line based on the upper bounding point, we
