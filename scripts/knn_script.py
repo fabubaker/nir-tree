@@ -43,10 +43,6 @@ if __name__ == "__main__":
     # Load points from the input file
     print("Loading points from the input file...")
     points = load_points(input_file_path)
-    seed_value = 0
-    random.seed(seed_value)
-    # shuffle the list of points
-    random.shuffle(points)
 
     # Create a NearestNeighbors model
     print("Creating a NearestNeighbors model...")
@@ -55,10 +51,12 @@ if __name__ == "__main__":
     # Load query points from the input file
     query_points = []
     print(f"Loading {n} query points from the input file...")
-    skip = math.ceil(len(points)/n)
+    seed_value = 0
+    random.seed(seed_value)
 
-    for i in range(0, len(points), skip):
-        query_points.append(points[i])
+    for i in range(0, n):
+        random_index = random.randint(0, len(points)-1)
+        query_points.append(points[random_index])
 
     for idx, query_point in enumerate(query_points):
         print(f"\nQuery Point {idx+1}: {query_point}")
