@@ -2756,7 +2756,9 @@ tree_node_handle BranchNode<min_branch_factor, max_branch_factor>::insert(
 #endif
 
   tree_node_allocator *allocator = get_node_allocator(treeRef);
-  SplitResult finalSplit;
+  SplitResult finalSplit = {
+          {Rectangle(), tree_node_handle(nullptr)},
+          {Rectangle(), tree_node_handle(nullptr)}};
 
   if (givenIsPoint) {
     assert(current_handle.get_type() == LEAF_NODE);
@@ -2765,11 +2767,13 @@ tree_node_handle BranchNode<min_branch_factor, max_branch_factor>::insert(
     // Add point to chosen node 
     current_node->addPoint(std::get<Point>(nodeEntry));
 
-    // Split if needed 
-    finalSplit = adjustTreeSub(treeRef,
-                               current_handle,
-                               parentHandles,
-                               hasReinsertedOnLevel);
+    if (current_node->cur_offset_ > max_branch_factor) {
+      // Split if needed 
+      finalSplit = adjustTreeSub(treeRef,
+                                current_handle,
+                                parentHandles,
+                                hasReinsertedOnLevel);
+    }
   } else {
 #if IGNORE_REINSERTION 
     // shouldn't get into this branch if ignore reinsertion
