@@ -1012,12 +1012,12 @@ runBench(PointGenerator<T> &pointGen,
   //std::cout << "Validation OK." << std::endl;
 
   // Search for points and time their retrieval
-  if (configU["num_points_to_search"] > 0){
+  if (configU["num_points_to_search"] > 0) {
     std::cout << "Beginning search." << std::endl;
     pointGen.reset();
 
     std::mt19937 g;
-    g.seed(0);
+    g.seed(9812);
 
     std::shuffle(pointGen.pointBuffer.begin(), pointGen.pointBuffer.end(), g);
 
@@ -1107,7 +1107,7 @@ runBench(PointGenerator<T> &pointGen,
     pointGen.reset();
 
     std::mt19937 g;
-    g.seed(0);
+    g.seed(7167);
 
     std::shuffle(pointGen.pointBuffer.begin(), pointGen.pointBuffer.end(), g);
 

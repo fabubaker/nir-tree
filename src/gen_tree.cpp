@@ -103,7 +103,7 @@ void generate_tree(std::map<std::string, size_t> &configU, std::map<std::string,
     
     // Shuffle dataset
     std::mt19937 g;
-    g.seed(0);
+    g.seed(5619);
     std::shuffle(all_points.begin(), all_points.end(), g);
 
     // start with bulk load:
