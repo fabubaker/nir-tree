@@ -404,8 +404,7 @@ public:
   void printTree(NIRTreeDisk<min_branch_factor, max_branch_factor> *treeRef,
             tree_node_handle current_handle, tree_node_handle parent_handle, unsigned n = 0);
   // height: returns the height of subtree where LeafNode has height 1 
-  unsigned height(NIRTreeDisk<min_branch_factor, max_branch_factor> *treeRef,
-                  tree_node_handle selfHandle);
+  unsigned height(tree_node_handle selfHandle);
 
 };
 
@@ -1008,34 +1007,8 @@ SplitResult adjustTreeSub(
   
   // Loop from the bottom to the very top (root)
   while (current_handle != nullptr) {
-    if (propagationSplit.leftBranch.child == nullptr){
-      assert(propagationSplit.rightBranch.child == nullptr);
-    }
-    // If there was a split we were supposed to propagate
-    if (propagationSplit.leftBranch.child != nullptr and propagationSplit.rightBranch.child != nullptr) {
-      assert(current_handle.get_type() == BRANCH_NODE);
-      auto current_branch_node = treeRef->get_branch_node(current_handle);
-      
-      if (propagationSplit.leftBranch.child.get_type() == LEAF_NODE){
-        assert(propagationSplit.rightBranch.child.get_type() == LEAF_NODE);
-        auto left_node = treeRef->get_leaf_node(propagationSplit.leftBranch.child);
-        assert(left_node->cur_offset_ > 0);
-        auto right_node = treeRef->get_leaf_node(propagationSplit.rightBranch.child);
-        assert(right_node->cur_offset_ > 0);
-      } else {
-        assert(propagationSplit.rightBranch.child.get_type() == BRANCH_NODE);
-        auto left_node = treeRef->get_branch_node(propagationSplit.leftBranch.child, false);
-        assert(left_node->cur_offset_ > 0);
-        auto right_node = treeRef->get_branch_node(propagationSplit.rightBranch.child, false);
-        assert(right_node->cur_offset_ > 0);
-      }
-      // Update updated child branch at Parent node
-      // Add splitted sibling branch to Parent node
-      current_branch_node->updateBranch(propagationSplit.leftBranch);
-      current_branch_node->addBranchToNode(propagationSplit.rightBranch);
-    }
-
     std::pair<SplitResult, tree_node_handle> split_res_and_new_handle;
+
     if (current_handle.get_type() == LEAF_NODE ) {
       auto current_leaf_node = treeRef->get_leaf_node(current_handle);
       split_res_and_new_handle = adjust_tree_bottom_half(
@@ -1048,6 +1021,14 @@ SplitResult adjustTreeSub(
     } else {
       assert(current_handle.get_type() == BRANCH_NODE);
       auto current_branch_node = treeRef->get_branch_node(current_handle);
+      // If there was a split from previous split, we were supposed to propagate
+      if (propagationSplit.leftBranch.child != nullptr and propagationSplit.rightBranch.child != nullptr) {
+      
+        // Update updated child branch at Parent node
+        // Add splitted sibling branch to Parent node
+        current_branch_node->updateBranch(propagationSplit.leftBranch);
+        current_branch_node->addBranchToNode(propagationSplit.rightBranch);
+      }
       split_res_and_new_handle = adjust_tree_bottom_half(
                                   treeRef,
                                   current_branch_node,
@@ -1056,9 +1037,11 @@ SplitResult adjustTreeSub(
                                   hasReinsertedOnLevel,
                                   max_branch_factor);
     }
+
     propagationSplit = split_res_and_new_handle.first;
     current_handle = split_res_and_new_handle.second;
   }
+
   return propagationSplit;
 }
 
@@ -1795,7 +1778,7 @@ BranchNode<min_branch_factor, max_branch_factor>::chooseNodeBranch(
   assert(treeRef->root == selfHandle); 
   tree_node_handle current_handle = selfHandle; 
   // get tree height to calculate branch node level 
-  uint8_t height = this->height(treeRef,selfHandle);
+  uint8_t height = this->height(selfHandle);
   // stop at parent level 
   uint8_t stopping_level = branchLevel.level + 1; 
   Branch &branch = branchLevel.branch; 
@@ -2589,8 +2572,7 @@ SplitResult BranchNode<min_branch_factor, max_branch_factor>::splitNode(
         }
 
         // check if child_sibling_node is empty after downward split 
-        auto child_sibling_node = treeRef->get_leaf_node(child_sibling.child);
-        if (child_sibling_node->cur_offset_ > 0){
+        if (child_sibling.boundingBox != Rectangle()){
           sibling_node->addBranchToNode(child_sibling);
         } else {
           allocator->free(child_sibling.child, sizeof(LeafNode<min_branch_factor, max_branch_factor>));
@@ -2612,8 +2594,7 @@ SplitResult BranchNode<min_branch_factor, max_branch_factor>::splitNode(
         }
 
         // check if child_sibling_node is empty after downward split 
-        auto child_sibling_node = treeRef->get_branch_node(child_sibling.child);
-        if (child_sibling_node->cur_offset_ > 0){
+        if (child_sibling.boundingBox != Rectangle()){
           sibling_node->addBranchToNode(child_sibling);
         } else {
           allocator->free(child_sibling.child, sizeof(BranchNode<min_branch_factor, max_branch_factor>));
@@ -2775,7 +2756,9 @@ tree_node_handle BranchNode<min_branch_factor, max_branch_factor>::insert(
 #endif
 
   tree_node_allocator *allocator = get_node_allocator(treeRef);
-  SplitResult finalSplit;
+  SplitResult finalSplit = {
+          {Rectangle(), tree_node_handle(nullptr)},
+          {Rectangle(), tree_node_handle(nullptr)}};
 
   if (givenIsPoint) {
     assert(current_handle.get_type() == LEAF_NODE);
@@ -2784,11 +2767,13 @@ tree_node_handle BranchNode<min_branch_factor, max_branch_factor>::insert(
     // Add point to chosen node 
     current_node->addPoint(std::get<Point>(nodeEntry));
 
-    // Split if needed 
-    finalSplit = adjustTreeSub(treeRef,
-                               current_handle,
-                               parentHandles,
-                               hasReinsertedOnLevel);
+    if (current_node->cur_offset_ > max_branch_factor) {
+      // Split if needed 
+      finalSplit = adjustTreeSub(treeRef,
+                                current_handle,
+                                parentHandles,
+                                hasReinsertedOnLevel);
+    }
   } else {
 #if IGNORE_REINSERTION 
     // shouldn't get into this branch if ignore reinsertion
@@ -3133,21 +3118,8 @@ void BranchNode<min_branch_factor, max_branch_factor>::printTree(NIRTreeDisk<min
 }
 
 template <int min_branch_factor, int max_branch_factor>
-unsigned BranchNode<min_branch_factor, max_branch_factor>::height(
-                    NIRTreeDisk<min_branch_factor, max_branch_factor> *treeRef,
-                    tree_node_handle selfHandle) {
-  unsigned ret = 0;
-  tree_node_handle current_handle = selfHandle;
-
-  for (;;) {
-    ret++;
-    if (current_handle.get_type() == LEAF_NODE || current_handle.get_type() == REPACKED_LEAF_NODE) {
-      return ret;
-    }
-
-    auto node = treeRef->get_branch_node(current_handle, false);
-    current_handle = node->entries.at(0).child;
-  }
+unsigned BranchNode<min_branch_factor, max_branch_factor>::height(tree_node_handle selfHandle) {
+  return selfHandle.get_level() + 1;
 }
 
 // called by NIRTreeDisk<min_branch_factor, max_branch_factor>::stat()
@@ -3184,7 +3156,7 @@ void stat_node(tree_node_handle root_handle, NIRTreeDisk<min_branch_factor, max_
   } else {
     assert(root_handle.get_type() == BRANCH_NODE);
     auto root_node = treeRef->get_branch_node(root_handle);
-    treeHeight = root_node->height(treeRef, root_handle);
+    treeHeight = root_node->height(root_handle);
   }
 
   histogramPolygonAtLevel.resize(treeHeight);
@@ -3762,9 +3734,9 @@ void testDisjoint(NIRTreeDisk<min_branch_factor, max_branch_factor> *treeRef,
         IsotheticPolygon pj = find_polygon(treeRef, bj);
         //std::cout << "checking " << bi.child <<" and " << bj.child << std::endl;
         if (! pi.disjoint(pj)){
-          int height = current_node->height(treeRef,current_handle);
+          int height = current_node->height(current_handle);
           auto root_node = treeRef->get_branch_node(root);
-          int root_height = current_node->height(treeRef, root);
+          int root_height = current_node->height(root);
           std::cout << bi.child <<" intersects " << bj.child << std::endl;
           std::cout << " parent is " << current_handle << std::endl;
           std::cout << " height of parent is " << height << std::endl;
@@ -3848,7 +3820,7 @@ void testLevels(NIRTreeDisk<min_branch_factor, max_branch_factor> *treeRef,
                        tree_node_handle root){
 #if DEBUG_TESTLEVELS
   auto root_node = treeRef->get_branch_node(root);
-  uint8_t root_level = root_node->height(treeRef, root) - 1;
+  uint8_t root_level = root_node->height(root) - 1;
   std::stack<std::pair<tree_node_handle, uint8_t>> context; 
   context.push(std::make_pair(root, root_level));
   while(not context.empty()){
