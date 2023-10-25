@@ -404,8 +404,7 @@ public:
   void printTree(NIRTreeDisk<min_branch_factor, max_branch_factor> *treeRef,
             tree_node_handle current_handle, tree_node_handle parent_handle, unsigned n = 0);
   // height: returns the height of subtree where LeafNode has height 1 
-  unsigned height(NIRTreeDisk<min_branch_factor, max_branch_factor> *treeRef,
-                  tree_node_handle selfHandle);
+  unsigned height(tree_node_handle selfHandle);
 
 };
 
@@ -1779,7 +1778,7 @@ BranchNode<min_branch_factor, max_branch_factor>::chooseNodeBranch(
   assert(treeRef->root == selfHandle); 
   tree_node_handle current_handle = selfHandle; 
   // get tree height to calculate branch node level 
-  uint8_t height = this->height(treeRef,selfHandle);
+  uint8_t height = this->height(selfHandle);
   // stop at parent level 
   uint8_t stopping_level = branchLevel.level + 1; 
   Branch &branch = branchLevel.branch; 
@@ -2596,10 +2595,7 @@ SplitResult BranchNode<min_branch_factor, max_branch_factor>::splitNode(
         }
 
         // check if child_sibling_node is empty after downward split 
-        // this get_branch_node can be avoided if another method is used to tell
-        // if sibling_node is empty
-        auto child_sibling_node = treeRef->get_branch_node(child_sibling.child);
-        if (child_sibling_node->cur_offset_ > 0){
+        if (child_sibling.boundingBox == Rectangle()){
           sibling_node->addBranchToNode(child_sibling);
         } else {
           allocator->free(child_sibling.child, sizeof(BranchNode<min_branch_factor, max_branch_factor>));
@@ -3119,21 +3115,8 @@ void BranchNode<min_branch_factor, max_branch_factor>::printTree(NIRTreeDisk<min
 }
 
 template <int min_branch_factor, int max_branch_factor>
-unsigned BranchNode<min_branch_factor, max_branch_factor>::height(
-                    NIRTreeDisk<min_branch_factor, max_branch_factor> *treeRef,
-                    tree_node_handle selfHandle) {
-  unsigned ret = 0;
-  tree_node_handle current_handle = selfHandle;
-
-  for (;;) {
-    ret++;
-    if (current_handle.get_type() == LEAF_NODE || current_handle.get_type() == REPACKED_LEAF_NODE) {
-      return ret;
-    }
-
-    auto node = treeRef->get_branch_node(current_handle, false);
-    current_handle = node->entries.at(0).child;
-  }
+unsigned BranchNode<min_branch_factor, max_branch_factor>::height(tree_node_handle selfHandle) {
+  return selfHandle.get_level() + 1; 
 }
 
 // called by NIRTreeDisk<min_branch_factor, max_branch_factor>::stat()
@@ -3170,7 +3153,7 @@ void stat_node(tree_node_handle root_handle, NIRTreeDisk<min_branch_factor, max_
   } else {
     assert(root_handle.get_type() == BRANCH_NODE);
     auto root_node = treeRef->get_branch_node(root_handle);
-    treeHeight = root_node->height(treeRef, root_handle);
+    treeHeight = root_node->height(root_handle);
   }
 
   histogramPolygonAtLevel.resize(treeHeight);
@@ -3748,9 +3731,9 @@ void testDisjoint(NIRTreeDisk<min_branch_factor, max_branch_factor> *treeRef,
         IsotheticPolygon pj = find_polygon(treeRef, bj);
         //std::cout << "checking " << bi.child <<" and " << bj.child << std::endl;
         if (! pi.disjoint(pj)){
-          int height = current_node->height(treeRef,current_handle);
+          int height = current_node->height(current_handle);
           auto root_node = treeRef->get_branch_node(root);
-          int root_height = current_node->height(treeRef, root);
+          int root_height = current_node->height(root);
           std::cout << bi.child <<" intersects " << bj.child << std::endl;
           std::cout << " parent is " << current_handle << std::endl;
           std::cout << " height of parent is " << height << std::endl;
@@ -3834,7 +3817,7 @@ void testLevels(NIRTreeDisk<min_branch_factor, max_branch_factor> *treeRef,
                        tree_node_handle root){
 #if DEBUG_TESTLEVELS
   auto root_node = treeRef->get_branch_node(root);
-  uint8_t root_level = root_node->height(treeRef, root) - 1;
+  uint8_t root_level = root_node->height(root) - 1;
   std::stack<std::pair<tree_node_handle, uint8_t>> context; 
   context.push(std::make_pair(root, root_level));
   while(not context.empty()){
