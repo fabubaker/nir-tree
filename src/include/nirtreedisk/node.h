@@ -3115,7 +3115,7 @@ void BranchNode<min_branch_factor, max_branch_factor>::printTree(NIRTreeDisk<min
 
 template <int min_branch_factor, int max_branch_factor>
 unsigned BranchNode<min_branch_factor, max_branch_factor>::height(tree_node_handle selfHandle) {
-  return selfHandle.get_level() + 1; 
+  return selfHandle.get_level() + 1;
 }
 
 // called by NIRTreeDisk<min_branch_factor, max_branch_factor>::stat()
