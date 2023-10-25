@@ -2596,6 +2596,8 @@ SplitResult BranchNode<min_branch_factor, max_branch_factor>::splitNode(
         }
 
         // check if child_sibling_node is empty after downward split 
+        // this get_branch_node can be avoided if another method is used to tell
+        // if sibling_node is empty
         auto child_sibling_node = treeRef->get_branch_node(child_sibling.child);
         if (child_sibling_node->cur_offset_ > 0){
           sibling_node->addBranchToNode(child_sibling);
