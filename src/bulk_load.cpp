@@ -1222,9 +1222,9 @@ void sequential_insert_tree(
   uint64_t print_count = pow(10, int(log10(num_els)) - 1);
   std::chrono::high_resolution_clock::time_point begin_time = std::chrono::high_resolution_clock::now();
   std::chrono::high_resolution_clock::time_point section_begin_time = begin_time;
-  for(auto iter = begin ; iter < end; iter++){
+  for (auto iter = begin ; iter < end; iter++) {
       tree->insert(*iter);
-      total_insert ++;
+      total_insert++;
     if (total_insert % print_count == 0) {
       std::chrono::high_resolution_clock::time_point section_end_time = std::chrono::high_resolution_clock::now();
       auto delta =  std::chrono::duration_cast<std::chrono::duration<double>>(section_end_time - section_begin_time);
@@ -1262,6 +1262,14 @@ template void sequential_insert_tree(
         unsigned max_branch_factor
 );
 
+template void sequential_insert_tree(
+        rplustreedisk::RPlusTreeDisk<R_PLUS_MIN_FANOUT, R_PLUS_MAX_FANOUT> *tree,
+        std::map<std::string, size_t> &configU,
+        std::vector<Point>::iterator begin,
+        std::vector<Point>::iterator end,
+        unsigned max_branch_factor
+);
+
 /* bulk_load_tree */
 template void bulk_load_tree(
         rstartreedisk::RStarTreeDisk<R_STAR_MIN_FANOUT, R_STAR_MAX_FANOUT> *tree,
@@ -1271,4 +1279,14 @@ template void bulk_load_tree(
         unsigned max_branch_factor,
         rstartreedisk::LeafNode<R_STAR_MIN_FANOUT, R_STAR_MAX_FANOUT> *leaf_node_type,
         rstartreedisk::BranchNode<R_STAR_MIN_FANOUT, R_STAR_MAX_FANOUT> *branch_node_type
+);
+
+template void bulk_load_tree(
+        rplustreedisk::RPlusTreeDisk<R_PLUS_MIN_FANOUT, R_PLUS_MAX_FANOUT> *tree,
+        std::map<std::string, size_t> &configU,
+        std::vector<Point>::iterator begin,
+        std::vector<Point>::iterator end,
+        unsigned max_branch_factor,
+        rplustreedisk::LeafNode<R_STAR_MIN_FANOUT, R_STAR_MAX_FANOUT> *leaf_node_type,
+        rplustreedisk::BranchNode<R_STAR_MIN_FANOUT, R_STAR_MAX_FANOUT> *branch_node_type
 );

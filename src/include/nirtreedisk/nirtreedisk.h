@@ -61,17 +61,11 @@ public:
     hasReinsertedOnLevel = {false};    
     
     // If this is a fresh tree, we need a root
-    // Update: We disable this for bulk-loading since the root node
-    // will be created anyways.
-    // We assume that insertion only happens after bulk load, 
-    // otherwise a root node is required here 
     if (existing_page_count == 0) {
-
-//      auto alloc = node_allocator_->create_new_tree_node<LeafNode<min_branch_factor, max_branch_factor>>(NodeHandleType(LEAF_NODE));
-//      root = alloc.second;
-//
-//      new (&(*(alloc.first))) LeafNode<min_branch_factor, max_branch_factor>(this, tree_node_handle(nullptr), root, 0);
-
+      auto node_type = NodeHandleType(LEAF_NODE);
+      auto alloc = node_allocator_->create_new_tree_node<LeafNode<min_branch_factor, max_branch_factor>>(node_type);
+      root = alloc.second;
+      new (&(*(alloc.first))) LeafNode<min_branch_factor, max_branch_factor>();
       return;
     }
 
@@ -268,7 +262,18 @@ void NIRTreeDisk<min_branch_factor, max_branch_factor>::print() {
       Printer(std::ofstream &printFile): printFile(printFile) {}
 
       void operator()(NIRTreeDisk<min_branch_factor, max_branch_factor> *treeRef, tree_node_handle node_handle) {
-//        printPackedNodes<min_branch_factor, max_branch_factor>(treeRef, node_handle, printFile);
+        if (node_handle.get_type() == BRANCH_NODE) {
+          auto node = treeRef->get_branch_node(node_handle);
+          printFile << node->boundingBox() << std::endl;
+        } else {
+          auto node = treeRef->get_leaf_node(node_handle);
+          printFile << node->boundingBox() << std::endl;
+
+          // Also print points
+          for (size_t i = 0; i < node->cur_offset_; i++) {
+            printFile << node->entries[i] << std::endl;
+          }
+        }
       }
 
       std::ofstream &printFile;

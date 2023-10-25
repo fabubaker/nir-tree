@@ -150,21 +150,54 @@ void generate_tree(std::map<std::string, size_t> &configU, std::map<std::string,
     sequential_insert_tree(
             tree, configU,
             all_points.begin() + cut_off_bulk_load, all_points.end(),
-            NIR_MAX_FANOUT
+            R_STAR_MAX_FANOUT
     );
     std::cout << "Created R*Tree" << std::endl;
 
     std::cout << "Buffer pool stats after sequential inserts: " << std::endl;
     bufferPool->stat();
     bufferPool->resetStat();
+  } else if (configU["tree"] == R_PLUS_TREE) {
+    rplustreedisk::RPlusTreeDisk<R_PLUS_MIN_FANOUT, R_PLUS_MAX_FANOUT> *tree = new rplustreedisk::RPlusTreeDisk<R_PLUS_MIN_FANOUT, R_PLUS_MAX_FANOUT>(
+            configU["buffer_pool_memory"], backing_file
+    );
+    spatialIndex = tree;
+    bufferPool = &(tree->node_allocator_->buffer_pool_);
+
+    std::cout << "Bulk Loading..." << std::endl;
+    std::cout << "Creating tree with " << configU["buffer_pool_memory"] << "bytes" << std::endl;
+    bulk_load_tree(
+            tree, configU, all_points.begin(), all_points.begin() + cut_off_bulk_load,
+            R_PLUS_MAX_FANOUT,
+            (rplustreedisk::LeafNode<R_PLUS_MIN_FANOUT, R_PLUS_MAX_FANOUT> *) nullptr,
+            (rplustreedisk::BranchNode<R_PLUS_MIN_FANOUT, R_PLUS_MAX_FANOUT> *) nullptr
+    );
+
+    std::cout << "Buffer pool stats after bulk-loading: " << std::endl;
+    bufferPool->stat();
+    bufferPool->resetStat();
+
+    // insert the rest of points:
+    std::cout << "Sequential Inserting..." << std::endl;
+    sequential_insert_tree(
+            tree, configU,
+            all_points.begin() + cut_off_bulk_load, all_points.end(),
+            R_PLUS_MAX_FANOUT
+    );
+    std::cout << "Created R+Tree" << std::endl;
+
+    std::cout << "Buffer pool stats after sequential inserts: " << std::endl;
+    bufferPool->stat();
+    bufferPool->resetStat();
   } else {
-    std::cout << "Only Supports NIR_Tree and R_STAR_TREE for gen_tree" << std::endl; 
+    std::cout << "Unsupported tree! Exiting..." << std::endl;
     abort();
   }
 
   // Quick Test: Searching first 5000 points which are bulk loaded 
   unsigned totalSearchesLoaded = 0;
   double totalTimeSearches = 0.0;
+  std::cout << "Searching for bulk-loaded points..." << std::endl;
   for (auto iter = all_points.begin(); iter < all_points.begin() + cut_off_bulk_load; iter++ ) {
     Point p = *iter; 
     std::chrono::high_resolution_clock::time_point begin = std::chrono::high_resolution_clock::now();
@@ -186,8 +219,9 @@ void generate_tree(std::map<std::string, size_t> &configU, std::map<std::string,
   }
 
   // Quick Test: Searching first 5000 points which are inserted
+  std::cout << "Searching for inserted points..." << std::endl;
   unsigned totalSearchesInserted = 0;
-  for (auto iter = all_points.begin()+ cut_off_bulk_load; iter < all_points.end(); iter++ ) {
+  for (auto iter = all_points.begin() + cut_off_bulk_load; iter < all_points.end(); iter++ ) {
     Point p = *iter; 
     std::chrono::high_resolution_clock::time_point begin = std::chrono::high_resolution_clock::now();
     std::vector<Point> out = spatialIndex->search(p);
@@ -208,9 +242,6 @@ void generate_tree(std::map<std::string, size_t> &configU, std::map<std::string,
   }
   
   spatialIndex->stat();
-
-  std::cout << "Total time to search: " << totalTimeSearches << "s" << std::endl;
-  std::cout << "Avg time to search: " << totalTimeSearches / (totalSearchesInserted + totalSearchesLoaded) << "s" << std::endl;
 
   return;
 }
