@@ -13,7 +13,7 @@ void parameters(
           "R_TREE", "R_PLUS_TREE", "R_STAR_TREE",
           "NIR_TREE", "QUAD_TREE", "REVISED_R_STAR_TREE"
   };
-  std::string benchTypes[] = {"UNIFORM", "ZIPF", "GAUSS"};
+  std::string benchTypes[] = {"UNIFORM", "ZIPF", "GAUSS", "DATASET_FROM_FILE"};
   std::string bulkloadAlgs[] = {"STR", "QTS", "TGS"};
 
   std::cout << "### GEN TREE PARAMETERS ###" << std::endl;
@@ -21,7 +21,7 @@ void parameters(
   std::cout << "  benchmark = " << benchTypes[configU["distribution"]] << std::endl;
   std::cout << "  size = " << configU["size"] << std::endl;
   std::cout << "  seed = " << configU["seed"] << std::endl;
-  std::cout << "  buffer pool memory = " << configU["buffer_pool_memory"] << " MB" << std::endl;
+  std::cout << "  buffer pool memory = " << configU["buffer_pool_memory"]/BUFFER_POOL_UNIT << " MB" << std::endl;
   std::cout << "  bulk load percentage = " << configD["bulk_load_pct"] << std::endl;
   std::cout << "  bulk load alg = " << bulkloadAlgs[configU["bulk_load_alg"]] << std::endl;
   std::cout << "  input dataset file name = " << configS["input_dataset_file_name"] << std::endl;
@@ -253,11 +253,11 @@ int main(int argc, char **argv) {
   std::map<std::string, std::string> configS;
 
   configU.emplace("tree", NIR_TREE);
-  configU.emplace("distribution", CALIFORNIA);
+  configU.emplace("distribution", UNIFORM);
   configU.emplace("seed", 0);
   configD.emplace("bulk_load_pct", 1.0);
 
-  while ((option = getopt(argc, argv, "t:m:n:s:p:g:z:B:A:b:i:o")) != -1) {
+  while ((option = getopt(argc, argv, "t:m:n:s:p:g:z:B:A:b:i:o:")) != -1) {
     switch (option) {
       case 't': {
         configU["tree"] = (TreeType)std::stoull(optarg);

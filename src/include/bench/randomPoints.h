@@ -41,18 +41,9 @@ static const unsigned PoisDataSize = 146677454;
 static const unsigned TweetsDataSize = 15598403;
 
 enum BenchType { UNIFORM,
-                 SKEW,
-                 CLUSTER,
-                 CALIFORNIA,
-                 BIOLOGICAL,
-                 FOREST,
-                 CANADA,
-                 GAIA,
-                 MICROSOFTBUILDINGS,
                  ZIPF,
                  GAUSS,
-                 POIS,
-                 TWEETS};
+                 DATASET_FROM_FILE };
 enum TreeType { R_TREE,
                 R_PLUS_TREE,
                 R_STAR_TREE,
@@ -855,36 +846,13 @@ runBench(
             configU["size"], configU["seed"],
             configU["rectanglescount"], configD["length_multiplier"]
     );
-  } else if (configU["distribution"] == SKEW) {
-    configU["rectanglescount"] = BitQuerySize;
-    searchRectangles = generateBitRectangles();
-  } else if (configU["distribution"] == CLUSTER) {
-    configU["rectanglescount"] = HazeQuerySize;
-    searchRectangles = generateHazeRectangles();
-  } else if (configU["distribution"] == CALIFORNIA) {
-    configU["rectanglescount"] = CaliforniaQuerySize;
-    searchRectangles = generateCaliRectangles();
-  } else if (configU["distribution"] == BIOLOGICAL) {
-    configU["rectanglescount"] = BiologicalQuerySize;
-    searchRectangles = generateBioRectangles();
-  } else if (configU["distribution"] == FOREST) {
-    configU["rectanglescount"] = ForestQuerySize;
-    searchRectangles = generateForestRectangles();
-  } else if (configU["distribution"] == CANADA) {
-    configU["rectanglescount"] = CanadaQuerySize;
-    searchRectangles = generateCanadaRectangles();
-  } else if (configU["distribution"] == GAIA) {
-    configU["rectanglescount"] = GaiaQuerySize;
-    searchRectangles = generateGaiaRectangles();
   } else if (configU["distribution"] == ZIPF) {
     searchRectangles = generateZipfRectangles(
       points, configU["size"],
       configU["seed"], configU["rectanglescount"],
       configU["num_elements"]
     );
-  } else if (configU["distribution"] == POIS) {
-    searchRectangles = generateRectanglesFromFile(configS["rects_file"]);
-  } else if (configU["distribution"] == TWEETS) {
+  } else if (configU["distribution"] == DATASET_FROM_FILE) {
     searchRectangles = generateRectanglesFromFile(configS["rects_file"]);
   } else {
     // Do nothing, rectangle searches are disabled for now...
