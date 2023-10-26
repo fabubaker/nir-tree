@@ -71,6 +71,16 @@ void generate_tree(
     while ((next = points.nextPoint())) {
       all_points.push_back(next.value());
     }
+  } else if (configU["distribution"] == DATASET_FROM_FILE) {
+    if (configS["input_dataset_file_name"].empty()) {
+      std::cerr << "Input dataset file not set!" << std::endl;
+      abort();
+    }
+
+    load_dataset(all_points, configS["input_dataset_file_name"]);
+  } else {
+    std::cout << "Unknown distribution!" << std::endl;
+    abort();
   }
 
   // Shuffle dataset
@@ -80,6 +90,7 @@ void generate_tree(
 
   double bulk_load_pct = configD["bulk_load_pct"];
   uint64_t cut_off_bulk_load = std::floor(bulk_load_pct * all_points.size());
+  std::cout << "Total points " << all_points.size() << std::endl;
   std::cout << "Bulk loading " << cut_off_bulk_load << " points." << std::endl;
   std::cout << "Sequentially inserting " << all_points.size() - cut_off_bulk_load << " points." << std::endl;
 
