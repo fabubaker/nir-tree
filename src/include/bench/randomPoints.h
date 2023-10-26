@@ -80,14 +80,6 @@ public:
   static int precision;
 };
 
-class Skew : public Benchmark {
-public:
-  static constexpr size_t size = BitDataSize;
-  static constexpr unsigned querySize = BitQuerySize;
-  static constexpr unsigned dimensions = 2;
-  static constexpr char filePathEnv[] = "";
-};
-
 class Zipf : public Benchmark {
 public:
   static size_t size;
@@ -106,69 +98,7 @@ public:
   static unsigned dimensions;
   static unsigned seed;
 };
-
-class California : public Benchmark {
-public:
-  static constexpr size_t size = CaliforniaDataSize;
-  static constexpr unsigned querySize = CaliforniaQuerySize;
-  static constexpr unsigned dimensions = 2;
-  static constexpr char filePathEnv[] = "";
-};
-
-class Biological : public Benchmark {
-public:
-  static constexpr size_t size = BiologicalDataSize;
-  static constexpr unsigned querySize = BiologicalQuerySize;
-  static constexpr unsigned dimensions = 3;
-  static constexpr char filePathEnv[] = "";
-};
-
-class Forest : public Benchmark {
-public:
-  static constexpr size_t size = ForestDataSize;
-  static constexpr unsigned querySize = ForestQuerySize;
-  static constexpr unsigned dimensions = 5;
-  static constexpr char filePathEnv[] = "";
-};
-
-class Canada : public Benchmark {
-public:
-  static constexpr size_t size = CanadaDataSize;
-  static constexpr unsigned querySize = CanadaQuerySize;
-  static constexpr unsigned dimensions = 2;
-  static constexpr char filePathEnv[] = "";
-};
-
-class Gaia : public Benchmark {
-public:
-  static constexpr size_t size = GaiaDataSize;
-  static constexpr unsigned querySize = GaiaQuerySize;
-  static constexpr unsigned dimensions = 3;
-  static constexpr char filePathEnv[] = "";
-};
-
-class MicrosoftBuildings : public Benchmark {
-public:
-  static constexpr size_t size = MicrosoftBuildingsDataSize;
-  static constexpr unsigned querySize = 0;
-  static constexpr unsigned dimensions = 2;
-  static constexpr char filePathEnv[] = "";
-};
-class Pois : public Benchmark {
-public:
-  static constexpr size_t size = PoisDataSize;
-  static constexpr unsigned querySize = 0;
-  static constexpr unsigned dimensions = 2;
-  static constexpr char filePathEnv[] = "NIR_POIS_PATH";
-};
-class Tweets : public Benchmark {
-public:
-  static constexpr size_t size = TweetsDataSize;
-  static constexpr unsigned querySize = 0;
-  static constexpr unsigned dimensions = 2;
-  static constexpr char filePathEnv[] = "NIR_TWEETS_PATH";
-};
-}; // namespace BenchTypeClasses
+} // namespace BenchTypeClasses
 
 // Mappings from each benchmark type to its tag
 namespace BenchDetail {
@@ -183,33 +113,6 @@ struct getBenchTag<BenchTypeClasses::Zipf> : BenchTag::DistributionGenerated {};
 
 template <>
 struct getBenchTag<BenchTypeClasses::Gauss> : BenchTag::DistributionGenerated {};
-
-template <>
-struct getBenchTag<BenchTypeClasses::Skew> : BenchTag::FileBackedReadAll {};
-
-template <>
-struct getBenchTag<BenchTypeClasses::California> : BenchTag::FileBackedReadAll {};
-
-template <>
-struct getBenchTag<BenchTypeClasses::Biological> : BenchTag::FileBackedReadAll {};
-
-template <>
-struct getBenchTag<BenchTypeClasses::Forest> : BenchTag::FileBackedReadAll {};
-
-template <>
-struct getBenchTag<BenchTypeClasses::Canada> : BenchTag::FileBackedReadAll {};
-
-template <>
-struct getBenchTag<BenchTypeClasses::Gaia> : BenchTag::FileBackedReadAll {};
-
-template <>
-struct getBenchTag<BenchTypeClasses::MicrosoftBuildings> : BenchTag::FileBackedReadChunksAtATime {};
-
-template <>
-struct getBenchTag<BenchTypeClasses::Pois> : BenchTag::FileBackedReadAll {};
-
-template <>
-struct getBenchTag<BenchTypeClasses::Tweets> : BenchTag::FileBackedReadAll {};
 } // namespace BenchDetail
 
 template <typename T>
@@ -813,14 +716,6 @@ static std::vector<Rectangle> generateZipfRectangles(
     Rectangle rectangle(ll, ur);
     rectangles.emplace_back(rectangle);
   }
-
-//  for (auto r: rectangles) {
-//    std::cout << "grep this: " << r << std::endl;
-//  }
-//
-//  for (auto p: points) {
-//    std::cout << "grep this: " << p << std::endl;
-//  }
 
   return rectangles;
 }

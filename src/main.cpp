@@ -36,78 +36,34 @@ void parameters(std::map<std::string, uint64_t> &configU, std::map<std::string, 
 
 void randomPoints(std::map<std::string, uint64_t> &configU, std::map<std::string, double> &configD, std::map<std::string, std::string> &configS) {
   switch (configU["distribution"]) {
-  case UNIFORM: {
-    BenchTypeClasses::Uniform::size = configU["size"];
-    BenchTypeClasses::Uniform::dimensions = dimensions;
-    BenchTypeClasses::Uniform::seed = configU["seed"];
-    if (configU.count("precision")) {
-      BenchTypeClasses::Uniform::precision = configU["precision"];
-      std::cout << "Using precision " << configU["precision"] << std::endl;
-    }
+    case UNIFORM: {
+      BenchTypeClasses::Uniform::size = configU["size"];
+      BenchTypeClasses::Uniform::dimensions = dimensions;
+      BenchTypeClasses::Uniform::seed = configU["seed"];
 
-    PointGenerator<BenchTypeClasses::Uniform> pointGen;
-    runBench(pointGen, configU, configD, configS);
-    break;
-  }
-  case SKEW: {
-    PointGenerator<BenchTypeClasses::Skew> pointGen;
-    runBench(pointGen, configU, configD, configS);
-    break;
-  }
-  case CALIFORNIA: {
-    PointGenerator<BenchTypeClasses::California> pointGen;
-    runBench(pointGen, configU, configD, configS);
-    break;
-  }
-  case BIOLOGICAL: {
-    PointGenerator<BenchTypeClasses::Biological> pointGen;
-    runBench(pointGen, configU, configD, configS);
-    break;
-  }
-  case FOREST: {
-    PointGenerator<BenchTypeClasses::Forest> pointGen;
-    runBench(pointGen, configU, configD, configS);
-    break;
-  }
-  case CANADA: {
-    PointGenerator<BenchTypeClasses::Canada> pointGen;
-    runBench(pointGen, configU, configD, configS);
-    break;
-  }
-  case GAIA: {
-    PointGenerator<BenchTypeClasses::Gaia> pointGen;
-    runBench(pointGen, configU, configD, configS);
-    break;
-  }
-  case MICROSOFTBUILDINGS: {
-    PointGenerator<BenchTypeClasses::MicrosoftBuildings> pointGen;
-    runBench(pointGen, configU, configD, configS);
-    break;
-  }
-  case ZIPF: {
-    BenchTypeClasses::Zipf::size = configU["size"];
-    BenchTypeClasses::Zipf::dimensions = dimensions;
-    BenchTypeClasses::Zipf::seed = configU["seed"];
-    BenchTypeClasses::Zipf::num_elements = configU["num_elements"];
-    BenchTypeClasses::Zipf::alpha = configD["alpha"];
-    PointGenerator<BenchTypeClasses::Zipf> pointGen;
-    runBench(pointGen, configU, configD, configS);
-    break;
-  }
-  case POIS: {
-    PointGenerator<BenchTypeClasses::Pois> pointGen;
-    runBench(pointGen, configU, configD, configS);
-    break;
-  }
-  case TWEETS: {
-    PointGenerator<BenchTypeClasses::Tweets> pointGen;
-    runBench(pointGen, configU, configD, configS);
-    break;
-  }
-  default: {
-    std::cout << "Unknown bench type." << std::endl;
-    exit(1);
-  }
+      if (configU.count("precision")) {
+        BenchTypeClasses::Uniform::precision = configU["precision"];
+        std::cout << "Using precision " << configU["precision"] << std::endl;
+      }
+
+      PointGenerator<BenchTypeClasses::Uniform> pointGen;
+      runBench(pointGen, configU, configD, configS);
+      break;
+    }
+    case ZIPF: {
+      BenchTypeClasses::Zipf::size = configU["size"];
+      BenchTypeClasses::Zipf::dimensions = dimensions;
+      BenchTypeClasses::Zipf::seed = configU["seed"];
+      BenchTypeClasses::Zipf::num_elements = configU["num_elements"];
+      BenchTypeClasses::Zipf::alpha = configD["alpha"];
+      PointGenerator<BenchTypeClasses::Zipf> pointGen;
+      runBench(pointGen, configU, configD, configS);
+      break;
+    }
+    default: {
+      std::cout << "Unknown bench type." << std::endl;
+      exit(1);
+    }
   }
 }
 
