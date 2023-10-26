@@ -257,6 +257,7 @@ int main(int argc, char **argv) {
   int option;
   std::map<std::string, uint64_t> configU;
   std::map<std::string, double> configD;
+  std::map<std::string, std::string> configS;
 
   configU.emplace("tree", NIR_TREE);
   configU.emplace("distribution", CALIFORNIA);
@@ -305,6 +306,10 @@ int main(int argc, char **argv) {
       }
       case 'b': {
         configD["bulk_load_pct"] = std::stod(optarg);
+        break;
+      }
+      case 'o': {
+        configS["output_db_file_name"] = optarg;
         break;
       }
     }
