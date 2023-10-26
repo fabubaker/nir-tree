@@ -51,7 +51,7 @@ if __name__ == "__main__":
     # Load query points from the input file
     query_points = []
     print(f"Loading {n} query points from the input file...")
-    seed_value = 0
+    seed_value = 3792
     random.seed(seed_value)
 
     for i in range(0, n):
