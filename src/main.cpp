@@ -19,7 +19,6 @@ void parameters(std::map<std::string, uint64_t> &configU, std::map<std::string, 
   std::cout << "### BENCHMARK PARAMETERS ###" << std::endl;
   std::cout << "  tree = " << treeTypes[configU["tree"]] << std::endl;
   std::cout << "  benchmark = " << benchTypes[configU["distribution"]] << std::endl;
-  std::cout << "  min/max branches = " << configU["minfanout"] << "/" << configU["maxfanout"] << std::endl;
   std::cout << "  n = " << configU["size"] << std::endl;
   std::cout << "  dimensions = " << dimensions << std::endl;
   std::cout << "  seed = " << configU["seed"] << std::endl;
@@ -119,8 +118,6 @@ int main(int argc, char *argv[]) {
   // Benchmark default configuration
   std::map<std::string, uint64_t> configU;
   configU.emplace("tree", NIR_TREE);
-  configU.emplace("minfanout", 25);
-  configU.emplace("maxfanout", 50);
   configU.emplace("size", 10000);
   configU.emplace("distribution", UNIFORM);
   configU.emplace("seed", 3141);
@@ -141,16 +138,6 @@ int main(int argc, char *argv[]) {
       case 'm': // Benchmark type
       {
         configU["distribution"] = (BenchType) std::stoull(optarg);
-        break;
-      }
-      case 'a': // Minimum fanout
-      {
-        configU["minfanout"] = std::stoull(optarg);
-        break;
-      }
-      case 'b': // Maximum fanout
-      {
-        configU["maxfanout"] = std::stoull(optarg);
         break;
       }
       case 'n': // Benchmark size
