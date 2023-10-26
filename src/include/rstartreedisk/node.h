@@ -2291,6 +2291,7 @@ void stat_node(tree_node_handle root_handle, RStarTreeDisk<min_branch_factor, ma
   // Print out what we have found
   STATEXEC(std::cout << "### Statistics ###" << std::endl);
   // Memory footprint is wrong!
+  STATEXEC(std::cout << "Tree ");
   STATMEM(memoryFootprint);
   //STATHEIGHT(height());
   STATSIZE(totalNodes);
