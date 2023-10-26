@@ -62,7 +62,7 @@ void load_dataset(std::vector<Point> &points, std::string dataset_file_name) {
 
   std::string line;
   while (std::getline(file, line)) {
-    std::ifstream line_stream(line.c_str());
+    std::istringstream line_stream(line.c_str());
     Point p;
 
     for (unsigned d = 0; d < DIM; ++d) {
