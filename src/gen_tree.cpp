@@ -263,48 +263,48 @@ int main(int argc, char **argv) {
 
   while ((option = getopt(argc, argv, "t:m:n:s:p:g:z:B:A:b:")) != -1) {
     switch (option) {
-    case 't': {
-      configU["tree"] = (TreeType)std::stoull(optarg);
-      break;
-    }
-    case 'm': {
-      configU["distribution"] = (BenchType)std::stoull(optarg);
-      break;
-    }
-    case 'n': {
-      configU["size"] = std::stoull(optarg);
-      break;
-    }
-    case 'g': {
-      configU["num_elements"] = std::stoull(optarg);
-      break;
-    }
-    case 'z': {
-      configD["alpha"] = std::stod(optarg);
-      break;
-    }
-    case 's': {
-      configU["seed"] = std::stoull(optarg);
-      break;
-    }
-    case 'p': {
-      configU["precision"] = std::stoull(optarg);
-      break;
-    }
-    case 'B': // buffer pool memory in MB
-    {
-      configU["buffer_pool_memory"] = std::stoull(optarg) * 1000000;
-      break;
-    }
-    case 'A':
-    {
-      configU["bulk_load_alg"] = std::stoull(optarg);
-      break;
-    }
-    case 'b': {
-      configD["bulk_load_pct"] = std::stod(optarg);
-      break;
-    }
+      case 't': {
+        configU["tree"] = (TreeType)std::stoull(optarg);
+        break;
+      }
+      case 'm': {
+        configU["distribution"] = (BenchType)std::stoull(optarg);
+        break;
+      }
+      case 'n': {
+        configU["size"] = std::stoull(optarg);
+        break;
+      }
+      case 'g': {
+        configU["num_elements"] = std::stoull(optarg);
+        break;
+      }
+      case 'z': {
+        configD["alpha"] = std::stod(optarg);
+        break;
+      }
+      case 's': {
+        configU["seed"] = std::stoull(optarg);
+        break;
+      }
+      case 'p': {
+        configU["precision"] = std::stoull(optarg);
+        break;
+      }
+      case 'B': // buffer pool memory in MB
+      {
+        configU["buffer_pool_memory"] = std::stoull(optarg) * 1000000;
+        break;
+      }
+      case 'A':
+      {
+        configU["bulk_load_alg"] = std::stoull(optarg);
+        break;
+      }
+      case 'b': {
+        configD["bulk_load_pct"] = std::stod(optarg);
+        break;
+      }
     }
   }
 
