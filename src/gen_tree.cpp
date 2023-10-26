@@ -82,6 +82,11 @@ void generate_tree(std::map<std::string, size_t> &configU, std::map<std::string,
     }
   }
 
+  // Shuffle dataset
+  std::mt19937 g;
+  g.seed(5619);
+  std::shuffle(all_points.begin(), all_points.end(), g);
+
   double bulk_load_pct = configD["bulk_load_pct"];
 
   uint64_t cut_off_bulk_load = std::floor(bulk_load_pct * all_points.size());
@@ -100,11 +105,6 @@ void generate_tree(std::map<std::string, size_t> &configU, std::map<std::string,
 
     spatialIndex = tree;
     bufferPool = &(tree->node_allocator_->buffer_pool_);
-    
-    // Shuffle dataset
-    std::mt19937 g;
-    g.seed(5619);
-    std::shuffle(all_points.begin(), all_points.end(), g);
 
     // start with bulk load:
     std::cout << "Bulk Loading..." << std::endl;
