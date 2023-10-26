@@ -43,12 +43,7 @@ void generate_tree(
   std::vector<Point> all_points;
   std::optional<Point> next;
 
-  if (configU["distribution"] == CALIFORNIA) {
-    PointGenerator<BenchTypeClasses::California> points;
-    while ((next = points.nextPoint())) {
-      all_points.push_back(next.value());
-    }
-  } else if (configU["distribution"] == UNIFORM) {
+  if (configU["distribution"] == UNIFORM) {
     BenchTypeClasses::Uniform::size = configU["size"];
     BenchTypeClasses::Uniform::dimensions = dimensions;
     BenchTypeClasses::Uniform::seed = configU["seed"];
@@ -77,16 +72,6 @@ void generate_tree(
     BenchTypeClasses::Gauss::seed = configU["seed"];
 
     PointGenerator<BenchTypeClasses::Gauss> points;
-    while ((next = points.nextPoint())) {
-      all_points.push_back(next.value());
-    }
-  } else if (configU["distribution"] == POIS) {
-    PointGenerator<BenchTypeClasses::Pois> points;
-    while ((next = points.nextPoint())) {
-      all_points.push_back(next.value());
-    }
-  } else if (configU["distribution"] == TWEETS) {
-    PointGenerator<BenchTypeClasses::Tweets> points;
     while ((next = points.nextPoint())) {
       all_points.push_back(next.value());
     }
