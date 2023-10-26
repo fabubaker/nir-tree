@@ -6,11 +6,11 @@
 #include <unistd.h>
 
 void parameters(std::map<std::string, uint64_t> &configU, std::map<std::string, double> configD, std::map<std::string, std::string> &configS) {
-  std::string treeTypes[] = {"R_TREE", "R_PLUS_TREE", "R_STAR_TREE", "NIR_TREE", "QUAD_TREE", "REVISED_R_STAR_TREE"};
-  std::string benchTypes[] = {
-      "UNIFORM", "SKEW", "CLUSTER", "CALIFORNIA", "BIOLOGICAL", "FOREST",
-      "CANADA", "GAIA", "MICROSOFTBUILDINGS", "ZIPF", "GAUSS", "POIS",
-      "TWEETS"};
+  std::string treeTypes[] = {
+          "R_TREE", "R_PLUS_TREE", "R_STAR_TREE",
+          "NIR_TREE", "QUAD_TREE", "REVISED_R_STAR_TREE"
+  };
+  std::string benchTypes[] = {"UNIFORM", "ZIPF", "GAUSS"};
 
   std::cout << "### BENCHMARK PARAMETERS ###" << std::endl;
   std::cout << "  tree = " << treeTypes[configU["tree"]] << std::endl;

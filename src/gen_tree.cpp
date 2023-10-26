@@ -13,11 +13,7 @@ void parameters(
           "R_TREE", "R_PLUS_TREE", "R_STAR_TREE",
           "NIR_TREE", "QUAD_TREE", "REVISED_R_STAR_TREE"
   };
-  std::string benchTypes[] = {
-          "UNIFORM", "SKEW", "CLUSTER", "CALIFORNIA", "BIOLOGICAL", "FOREST",
-          "CANADA", "GAIA", "MICROSOFTBUILDINGS", "ZIPF", "GAUSS", "POIS",
-          "TWEETS"};
-
+  std::string benchTypes[] = {"UNIFORM", "ZIPF", "GAUSS"};
   std::string bulkloadAlgs[] = {"STR", "QTS", "TGS"};
 
   std::cout << "### GEN TREE PARAMETERS ###" << std::endl;
@@ -105,7 +101,8 @@ void generate_tree(
     std::cout << "Bulk Loading..." << std::endl;
     std::cout << "Creating tree with " << configU["buffer_pool_memory"] << "bytes" << std::endl;
     bulk_load_tree(
-      tree, configU, all_points.begin(), all_points.begin() + cut_off_bulk_load, NIR_MAX_FANOUT,
+      tree, configU, all_points.begin(), all_points.begin() + cut_off_bulk_load,
+      NIR_MAX_FANOUT,
       (nirtreedisk::LeafNode<NIR_MIN_FANOUT, NIR_MAX_FANOUT> *) nullptr,
       (nirtreedisk::BranchNode<NIR_MIN_FANOUT, NIR_MAX_FANOUT> *) nullptr
     );
