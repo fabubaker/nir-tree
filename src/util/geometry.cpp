@@ -927,6 +927,22 @@ bool IsotheticPolygon::disjoint(const IsotheticPolygon &givenPolygon) const
 	//return true;
 }
 
+bool IsotheticPolygon::selfDisjoint() const
+{
+  for (int i = 0; i < basicRectangles.size(); i++) {
+    for (int j = i + 1; j < basicRectangles.size(); j++) {
+      Rectangle A = basicRectangles[i];
+      Rectangle B = basicRectangles[j];
+
+      if (A.intersectsRectangle(B)) {
+        return false;
+      }
+    }
+  }
+
+  return true;
+}
+
 std::vector<Rectangle> IsotheticPolygon::intersection(const Rectangle &givenRectangle) const
 {
 	std::vector<Rectangle> v;
@@ -1289,12 +1305,12 @@ bool operator!=(const IsotheticPolygon &lhs, const IsotheticPolygon &rhs)
 std::ostream& operator<<(std::ostream &os, const IsotheticPolygon &polygon)
 {
 	os.precision(std::numeric_limits<double>::max_digits10 + 3);
-	os << "|";
+	os << "---" << std::endl;
 	for (auto rectangle : polygon.basicRectangles)
 	{
-		os << rectangle;
+		os << rectangle << std::endl;
 	}
-	os << "|";
+	os << "---" << std::endl;
 	return os;
 }
 

@@ -221,7 +221,8 @@ class IsotheticPolygon
 		bool intersectsPolygon(const IsotheticPolygon &givenPolygon) const;
 		bool borderOnlyIntersectsRectangle(const Rectangle &givenRectangle) const;
 		bool containsPoint(const Point &givenPoint) const ;
-		bool disjoint(const IsotheticPolygon &givenPolygon) const;
+    bool disjoint(const IsotheticPolygon &givenPolygon) const;
+    bool selfDisjoint() const;
 		std::vector<Rectangle> intersection(const Rectangle &givenRectangle) const;
 		void intersection(const IsotheticPolygon &constraintPolygon);
 		void increaseResolution(const Point &givenPoint, const Rectangle &clippingRectangle);
