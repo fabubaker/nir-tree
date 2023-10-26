@@ -5,7 +5,10 @@
 
 #define BUFFER_POOL_UNIT 1000000
 
-void parameters(std::map<std::string, uint64_t> &configU, std::map<std::string, double> &configD) {
+void parameters(
+        std::map<std::string, uint64_t> &configU, std::map<std::string, double> &configD,
+        std::map<std::string, std::string> configS
+) {
   std::string treeTypes[] = {
           "R_TREE", "R_PLUS_TREE", "R_STAR_TREE",
           "NIR_TREE", "QUAD_TREE", "REVISED_R_STAR_TREE"
@@ -25,11 +28,15 @@ void parameters(std::map<std::string, uint64_t> &configU, std::map<std::string, 
   std::cout << "  buffer pool memory = " << configU["buffer_pool_memory"] << " MB" << std::endl;
   std::cout << "  bulk load percentage = " << configD["bulk_load_pct"] << std::endl;
   std::cout << "  bulk load alg = " << bulkloadAlgs[configU["bulk_load_alg"]] << std::endl;
+  std::cout << "  output db file name = " << configS["output_db_file_name"] << std::endl;
   std::cout << "### ### ### ### ### ###" << std::endl << std::endl;
 }
 
-void generate_tree(std::map<std::string, size_t> &configU, std::map<std::string, double> &configD) {
-  std::string backing_file = "bulkloaded_tree.txt";
+void generate_tree(
+        std::map<std::string, size_t> &configU, std::map<std::string, double> &configD,
+        std::map<std::string, std::string> configS
+) {
+  std::string backing_file = configS["output_db_file_name"];
   unlink(backing_file.c_str());
 
   std::vector<Point> all_points;
@@ -102,7 +109,8 @@ void generate_tree(std::map<std::string, size_t> &configU, std::map<std::string,
   if (configU["tree"] == NIR_TREE) {
     nirtreedisk::NIRTreeDisk<NIR_MIN_FANOUT, NIR_MAX_FANOUT> *tree =
             new nirtreedisk::NIRTreeDisk<NIR_MIN_FANOUT, NIR_MAX_FANOUT>(
-            configU["buffer_pool_memory"], backing_file, nirtreedisk::LINE_MINIMIZE_DOWN_SPLITS
+            configU["buffer_pool_memory"], backing_file,
+            nirtreedisk::LINE_MINIMIZE_DOWN_SPLITS
     );
 
     spatialIndex = tree;
@@ -134,7 +142,8 @@ void generate_tree(std::map<std::string, size_t> &configU, std::map<std::string,
     bufferPool->stat();
     bufferPool->resetStat();
   } else if (configU["tree"] == R_STAR_TREE) {
-    rstartreedisk::RStarTreeDisk<R_STAR_MIN_FANOUT, R_STAR_MAX_FANOUT> *tree = new rstartreedisk::RStarTreeDisk<R_STAR_MIN_FANOUT, R_STAR_MAX_FANOUT>(
+    rstartreedisk::RStarTreeDisk<R_STAR_MIN_FANOUT, R_STAR_MAX_FANOUT> *tree =
+            new rstartreedisk::RStarTreeDisk<R_STAR_MIN_FANOUT, R_STAR_MAX_FANOUT>(
             configU["buffer_pool_memory"], backing_file
     );
     spatialIndex = tree;
@@ -143,7 +152,8 @@ void generate_tree(std::map<std::string, size_t> &configU, std::map<std::string,
     std::cout << "Bulk Loading..." << std::endl;
     std::cout << "Creating tree with " << configU["buffer_pool_memory"] << "bytes" << std::endl;
     bulk_load_tree(
-      tree, configU, all_points.begin(), all_points.begin() + cut_off_bulk_load, R_STAR_MAX_FANOUT,
+      tree, configU, all_points.begin(), all_points.begin() + cut_off_bulk_load,
+      R_STAR_MAX_FANOUT,
       (rstartreedisk::LeafNode<R_STAR_MIN_FANOUT, R_STAR_MAX_FANOUT> *) nullptr,
       (rstartreedisk::BranchNode<R_STAR_MIN_FANOUT, R_STAR_MAX_FANOUT> *) nullptr
     );
@@ -165,7 +175,8 @@ void generate_tree(std::map<std::string, size_t> &configU, std::map<std::string,
     bufferPool->stat();
     bufferPool->resetStat();
   } else if (configU["tree"] == R_PLUS_TREE) {
-    rplustreedisk::RPlusTreeDisk<R_PLUS_MIN_FANOUT, R_PLUS_MAX_FANOUT> *tree = new rplustreedisk::RPlusTreeDisk<R_PLUS_MIN_FANOUT, R_PLUS_MAX_FANOUT>(
+    rplustreedisk::RPlusTreeDisk<R_PLUS_MIN_FANOUT, R_PLUS_MAX_FANOUT> *tree =
+            new rplustreedisk::RPlusTreeDisk<R_PLUS_MIN_FANOUT, R_PLUS_MAX_FANOUT>(
             configU["buffer_pool_memory"], backing_file
     );
     spatialIndex = tree;
@@ -316,10 +327,10 @@ int main(int argc, char **argv) {
   }
 
   // Print gen_tree parameters
-  parameters(configU, configD);
+  parameters(configU, configD, configS);
 
   // Generate the tree
-  generate_tree(configU, configD);
+  generate_tree(configU, configD, configS);
 
   return 0;
 }
