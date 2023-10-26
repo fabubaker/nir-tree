@@ -28,6 +28,7 @@ void parameters(
   std::cout << "  buffer pool memory = " << configU["buffer_pool_memory"] << " MB" << std::endl;
   std::cout << "  bulk load percentage = " << configD["bulk_load_pct"] << std::endl;
   std::cout << "  bulk load alg = " << bulkloadAlgs[configU["bulk_load_alg"]] << std::endl;
+  std::cout << "  input dataset file name = " << configS["input_dataset_file_name"] << std::endl;
   std::cout << "  output db file name = " << configS["output_db_file_name"] << std::endl;
   std::cout << "### ### ### ### ### ###" << std::endl << std::endl;
 }
@@ -275,7 +276,7 @@ int main(int argc, char **argv) {
   configU.emplace("seed", 0);
   configD.emplace("bulk_load_pct", 1.0);
 
-  while ((option = getopt(argc, argv, "t:m:n:s:p:g:z:B:A:b:")) != -1) {
+  while ((option = getopt(argc, argv, "t:m:n:s:p:g:z:B:A:b:i:o")) != -1) {
     switch (option) {
       case 't': {
         configU["tree"] = (TreeType)std::stoull(optarg);
@@ -317,6 +318,10 @@ int main(int argc, char **argv) {
       }
       case 'b': {
         configD["bulk_load_pct"] = std::stod(optarg);
+        break;
+      }
+      case 'i': {
+        configS["input_dataset_file_name"] = optarg;
         break;
       }
       case 'o': {
