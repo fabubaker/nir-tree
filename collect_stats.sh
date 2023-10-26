@@ -42,7 +42,7 @@ root_folder="${datasetname}_${tag}_dir"
 load_pct=$(bc -l <<< "scale=2; 1 - $insert_pct / 100")
 load_pct=$(printf "%.1f" "$load_pct")
 echo "Insertion Percentage: "$load_pct
-buffer_mem=4000
+buffer_mem=8000
 load_algo=1
 
 # create folders to keep result
