@@ -2,10 +2,6 @@
 #include <globals/globals.h>
 #include <iostream>
 #include <map>
-#include <nirtree/nirtree.h>
-#include <rplustree/rplustree.h>
-#include <rstartree/rstartree.h>
-#include <rtree/rtree.h>
 #include <string>
 #include <unistd.h>
 
@@ -47,7 +43,8 @@ void randomPoints(std::map<std::string, uint64_t> &configU, std::map<std::string
       }
 
       PointGenerator<BenchTypeClasses::Uniform> pointGen;
-      runBench(pointGen, configU, configD, configS);
+      pointGen.generate();
+      runBench(pointGen.pointBuffer, configU, configD, configS);
       break;
     }
     case ZIPF: {
@@ -56,8 +53,10 @@ void randomPoints(std::map<std::string, uint64_t> &configU, std::map<std::string
       BenchTypeClasses::Zipf::seed = configU["seed"];
       BenchTypeClasses::Zipf::num_elements = configU["num_elements"];
       BenchTypeClasses::Zipf::alpha = configD["alpha"];
+
       PointGenerator<BenchTypeClasses::Zipf> pointGen;
-      runBench(pointGen, configU, configD, configS);
+      pointGen.generate();
+      runBench(pointGen.pointBuffer, configU, configD, configS);
       break;
     }
     default: {
