@@ -98,7 +98,6 @@ void generate_tree(
   std::shuffle(all_points.begin(), all_points.end(), g);
 
   double bulk_load_pct = configD["bulk_load_pct"];
-
   uint64_t cut_off_bulk_load = std::floor(bulk_load_pct * all_points.size());
   std::cout << "Bulk loading " << cut_off_bulk_load << " points." << std::endl;
   std::cout << "Sequentially inserting " << all_points.size() - cut_off_bulk_load << " points." << std::endl;

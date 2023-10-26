@@ -891,12 +891,12 @@ static bool is_already_loaded(std::map<std::string, uint64_t> &configU, Index *s
 }
 
 
-template <typename T>
 static void
-runBench(PointGenerator<T> &pointGen,
-         std::map<std::string, uint64_t> &configU,
-         std::map<std::string, double> &configD,
-         std::map<std::string, std::string> &configS
+runBench(
+   std::vector<Point> points,
+   std::map<std::string, uint64_t> &configU,
+   std::map<std::string, double> &configD,
+   std::map<std::string, std::string> &configS
 ) {
   std::cout << "Running benchmark." << std::endl;
 
@@ -911,9 +911,6 @@ runBench(PointGenerator<T> &pointGen,
   unsigned totalDeletes = 0.0;
   unsigned totalPageHits = 0;
   unsigned totalPageMisses = 0;
-
-  // Populate pointGen buffers with points
-  pointGen.generate();
 
   // Grab a reference to the buffer pool to print out stats
   buffer_pool *bufferPool;
@@ -985,7 +982,7 @@ runBench(PointGenerator<T> &pointGen,
     searchRectangles = generateGaiaRectangles();
   } else if (configU["distribution"] == ZIPF) {
     searchRectangles = generateZipfRectangles(
-      pointGen.pointBuffer, configU["size"],
+      points, configU["size"],
       configU["seed"], configU["rectanglescount"],
       configU["num_elements"]
     );
@@ -1015,25 +1012,25 @@ runBench(PointGenerator<T> &pointGen,
   // Search for points and time their retrieval
   if (configU["num_points_to_search"] > 0) {
     std::cout << "Beginning search." << std::endl;
-    pointGen.reset();
 
     std::mt19937 g;
     g.seed(9812);
+    std::shuffle(points.begin(), points.end(), g);
 
-    std::shuffle(pointGen.pointBuffer.begin(), pointGen.pointBuffer.end(), g);
-
-    while ((nextPoint = pointGen.nextPoint()) /* Intentional = not == */) {
+    for (Point p : points) {
       // Search
-      Point p = nextPoint.value();
       std::chrono::high_resolution_clock::time_point begin = std::chrono::high_resolution_clock::now();
       std::vector<Point> vals = spatialIndex->search(p);
+
       if (vals.empty() || vals[0] != p) {
         std::cout << "could not find " << p << std::endl;
         std::cout << "Total searches: " << totalSearches << std::endl;
         exit(1);
       }
+
       std::chrono::high_resolution_clock::time_point end = std::chrono::high_resolution_clock::now();
       std::chrono::duration<double> delta = std::chrono::duration_cast<std::chrono::duration<double>>(end - begin);
+
       totalTimeSearches += delta.count();
       totalSearches += 1;
       totalPageHits += bufferPool->page_hits;
@@ -1051,13 +1048,12 @@ runBench(PointGenerator<T> &pointGen,
       bufferPool->resetStat();
     }
     std::cout << "Search OK." << std::endl;
-
   } else {
     std::cout << "Test for point search is disabled" << std::endl; 
   }
 
 	// Search for rectangles
-  if (!configS["rects_file"].empty()){
+  if (!configS["rects_file"].empty()) {
     unsigned rangeSearchChecksum = 0;
 
     std::cout << "Beginning search for " << searchRectangles.size() << " rectangles..." << std::endl;
@@ -1103,22 +1099,20 @@ runBench(PointGenerator<T> &pointGen,
   }
 
   // Delete for points and search after deletion
-  if (configU["num_points_to_delete"] > 0){
+  if (configU["num_points_to_delete"] > 0) {
     std::cout << "Beginning delete." << std::endl;
-    pointGen.reset();
 
     std::mt19937 g;
     g.seed(7167);
+    std::shuffle(points.begin(), points.end(), g);
 
-    std::shuffle(pointGen.pointBuffer.begin(), pointGen.pointBuffer.end(), g);
-
-    while ((nextPoint = pointGen.nextPoint()) /* Intentional = not == */) {
+    for (Point p : points) {
       // Remove point
-      Point p = nextPoint.value();
       std::chrono::high_resolution_clock::time_point begin = std::chrono::high_resolution_clock::now();
       spatialIndex->remove(p);
       std::chrono::high_resolution_clock::time_point end = std::chrono::high_resolution_clock::now();
       std::chrono::duration<double> delta = std::chrono::duration_cast<std::chrono::duration<double>>(end - begin);
+
       totalTimeDeletes += delta.count();
       totalDeletes += 1;
       totalPageHits += bufferPool->page_hits;
@@ -1126,12 +1120,14 @@ runBench(PointGenerator<T> &pointGen,
       
       // Search removed point
       std::vector<Point> vals = spatialIndex->search(p);
+
       if (not vals.empty()) {
         std::cout << "Removed Point " << p << " is found" << std::endl;
         std::cout << "Output size is " << vals.size() << std::endl;
         std::cout << "Total successful delete is: " << totalDeletes << std::endl;
         exit(1);
       }
+
       if (totalDeletes >= configU["num_points_to_delete"]) {
         break;
       }
@@ -1144,14 +1140,7 @@ runBench(PointGenerator<T> &pointGen,
   }
   // Gather statistics
 
-#ifdef STAT
-//  spatialIndex->stat();
-//  std::cout << "Statistics OK." << std::endl;
-#endif
-
   // Timing Statistics
-  std::cout << "Total time to insert: " << totalTimeInserts << "s" << std::endl;
-  std::cout << "Avg time to insert: " << totalTimeInserts / (double)totalInserts << "s" << std::endl;
   std::cout << "Total searches: " << totalSearches << std::endl;
   std::cout << "Total time to search: " << totalTimeSearches << "s" << std::endl;
   std::cout << "Avg time to search: " << totalTimeSearches / totalSearches << "s" << std::endl;
@@ -1161,7 +1150,6 @@ runBench(PointGenerator<T> &pointGen,
   std::cout << "Avg time to delete: " << totalTimeDeletes / (double)totalDeletes << "s" << std::endl;
   std::cout << "Total page misses: " << totalPageMisses << std::endl;
   std::cout << "Total page hits + misses: " << totalPageHits + totalPageMisses << std::endl;
-  std::cout << "Total intersections: " << spatialIndex->stats.intersectionCount << std::endl;
 
   // Generate visualization
   if (configU["visualization"]) {
