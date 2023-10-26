@@ -3,6 +3,8 @@
 #include <globals/globals.h>
 #include <string>
 
+#define BUFFER_POOL_UNIT 1000000
+
 void parameters(std::map<std::string, uint64_t> &configU, std::map<std::string, double> &configD) {
   std::string treeTypes[] = {
           "R_TREE", "R_PLUS_TREE", "R_STAR_TREE",
@@ -20,7 +22,7 @@ void parameters(std::map<std::string, uint64_t> &configU, std::map<std::string, 
   std::cout << "  benchmark = " << benchTypes[configU["distribution"]] << std::endl;
   std::cout << "  size = " << configU["size"] << std::endl;
   std::cout << "  seed = " << configU["seed"] << std::endl;
-  std::cout << "  buffer pool memory = " << configU["buffer_pool_memory"] << std::endl;
+  std::cout << "  buffer pool memory = " << configU["buffer_pool_memory"] << " MB" << std::endl;
   std::cout << "  bulk load percentage = " << configD["bulk_load_pct"] << std::endl;
   std::cout << "  bulk load alg = " << bulkloadAlgs[configU["bulk_load_alg"]] << std::endl;
   std::cout << "### ### ### ### ### ###" << std::endl << std::endl;
@@ -293,7 +295,7 @@ int main(int argc, char **argv) {
       }
       case 'B': // buffer pool memory in MB
       {
-        configU["buffer_pool_memory"] = std::stoull(optarg) * 1000000;
+        configU["buffer_pool_memory"] = std::stoull(optarg) * BUFFER_POOL_UNIT;
         break;
       }
       case 'A':
