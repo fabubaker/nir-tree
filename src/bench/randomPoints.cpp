@@ -51,3 +51,28 @@ double BenchTypeClasses::Zipf::invert_prob(unsigned position) {
   double inv_p = (1.0 / p);
   return inv_p;
 }
+
+void load_dataset(std::vector<Point> &points, std::string dataset_file_name) {
+  std::ifstream file(dataset_file_name);
+
+  if (!file.is_open()) {
+    std::cerr << "Error: Couldn't open the file." << std::endl;
+    abort();
+  }
+
+  std::string line;
+  while (std::getline(file, line)) {
+    std::ifstream line_stream(line.c_str());
+    Point p;
+
+    for (unsigned d = 0; d < DIM; ++d) {
+      double dbl;
+      line_stream >> dbl;
+      p[d] = dbl;
+    }
+
+    points.push_back(p);
+  }
+
+  file.close();
+}

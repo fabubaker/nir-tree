@@ -115,6 +115,8 @@ template <>
 struct getBenchTag<BenchTypeClasses::Gauss> : BenchTag::DistributionGenerated {};
 } // namespace BenchDetail
 
+void load_dataset(std::vector<Point> &points, std::string dataset_file_name);
+
 template <typename T>
 class PointGenerator {
 private:
@@ -784,7 +786,6 @@ static bool is_already_loaded(std::map<std::string, uint64_t> &configU, Index *s
 
   return false;
 }
-
 
 static void
 runBench(
