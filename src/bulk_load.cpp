@@ -1120,6 +1120,12 @@ void bulk_load_tree(
     BN *branch_node_type
 ) {
   uint64_t num_els = (end - begin);
+
+  // Nothing to bulk load, return early...
+  if (num_els == 0) {
+    return;
+  }
+
   // Leaf is at 0th level
   uint64_t max_depth = std::ceil(log(num_els) / log(max_branch_factor)) - 1;
 
