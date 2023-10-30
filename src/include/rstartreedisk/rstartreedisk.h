@@ -45,6 +45,7 @@ public:
       auto node_type = NodeHandleType(LEAF_NODE);
       auto alloc = node_allocator_->create_new_tree_node<LeafNode<min_branch_factor, max_branch_factor>>(node_type);
       root = alloc.second;
+      root.set_level(0);
       new (&(*(alloc.first))) LeafNode<min_branch_factor, max_branch_factor>();
       return;
     }
