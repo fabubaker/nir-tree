@@ -6,7 +6,8 @@
 #define BUFFER_POOL_UNIT 1000000
 
 void parameters(
-        std::map<std::string, uint64_t> &configU, std::map<std::string, double> &configD,
+        std::map<std::string, uint64_t> &configU,
+        std::map<std::string, double> &configD,
         std::map<std::string, std::string> configS
 ) {
   std::string treeTypes[] = {
@@ -30,7 +31,8 @@ void parameters(
 }
 
 void generate_tree(
-        std::map<std::string, size_t> &configU, std::map<std::string, double> &configD,
+        std::map<std::string, size_t> &configU,
+        std::map<std::string, double> &configD,
         std::map<std::string, std::string> configS
 ) {
   std::string backing_file = configS["output_db_file_name"];
