@@ -30,7 +30,11 @@ void parameters(std::map<std::string, uint64_t> &configU, std::map<std::string, 
   std::cout << "### ### ### ### ### ###" << std::endl << std::endl;
 }
 
-void randomPoints(std::map<std::string, uint64_t> &configU, std::map<std::string, double> &configD, std::map<std::string, std::string> &configS) {
+void randomPoints(
+        std::map<std::string, uint64_t> &configU,
+        std::map<std::string, double> &configD,
+        std::map<std::string, std::string> &configS
+) {
   std::vector<Point> all_points;
 
   switch (configU["distribution"]) {
