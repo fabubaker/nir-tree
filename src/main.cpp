@@ -59,6 +59,16 @@ void randomPoints(std::map<std::string, uint64_t> &configU, std::map<std::string
       runBench(pointGen.pointBuffer, configU, configD, configS);
       break;
     }
+    case GAUSS: {
+      BenchTypeClasses::Gauss::size = configU["size"];
+      BenchTypeClasses::Gauss::dimensions = dimensions;
+      BenchTypeClasses::Gauss::seed = configU["seed"];
+
+      PointGenerator<BenchTypeClasses::Gauss> pointGen;
+      pointGen.generate();
+      runBench(pointGen.pointBuffer, configU, configD, configS);
+      break;
+    }
     default: {
       std::cout << "Unknown bench type." << std::endl;
       exit(1);
