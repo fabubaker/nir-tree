@@ -34,6 +34,12 @@ void generate_tree(
         std::map<std::string, std::string> configS
 ) {
   std::string backing_file = configS["output_db_file_name"];
+
+  if (backing_file.empty()) {
+    std::cout << "output_db_file_name not set!" << std::endl;
+    exit(1);
+  }
+
   unlink(backing_file.c_str());
 
   std::vector<Point> all_points;
