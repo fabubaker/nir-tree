@@ -10,7 +10,7 @@ void parameters(std::map<std::string, uint64_t> &configU, std::map<std::string, 
           "R_TREE", "R_PLUS_TREE", "R_STAR_TREE",
           "NIR_TREE", "QUAD_TREE", "REVISED_R_STAR_TREE"
   };
-  std::string benchTypes[] = {"UNIFORM", "ZIPF", "GAUSS"};
+  std::string benchTypes[] = {"UNIFORM", "ZIPF", "GAUSS", "DATASET_FROM_FILE"};
 
   std::cout << "### BENCHMARK PARAMETERS ###" << std::endl;
   std::cout << "  tree = " << treeTypes[configU["tree"]] << std::endl;
@@ -31,6 +31,8 @@ void parameters(std::map<std::string, uint64_t> &configU, std::map<std::string, 
 }
 
 void randomPoints(std::map<std::string, uint64_t> &configU, std::map<std::string, double> &configD, std::map<std::string, std::string> &configS) {
+  std::vector<Point> all_points;
+
   switch (configU["distribution"]) {
     case UNIFORM: {
       BenchTypeClasses::Uniform::size = configU["size"];
@@ -68,6 +70,14 @@ void randomPoints(std::map<std::string, uint64_t> &configU, std::map<std::string
       pointGen.generate();
       runBench(pointGen.pointBuffer, configU, configD, configS);
       break;
+    }
+    case DATASET_FROM_FILE: {
+      if (configS["input_dataset_file_name"].empty()) {
+        std::cerr << "Input dataset file not set!" << std::endl;
+        exit(1);
+      }
+
+      load_dataset(all_points, configS["input_dataset_file_name"]);
     }
     default: {
       std::cout << "Unknown bench type." << std::endl;

@@ -80,7 +80,7 @@ void generate_tree(
   } else if (configU["distribution"] == DATASET_FROM_FILE) {
     if (configS["input_dataset_file_name"].empty()) {
       std::cerr << "Input dataset file not set!" << std::endl;
-      abort();
+      exit(1);
     }
 
     load_dataset(all_points, configS["input_dataset_file_name"]);
