@@ -568,53 +568,49 @@ std::pair<tree_node_handle, Rectangle> quad_tree_style_load(
       // Produce a polygon using bbox.
       IsotheticPolygon ip = IsotheticPolygon(bbox);
 
-      // Fragment non-leaf nodes into polygons
-      if (child_handle.get_level() != 0) {
-        // Look at each of the existing children's polygons, and figure out if
-        // any of their polygons overlap with our polygon. If so, we need to
-        // figure out who owns the overlapping region.
-        for (uint64_t i = 0; i < branch_handles.size(); i++) {
-          std::vector<Rectangle> &existing_rects = branch_handles.at(i).first.basicRectangles;
+      // Look at each of the existing children's polygons, and figure out if
+      // any of their polygons overlap with our polygon. If so, we need to
+      // figure out who owns the overlapping region.
+      for (uint64_t i = 0; i < branch_handles.size(); i++) {
+        std::vector<Rectangle> &existing_rects = branch_handles.at(i).first.basicRectangles;
 
-          if (branch_handles.at(i).first.intersectsPolygon(ip)) {
-            // It is imperative that the references here are set carefully.
-            // make_all_rects_disjoint updates the second and fourth arguments,
-            // so these should point to the basicRectangles vector of the polygons.
-            intersection_count += 1;
-            make_all_rects_disjoint(
-                    tree,
-                    existing_rects,              // Existing rects of sibling poly
-                    branch_handles.at(i).second, // Sibling handle
-                    ip.basicRectangles,          // Existing rects of our poly
-                    child_handle                 // our handle
-            );
+        if (branch_handles.at(i).first.intersectsPolygon(ip)) {
+          // It is imperative that the references here are set carefully.
+          // make_all_rects_disjoint updates the second and fourth arguments,
+          // so these should point to the basicRectangles vector of the polygons.
+          intersection_count += 1;
+          make_all_rects_disjoint(
+                  tree,
+                  existing_rects,              // Existing rects of sibling poly
+                  branch_handles.at(i).second, // Sibling handle
+                  ip.basicRectangles,          // Existing rects of our poly
+                  child_handle                 // our handle
+          );
 
-            // These may have been updated. Update the metadata.
-            ip.recomputeBoundingBox();
-            branch_handles.at(i).first.recomputeBoundingBox();
-          }
+          // These may have been updated. Update the metadata.
+          ip.recomputeBoundingBox();
+          branch_handles.at(i).first.recomputeBoundingBox();
         }
       }
 
       branch_handles.push_back(std::make_pair(ip, child_handle));
 
 #ifndef NDEBUG
-      // Double check non-intersection for non-leaf nodes
-      if (child_handle.get_level() != 0) {
-        for (uint64_t i = 0; i < branch_handles.size(); i++) {
-          for (uint64_t j = i + 1; j < branch_handles.size(); j++) {
-            std::vector<Rectangle> &existing_rects_a =
-                    branch_handles.at(i).first.basicRectangles;
-            std::vector<Rectangle> &existing_rects_b =
-                    branch_handles.at(j).first.basicRectangles;
-            for (Rectangle &rect_a: existing_rects_a) {
-              for (Rectangle &rect_b: existing_rects_b) {
-                if (rect_b.intersectsRectangle(rect_a)) {
-                  std::cout << rect_b << " intersects: " << rect_a << std::endl;
-                  std::cout << "Cur y_lo: " << (*(start + x_start + y_start))[1] << std::endl;
-                  std::cout << "Prev y: " << (*(start + x_start + y_start - 1))[1] << std::endl;
-                  abort();
-                }
+      // Double check non-intersection - Really inefficient, but I don't see a better way
+      // of doing this.
+      for (uint64_t i = 0; i < branch_handles.size(); i++) {
+        for (uint64_t j = i + 1; j < branch_handles.size(); j++) {
+          std::vector<Rectangle> &existing_rects_a =
+                  branch_handles.at(i).first.basicRectangles;
+          std::vector<Rectangle> &existing_rects_b =
+                  branch_handles.at(j).first.basicRectangles;
+          for (Rectangle &rect_a : existing_rects_a) {
+            for (Rectangle &rect_b : existing_rects_b) {
+              if (rect_b.intersectsRectangle(rect_a)) {
+                std::cout << rect_b << " intersects: " << rect_a << std::endl;
+                std::cout << "Cur y_lo: " << (*(start + x_start + y_start))[1] << std::endl;
+                std::cout << "Prev y: " << (*(start + x_start + y_start - 1))[1] << std::endl;
+                abort();
               }
             }
           }
