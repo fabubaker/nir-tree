@@ -270,7 +270,7 @@ int main(int argc, char **argv) {
   std::map<std::string, std::string> configS;
 
   configU.emplace("tree", NIR_TREE);
-  configU.emplace("distribution", UNIFORM);
+  configU.emplace("distribution", DATASET_FROM_FILE);
   configU.emplace("seed", 0);
   configD.emplace("bulk_load_pct", 1.0);
 

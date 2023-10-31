@@ -98,7 +98,7 @@ int main(int argc, char *argv[]) {
   std::map<std::string, uint64_t> configU;
   configU.emplace("tree", NIR_TREE);
   configU.emplace("size", 10000);
-  configU.emplace("distribution", UNIFORM);
+  configU.emplace("distribution", DATASET_FROM_FILE);
   configU.emplace("seed", 3141);
   configU.emplace("rectanglescount", 5000);
   configU.emplace("visualization", false);
