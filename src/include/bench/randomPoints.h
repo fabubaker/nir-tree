@@ -527,10 +527,6 @@ runBench(
     std::cout << "Tree is loaded. Running benchmarks..." << std::endl;
   }
 
-  // Validate tree
-  //spatialIndex->validate();
-  //std::cout << "Validation OK." << std::endl;
-
   // Search for points and time their retrieval
   if (configU["num_points_to_search"] > 0) {
     std::cout << "Beginning search." << std::endl;
