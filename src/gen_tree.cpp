@@ -2,21 +2,22 @@
 #include <vector>
 #include <globals/globals.h>
 #include <string>
+#include <filesystem>
 
 #define BUFFER_POOL_UNIT 1000000
+
+std::string treeTypes[] = {
+        "R_TREE", "R_PLUS_TREE", "R_STAR_TREE",
+        "NIR_TREE", "QUAD_TREE", "REVISED_R_STAR_TREE"
+};
+std::string benchTypes[] = {"UNIFORM", "ZIPF", "GAUSS", "DATASET_FROM_FILE"};
+std::string bulkloadAlgs[] = {"STR", "QTS", "TGS"};
 
 void parameters(
         std::map<std::string, uint64_t> &configU,
         std::map<std::string, double> &configD,
         std::map<std::string, std::string> configS
 ) {
-  std::string treeTypes[] = {
-          "R_TREE", "R_PLUS_TREE", "R_STAR_TREE",
-          "NIR_TREE", "QUAD_TREE", "REVISED_R_STAR_TREE"
-  };
-  std::string benchTypes[] = {"UNIFORM", "ZIPF", "GAUSS", "DATASET_FROM_FILE"};
-  std::string bulkloadAlgs[] = {"STR", "QTS", "TGS"};
-
   std::cout << "### GEN TREE PARAMETERS ###" << std::endl;
   std::cout << "  tree = " << treeTypes[configU["tree"]] << std::endl;
   std::cout << "  benchmark = " << benchTypes[configU["distribution"]] << std::endl;
@@ -36,11 +37,6 @@ void generate_tree(
         std::map<std::string, std::string> configS
 ) {
   std::string backing_file = configS["output_db_file_name"];
-
-  if (backing_file.empty()) {
-    std::cout << "output_db_file_name not set!" << std::endl;
-    exit(1);
-  }
 
   unlink(backing_file.c_str());
 
@@ -328,6 +324,20 @@ int main(int argc, char **argv) {
         configS["output_db_file_name"] = optarg;
         break;
       }
+    }
+  }
+
+  if (configS["output_db_file_name"].empty()) {
+    if (!configS["input_dataset_file_name"].empty()) {
+      std::string dataset = configS["input_dataset_file_name"];
+      std::string tree = treeTypes[configU["tree"]];
+      std::filesystem::path dataset_path(dataset);
+      std::string dataset_name = dataset_path.stem().string();
+
+      configS["output_db_file_name"] = "./" + dataset_name + "_" + tree;
+    } else {
+      std::cout << "output_db_file_name not set!" << std::endl;
+      exit(1);
     }
   }
 
