@@ -54,7 +54,11 @@ void randomPoints(
       }
 
       PointGenerator<BenchTypeClasses::Uniform> pointGen;
-      pointGen.generate();
+
+      if (configU["num_points_to_search"] > 0) {
+        pointGen.generate();
+      }
+
       runBench(pointGen.pointBuffer, configU, configD, configS);
       break;
     }
@@ -66,7 +70,11 @@ void randomPoints(
       BenchTypeClasses::Zipf::alpha = configD["alpha"];
 
       PointGenerator<BenchTypeClasses::Zipf> pointGen;
-      pointGen.generate();
+
+      if (configU["num_points_to_search"] > 0) {
+        pointGen.generate();
+      }
+
       runBench(pointGen.pointBuffer, configU, configD, configS);
       break;
     }
@@ -76,7 +84,11 @@ void randomPoints(
       BenchTypeClasses::Gauss::seed = configU["seed"];
 
       PointGenerator<BenchTypeClasses::Gauss> pointGen;
-      pointGen.generate();
+
+      if (configU["num_points_to_search"] > 0) {
+        pointGen.generate();
+      }
+
       runBench(pointGen.pointBuffer, configU, configD, configS);
       break;
     }
@@ -86,7 +98,10 @@ void randomPoints(
         exit(1);
       }
 
-      load_dataset(all_points, configS["input_dataset_file_name"]);
+      if (configU["num_points_to_search"] > 0) {
+        load_dataset(all_points, configS["input_dataset_file_name"]);
+      }
+
       runBench(all_points, configU, configD, configS);
       break;
     }
