@@ -29,8 +29,9 @@ void parameters(
   std::cout << "  points per rectangle = " << configU["points_per_rectangle"] << std::endl;
   std::cout << "  points to search = " << configU["num_points_to_search"] << std::endl;
   std::cout << "  points to delete = " << configU["num_points_to_delete"] << std::endl;
-  std::cout << "  db file name = " << configS["db_file_name"] << std::endl;
   std::cout << "  rectangles file name = " << configS["rects_file"] << std::endl;
+  std::cout << "  input dataset file name = " << configS["input_dataset_file_name"] << std::endl;
+  std::cout << "  db file name = " << configS["db_file_name"] << std::endl;
   std::cout << "### ### ### ### ### ###" << std::endl << std::endl;
 }
 
@@ -86,6 +87,8 @@ void randomPoints(
       }
 
       load_dataset(all_points, configS["input_dataset_file_name"]);
+      runBench(all_points, configU, configD, configS);
+      break;
     }
     default: {
       std::cout << "Unknown bench type." << std::endl;
@@ -111,7 +114,7 @@ int main(int argc, char *argv[]) {
   std::map<std::string, double> configD;
   std::map<std::string, std::string> configS;
 
-  while ((option = getopt(argc, argv, "t:m:a:b:n:s:r:v:z:g:p:B:P:S:f:L:A:D:R:")) != -1) {
+  while ((option = getopt(argc, argv, "t:m:a:b:n:s:r:v:z:g:p:B:P:S:f:L:A:D:R:i:")) != -1) {
     switch (option) {
       case 't': // Tree
       {
@@ -198,19 +201,22 @@ int main(int argc, char *argv[]) {
         configU["bulk_load_alg"] = std::stoull(optarg);
         break;
       }
-
-    default: {
-      std::cout << "Bad option. Usage:" << std::endl;
-      std::cout << "    -t  Specifies tree type {0 = R-Tree, 1 = R+-Tree, 2 = R*-Tree, 3 = NIR-Tree, 4 = Quad-Tree, 5 = RR*-Tree}" << std::endl;
-      std::cout << "    -m  Specifies benchmark type {0 = Uniform, 1 = Skew, 2 = Clustered, 3 = California, 4 = Biological, 5 = Forest, 6 = Canada, 7 = Gaia, 8 = MSBuildings}" << std::endl;
-      std::cout << "    -a  Minimum fanout for nodes in the selected tree" << std::endl;
-      std::cout << "    -b  Maximum fanout for nodes in the selected tree" << std::endl;
-      std::cout << "    -n  Specified benchmark size if size is not constant for benchmark type" << std::endl;
-      std::cout << "    -s  Specifies benchmark seed if benchmark type is randomly generated" << std::endl;
-      std::cout << "    -r  Specifies number of rectangles to search in benchmark if size is not constant for benchmark type" << std::endl;
-      std::cout << "    -v  Turns visualization on or off for first two dimensions of the selected tree" << std::endl;
-      return 1;
-    }
+      case 'i': {
+        configS["input_dataset_file_name"] = optarg;
+        break;
+      }
+      default: {
+        std::cout << "Bad option. Usage:" << std::endl;
+        std::cout << "    -t  Specifies tree type {0 = R-Tree, 1 = R+-Tree, 2 = R*-Tree, 3 = NIR-Tree, 4 = Quad-Tree, 5 = RR*-Tree}" << std::endl;
+        std::cout << "    -m  Specifies benchmark type {0 = Uniform, 1 = Skew, 2 = Clustered, 3 = California, 4 = Biological, 5 = Forest, 6 = Canada, 7 = Gaia, 8 = MSBuildings}" << std::endl;
+        std::cout << "    -a  Minimum fanout for nodes in the selected tree" << std::endl;
+        std::cout << "    -b  Maximum fanout for nodes in the selected tree" << std::endl;
+        std::cout << "    -n  Specified benchmark size if size is not constant for benchmark type" << std::endl;
+        std::cout << "    -s  Specifies benchmark seed if benchmark type is randomly generated" << std::endl;
+        std::cout << "    -r  Specifies number of rectangles to search in benchmark if size is not constant for benchmark type" << std::endl;
+        std::cout << "    -v  Turns visualization on or off for first two dimensions of the selected tree" << std::endl;
+        return 1;
+      }
     }
   }
 
