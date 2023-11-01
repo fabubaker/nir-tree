@@ -1473,16 +1473,7 @@ void point_search_branch_node(BranchNode<min_branch_factor, max_branch_factor> &
 
     intersection_count++;
     if (b.boundingBox.containsPoint(requestedPoint)) {
-      auto itr = treeRef->polygons.find(b.child);
-
-      // This branch has no polygons, just use info from native MBR
-      if (itr == treeRef->polygons.end()) {
-        context.push(b.child);
-        matching_branch_counter++;
-        break;
-      }
-
-      IsotheticPolygon polygon = itr->second;
+      auto polygon = find_polygon(treeRef, b.child);
 
       if (polygon.containsPointWithMetrics(requestedPoint, intersection_count)) {
         context.push(b.child);
@@ -1598,15 +1589,7 @@ void rectangle_search_branch_node(BranchNode<min_branch_factor, max_branch_facto
 
     intersection_count++;
     if (b.boundingBox.intersectsRectangle(requestedRectangle)) {
-      auto itr = treeRef->polygons.find(b.child);
-
-      // This branch has no polygons, just use info from native MBR
-      if (itr == treeRef->polygons.end()) {
-        context.push(b.child);
-        continue;
-      }
-
-      IsotheticPolygon polygon = itr->second;
+      auto polygon = find_polygon(treeRef, b.child);
 
       if (polygon.intersectsRectangleWithMetrics(requestedRectangle, intersection_count)) {
         context.push(b.child);
