@@ -334,7 +334,7 @@ int main(int argc, char **argv) {
       std::filesystem::path dataset_path(dataset);
       std::string dataset_name = dataset_path.stem().string();
 
-      configS["output_db_file_name"] = "./" + dataset_name + "_" + tree;
+      configS["output_db_file_name"] = "./" + dataset_name + "_" + tree + ".db";
     } else {
       std::cout << "output_db_file_name not set!" << std::endl;
       exit(1);
