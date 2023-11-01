@@ -4,18 +4,19 @@
 #include <map>
 #include <string>
 #include <unistd.h>
+#include <filesystem>
+
+std::string treeTypes[] = {
+        "R_TREE", "R_PLUS_TREE", "R_STAR_TREE",
+        "NIR_TREE", "QUAD_TREE", "REVISED_R_STAR_TREE"
+};
+std::string benchTypes[] = {"UNIFORM", "ZIPF", "GAUSS", "DATASET_FROM_FILE"};
 
 void parameters(
         std::map<std::string, uint64_t> &configU,
         std::map<std::string, double> configD,
         std::map<std::string, std::string> &configS
 ) {
-  std::string treeTypes[] = {
-          "R_TREE", "R_PLUS_TREE", "R_STAR_TREE",
-          "NIR_TREE", "QUAD_TREE", "REVISED_R_STAR_TREE"
-  };
-  std::string benchTypes[] = {"UNIFORM", "ZIPF", "GAUSS", "DATASET_FROM_FILE"};
-
   std::cout << "### BENCHMARK PARAMETERS ###" << std::endl;
   std::cout << "  tree = " << treeTypes[configU["tree"]] << std::endl;
   std::cout << "  benchmark = " << benchTypes[configU["distribution"]] << std::endl;
@@ -236,8 +237,17 @@ int main(int argc, char *argv[]) {
   }
 
   if (configS["db_file_name"].empty()) {
-    std::cout << "Need to specify database file name using -f! Exiting..." << std::endl;
-    exit(1);
+    if (!configS["input_dataset_file_name"].empty()) {
+      std::string dataset = configS["input_dataset_file_name"];
+      std::string tree = treeTypes[configU["tree"]];
+      std::filesystem::path dataset_path(dataset);
+      std::string dataset_name = dataset_path.stem().string();
+
+      configS["db_file_name"] = "./" + dataset_name + "_" + tree + ".db";
+    } else {
+      std::cout << "db_file_name not set!" << std::endl;
+      exit(1);
+    }
   }
 
   // Print test parameters
