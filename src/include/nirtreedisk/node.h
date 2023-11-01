@@ -1473,7 +1473,7 @@ void point_search_branch_node(BranchNode<min_branch_factor, max_branch_factor> &
 
     intersection_count++;
     if (b.boundingBox.containsPoint(requestedPoint)) {
-      auto polygon = find_polygon(treeRef, b.child);
+      auto polygon = find_polygon(treeRef, b);
 
       if (polygon.containsPointWithMetrics(requestedPoint, intersection_count)) {
         context.push(b.child);
@@ -1589,7 +1589,7 @@ void rectangle_search_branch_node(BranchNode<min_branch_factor, max_branch_facto
 
     intersection_count++;
     if (b.boundingBox.intersectsRectangle(requestedRectangle)) {
-      auto polygon = find_polygon(treeRef, b.child);
+      auto polygon = find_polygon(treeRef, b);
 
       if (polygon.intersectsRectangleWithMetrics(requestedRectangle, intersection_count)) {
         context.push(b.child);
