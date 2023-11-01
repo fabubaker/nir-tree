@@ -58,10 +58,6 @@ mkdir "${root_folder}/bulkloaded_tree_nir/"
 mkdir "${root_folder}/bulkloaded_tree_rstar/"
 mkdir "${root_folder}/bulkloaded_tree_rplus/"
 
-
-
-
-
 # generate nir tree
 ./bin/gen_tree -t 3 -m $datasetindex -B $buffer_mem -A $load_algo -b $load_pct >  "$root_folder/nir_load.ot" 
 mv bulkloaded_tree.* "${root_folder}/bulkloaded_tree_nir/"
@@ -176,7 +172,3 @@ echo "$nir_polygon_size_mb" >> output.csv
 echo "$nir_polygon_size_gb" >> output.csv
 
 echo "finish generating $root_folder/output.csv"
-
-
-
-
