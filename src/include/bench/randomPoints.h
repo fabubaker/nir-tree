@@ -559,10 +559,6 @@ runBench(
         bufferPool->stat();
       }
 
-      if (totalSearches >= configU["num_points_to_search"]) {
-        break;
-      }
-
       bufferPool->resetStat();
     }
     std::cout << "Search OK." << std::endl;
