@@ -46,7 +46,7 @@ if __name__ == "__main__":
 
     # Create a NearestNeighbors model
     print("Creating a NearestNeighbors model...")
-    nbrs = NearestNeighbors(n_neighbors=k, algorithm='ball_tree').fit(points)
+    nbrs = NearestNeighbors(n_neighbors=k, algorithm='kd_tree').fit(points)
 
     # Load query points from the input file
     query_points = []
