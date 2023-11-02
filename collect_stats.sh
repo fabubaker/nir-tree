@@ -16,17 +16,17 @@ results_file="${root_folder}/${dataset_name}_${tag}_results.csv"
 
 mkdir -p "${root_folder}"
 
-# generate NIR tree
-./bin/gen_tree -t 3 -i $dataset_path -B $buffer_mem -A $load_algo -b $bulk_load_pct | tee "$root_folder/nir_load.ot"
-echo "Finished generating NIR tree..."
+# generate R+ tree
+./bin/gen_tree -t 1 -i $dataset_path -B $buffer_mem -A $load_algo -b $bulk_load_pct | tee "$root_folder/rplus_load.ot"
+echo "Finished generating R+ tree..."
 
 # generate R* tree
 ./bin/gen_tree -t 2 -i $dataset_path -B $buffer_mem -A $load_algo -b $bulk_load_pct | tee "$root_folder/rstar_load.ot"
 echo "Finished generating R* tree..."
 
-# generate R+ tree
-./bin/gen_tree -t 1 -i $dataset_path -B $buffer_mem -A $load_algo -b $bulk_load_pct | tee "$root_folder/rplus_load.ot"
-echo "Finished generating R+ tree..."
+# generate NIR tree
+./bin/gen_tree -t 3 -i $dataset_path -B $buffer_mem -A $load_algo -b $bulk_load_pct | tee "$root_folder/nir_load.ot"
+echo "Finished generating NIR tree..."
 
 # Run benchmarks
 ./run_bench.sh 1 $dataset_path $tag
