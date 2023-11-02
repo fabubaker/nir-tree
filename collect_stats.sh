@@ -28,33 +28,18 @@ echo "Finished generating R* tree..."
 ./bin/gen_tree -t 1 -i $dataset_path -B $buffer_mem -A $load_algo -b $bulk_load_pct | tee "$root_folder/rplus_load.ot"
 echo "Finished generating R+ tree..."
 
-# run benchmark
-# nir tree
-./bin/main -t 3 -i $dataset_path -B $buffer_mem -S 1 | tee $root_folder/nir_point_search.ot
-./bin/main -t 3 -i $dataset_path -B $buffer_mem -S 0 -R ./rects/${dataset_name}_rect_10.tst | tee $root_folder/nir_rec_search_10.ot
-./bin/main -t 3 -i $dataset_path -B $buffer_mem -S 0 -R ./rects/${dataset_name}_rect_100.tst | tee $root_folder/nir_rec_search_100.ot
-./bin/main -t 3 -i $dataset_path -B $buffer_mem -S 0 -R ./rects/${dataset_name}_rect_1000.tst | tee $root_folder/nir_rec_search_1000.ot
-./bin/main -t 3 -i $dataset_path -B $buffer_mem -S 0 -R ./rects/${dataset_name}_rect_10000.tst | tee $root_folder/nir_rec_search_10000.ot
-echo "Finished running benchmarks for NIR tree..."
-
-# R* tree
-./bin/main -t 2 -i $dataset_path -B $buffer_mem -S 1 -r 0 | tee $root_folder/rstar_point_search.ot
-./bin/main -t 2 -i $dataset_path -B $buffer_mem -S 0 -R ./rects/${dataset_name}_rect_10.tst | tee $root_folder/rstar_rec_search_10.ot
-./bin/main -t 2 -i $dataset_path -B $buffer_mem -S 0 -R ./rects/${dataset_name}_rect_100.tst | tee $root_folder/rstar_rec_search_100.ot
-./bin/main -t 2 -i $dataset_path -B $buffer_mem -S 0 -R ./rects/${dataset_name}_rect_1000.tst | tee $root_folder/rstar_rec_search_1000.ot
-./bin/main -t 2 -i $dataset_path -B $buffer_mem -S 0 -R ./rects/${dataset_name}_rect_10000.tst | tee $root_folder/rstar_rec_search_10000.ot
-echo "Finished running benchmarks for R* tree..."
-
-# R+ tree
-./bin/main -t 1 -i $dataset_path -B $buffer_mem -S 1 -r 0 | tee $root_folder/rplus_point_search.ot
-./bin/main -t 1 -i $dataset_path -B $buffer_mem -S 0 -R ./rects/${dataset_name}_rect_10.tst | tee $root_folder/rplus_rec_search_10.ot
-./bin/main -t 1 -i $dataset_path -B $buffer_mem -S 0 -R ./rects/${dataset_name}_rect_100.tst | tee $root_folder/rplus_rec_search_100.ot
-./bin/main -t 1 -i $dataset_path -B $buffer_mem -S 0 -R ./rects/${dataset_name}_rect_1000.tst | tee $root_folder/rplus_rec_search_1000.ot
-./bin/main -t 1 -i $dataset_path -B $buffer_mem -S 0 -R ./rects/${dataset_name}_rect_10000.tst | tee $root_folder/rplus_rec_search_10000.ot
+# Run benchmarks
+./run_bench.sh 1 $dataset_path $tag
 echo "Finished running benchmarks for R+ tree..."
 
-# generate csv file for result
-touch $results_file
+./run_bench.sh 2 $dataset_path $tag
+echo "Finished running benchmarks for R* tree..."
+
+./run_bench.sh 3 $dataset_path $tag
+echo "Finished running benchmarks for NIR tree..."
+
+# Remove any existing result files
+rm $results_file
 
 echo "Search Type, NIR, R*, R+" >> $results_file
 
