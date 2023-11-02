@@ -1,30 +1,22 @@
 #!/bin/bash
-#Usage: 
-#./collect_stats.sh data/tweets.csv exp 0.3
+# Usage:
+# ./collect_stats.sh data/tweets.csv exp 0.3
 # it will run benchmark on tweets with 30% bulk-load and a tag name "exp"
+
 dataset_path="$1"
 tag="$2"
 bulk_load_pct="$3"
 
-dataset_name=$(echo $dataset_path | awk -F/ '{gsub(/\..*$/,"",$NF); print $NF}')
-
-root_folder="${dataset_name}_${tag}_dir"
-
 buffer_mem=8000
 load_algo=1
 
-# create folders to keep result
-if [ -e "${root_folder}" ]; then
-    echo "${root_folder} already exists."
-    echo "Remove the folder or change to another tag name!"
-    exit 1
-else
-    mkdir "${root_folder}"
-fi
+dataset_name=$(echo $dataset_path | awk -F/ '{gsub(/\..*$/,"",$NF); print $NF}')
+root_folder="${dataset_name}_${tag}_dir"
 
-mkdir "${root_folder}/bulkloaded_tree_nir/"
-mkdir "${root_folder}/bulkloaded_tree_rstar/"
-mkdir "${root_folder}/bulkloaded_tree_rplus/"
+mkdir -p "${root_folder}"
+mkdir -p "${root_folder}/bulkloaded_tree_nir/"
+mkdir -p "${root_folder}/bulkloaded_tree_rstar/"
+mkdir -p "${root_folder}/bulkloaded_tree_rplus/"
 
 # generate NIR tree
 ./bin/gen_tree -t 3 -i $dataset_path -B $buffer_mem -A $load_algo -b $bulk_load_pct | tee "$root_folder/nir_load.ot"
