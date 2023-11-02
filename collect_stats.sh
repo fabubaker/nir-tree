@@ -122,12 +122,9 @@ echo "$nir_tree_size_gb, $rstar_tree_size_gb, $rplus_tree_size_gb" >> output.csv
 
 # polygon overheads (KB)
 # polygon overheads (MB)
-# polygon overheads (GB)
 nir_polygon_size_kb=$(grep "Polygon with Encoding Memory Usage:" nir_load.ot | cut -d":" -f2 | cut -d"K" -f1 | cut -c2-)
 nir_polygon_size_mb=$(grep "Polygon with Encoding Memory Usage:" nir_load.ot | cut -d"," -f2 | cut -d"M" -f1 | cut -c2-)
-nir_polygon_size_mb=$(grep "Polygon with Encoding Memory Usage:" nir_load.ot | cut -d"," -f3 | cut -d"G" -f1 | cut -c2-)
 echo "$nir_polygon_size_kb" >> output.csv
 echo "$nir_polygon_size_mb" >> output.csv
-echo "$nir_polygon_size_gb" >> output.csv
 
 echo "finish generating $root_folder/output.csv"
