@@ -1,9 +1,10 @@
 #!/bin/bash
+set -e
 # Usage:
 # ./collect_stats.sh data/tweets.csv exp 0.3
 # it will run benchmark on tweets with 30% bulk-load and a tag name "exp"
 
-dataset_path="$1"
+dataset_path=$(realpath $1)
 tag="$2"
 bulk_load_pct="$3"
 
@@ -12,34 +13,39 @@ load_algo=1
 
 dataset_name=$(echo $dataset_path | awk -F/ '{gsub(/\..*$/,"",$NF); print $NF}')
 root_folder="${dataset_name}_${tag}_dir"
-results_file="${root_folder}/${dataset_name}_${tag}_results.csv"
+results_file="${dataset_name}_${tag}_results.csv"
+rects_dir=$(realpath rects)
 
 mkdir -p "${root_folder}"
 
+echo "[$0] Changing directory to ${root_folder}"
+echo ""
+cd $root_folder
+
 # generate R+ tree
-./bin/gen_tree -t 1 -i $dataset_path -B $buffer_mem -A $load_algo -b $bulk_load_pct | tee "$root_folder/rplus_load.ot"
+../bin/gen_tree -t 1 -i $dataset_path -B $buffer_mem -A $load_algo -b $bulk_load_pct | tee "rplus_load.ot"
 echo "Finished generating R+ tree..."
 
 # generate R* tree
-./bin/gen_tree -t 2 -i $dataset_path -B $buffer_mem -A $load_algo -b $bulk_load_pct | tee "$root_folder/rstar_load.ot"
+../bin/gen_tree -t 2 -i $dataset_path -B $buffer_mem -A $load_algo -b $bulk_load_pct | tee "rstar_load.ot"
 echo "Finished generating R* tree..."
 
 # generate NIR tree
-./bin/gen_tree -t 3 -i $dataset_path -B $buffer_mem -A $load_algo -b $bulk_load_pct | tee "$root_folder/nir_load.ot"
+../bin/gen_tree -t 3 -i $dataset_path -B $buffer_mem -A $load_algo -b $bulk_load_pct | tee "nir_load.ot"
 echo "Finished generating NIR tree..."
 
 # Run benchmarks
-./run_bench.sh 1 $dataset_path $tag
+../run_bench.sh 1 $dataset_path $rects_dir $tag
 echo "Finished running benchmarks for R+ tree..."
 
-./run_bench.sh 2 $dataset_path $tag
+../run_bench.sh 2 $dataset_path $rects_dir $tag
 echo "Finished running benchmarks for R* tree..."
 
-./run_bench.sh 3 $dataset_path $tag
+../run_bench.sh 3 $dataset_path $rects_dir $tag
 echo "Finished running benchmarks for NIR tree..."
 
 # Remove any existing result files
-rm $results_file
+rm -f $results_file
 
 echo "Search Type, NIR, R*, R+" >> $results_file
 
@@ -106,4 +112,4 @@ nir_polygon_size_mb=$(grep "Polygon with Encoding Memory Usage:" nir_load.ot | c
 echo "NIR Poly Size KB, $nir_polygon_size_kb" >> $results_file
 echo "NIR Poly Size MB, $nir_polygon_size_mb" >> $results_file
 
-echo "Finished generating $results_file!"
+echo "Finished generating $results_file !"
