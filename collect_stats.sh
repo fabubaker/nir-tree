@@ -8,7 +8,9 @@ dataset_path=$(realpath $1)
 tag="$2"
 bulk_load_pct="$3"
 
+# Buffer Pool Memory is 8000 MB
 buffer_mem=8000
+# Bulk Loading Algorithm is QTS
 load_algo=1
 
 dataset_name=$(echo $dataset_path | awk -F/ '{gsub(/\..*$/,"",$NF); print $NF}')
