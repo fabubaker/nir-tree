@@ -3260,7 +3260,7 @@ void stat_node(tree_node_handle root_handle, NIRTreeDisk<min_branch_factor, max_
   // Print polygon size
   STATEXEC(std::cout << "Polygon ");
   STATMEM(memoryPolygons);
-  STATEXEC(std::cout << "Polygon with encoding");
+  STATEXEC(std::cout << "Polygon with Encoding ");
   STATMEM(memoryPolygonsWithEncoding);
 
   // Print polygon size as percent of tree size

@@ -1435,6 +1435,7 @@ namespace rplustreedisk {
       // Print out what we have found
       STATEXEC(std::cout << "### Statistics ###" << std::endl);
       // Memory footprint is wrong!
+      STATEXEC(std::cout << "Tree ");
       STATMEM(memoryFootprint);
       //STATHEIGHT(height());
       STATSIZE(totalNodes);
