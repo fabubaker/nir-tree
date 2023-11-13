@@ -1345,15 +1345,6 @@ tree_node_handle BranchNode<min_branch_factor, max_branch_factor>::chooseSubtree
         std::stack<tree_node_handle> &parentHandles,
         const NodeEntry &givenNodeEntry
 ) {
-  // CS1: This is called on the root! Just like insert/reinsert
-  // CS2: If N is a leaf return N (same)
-  // CS3: If the child pointers (bounding boxes) -> choose rectangle that needs least
-  // 		overlap enlargement to fit the new Point/bounding rectangle. If tie return smallest area.
-  // 		i.e. the rectangle that has the least overlap -> tbh I'm not sure we can just leave this
-  // 	Else:
-  // 		If not child pointers (bounding boxes) -> choose rectangle that needs least
-  // 		overlap enlargement to fit the new Point (same as before) if tie return smallest area (same)
-
   // CL1 [Initialize]
   tree_node_handle node_handle = current_handle;
 
@@ -1363,14 +1354,11 @@ tree_node_handle BranchNode<min_branch_factor, max_branch_factor>::chooseSubtree
 
   if (entryIsBranch) {
     const Branch &b = std::get<Branch>(givenNodeEntry);
-    //std::cout << "ChooseSubTree for branch: " << b.boundingBox <<
-    //    std::endl;
     givenEntryBoundingBox = b.boundingBox;
     tree_node_handle child_handle = b.child;
     stoppingLevel = child_handle.get_level() + 1;
   } else {
     const Point &p = std::get<Point>(givenNodeEntry);
-    //std::cout << "ChooseSubTree for point: " << p << std::endl;
     givenEntryBoundingBox = Rectangle(p, Point::closest_larger_point(p));
   }
 
@@ -1388,93 +1376,25 @@ tree_node_handle BranchNode<min_branch_factor, max_branch_factor>::chooseSubtree
       return node_handle;
     }
 
-    unsigned descentIndex = 0;
-    auto child_handle = node->entries.at(0).child;
-    bool childrenAreLeaves = (child_handle.get_type() == LEAF_NODE);
+    unsigned smallestExpansionIndex = 0;
+    double smallestExpansionArea = std::numeric_limits<double>::infinity();
 
-    if (childrenAreLeaves) {
-      //std::cout << "ChildrenAreLeaves: " << childrenAreLeaves <<
-      //    std::endl;
-      double smallestOverlapExpansion = std::numeric_limits<double>::infinity();
-      double smallestExpansionArea = std::numeric_limits<double>::infinity();
-      double smallestArea = std::numeric_limits<double>::infinity();
+    // CL2 [Choose subtree]
+    // Find the bounding box with least required expansion
+    for (unsigned i = 0; i < node->cur_offset_; i++) {
+      const Branch &b = node->entries.at(i);
+      double testExpansionArea = b.boundingBox.computeExpansionArea(givenEntryBoundingBox);
 
-      // Choose the entry in N whose rectangle needs least overlap enlargement
-      unsigned num_entries_els = node->cur_offset_;
-      for (unsigned i = 0; i < num_entries_els; i++) {
-        const Branch &b = node->entries.at(i);
-
-        // Compute overlap
-        double testOverlapExpansionArea =
-                computeOverlapGrowth<NodeEntry, Branch, max_branch_factor>(
-                  i, node->entries,
-           node->cur_offset_, givenEntryBoundingBox
-                );
-
-        //std::cout << "overlapGrowth " << i << ": " <<
-        //    testOverlapExpansionArea << std::endl;
-
-        // Take largest overlap
-        if (smallestOverlapExpansion > testOverlapExpansionArea) {
-          descentIndex = i;
-          smallestOverlapExpansion = testOverlapExpansionArea;
-          smallestExpansionArea = b.boundingBox.computeExpansionArea(givenEntryBoundingBox);
-          smallestArea = b.boundingBox.area();
-        } else if (smallestOverlapExpansion == testOverlapExpansionArea) {
-          // Use expansion area to break tie
-          double testExpansionArea = b.boundingBox.computeExpansionArea(givenEntryBoundingBox);
-          if (smallestExpansionArea > testExpansionArea) {
-            descentIndex = i;
-            // Don't need to update smallestOverlapExpansion, its the same
-            smallestExpansionArea = testExpansionArea;
-            smallestArea = b.boundingBox.area();
-          } else if (smallestExpansionArea == testExpansionArea) {
-            // Use area to break tie
-            double testArea = b.boundingBox.area();
-            if (smallestArea > testArea) {
-              descentIndex = i;
-              // Don't need to update smallestOverlapExpansion, its the same
-              // Don't need to update smallestExpansionArea, its the same
-              smallestArea = testArea;
-            }
-          }
-        }
-      }
-      // childrenAreLeaves end
-    } else {
-      double smallestExpansionArea = std::numeric_limits<double>::infinity();
-      double smallestArea = std::numeric_limits<double>::infinity();
-      unsigned num_entries_els = node->cur_offset_;
-
-      // CL2 [Choose subtree]
-      // Find the bounding box with least required expansion/overlap
-      for (unsigned i = 0; i < num_entries_els; i++) {
-        const Branch &b = node->entries.at(i);
-        double testExpansionArea = b.boundingBox.computeExpansionArea(givenEntryBoundingBox);
-
-        if (smallestExpansionArea > testExpansionArea) {
-          descentIndex = i;
-          smallestExpansionArea = testExpansionArea;
-          smallestArea = b.boundingBox.area();
-        } else if (smallestExpansionArea == testExpansionArea) {
-          // Use area to break tie
-          double testArea = b.boundingBox.area();
-
-          if (smallestArea > testArea) {
-            descentIndex = i;
-            // Don't need to update smallestExpansionArea
-            smallestArea = testArea;
-          }
-        }
+      if (smallestExpansionArea > testExpansionArea) {
+        smallestExpansionIndex = i;
+        smallestExpansionArea = testExpansionArea;
       }
     }
 
-    //std::cout << "Proceeding down index " << descentIndex <<
-    //    std::endl;
     // Descend
     // Keep track of the previous node before descending
     parentHandles.push(node_handle);
-    node_handle = node->entries[descentIndex].child;
+    node_handle = node->entries[smallestExpansionIndex].child;
   }
 
   assert(false);
