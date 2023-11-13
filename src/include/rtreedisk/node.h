@@ -867,14 +867,7 @@ tree_node_handle LeafNode<min_branch_factor, max_branch_factor>::insert(
 
   // If we exceed treeRef->maxBranchFactor we need to do something about it
   if (cur_offset_ > max_branch_factor) {
-    // We call overflow treatment to determine how our sibling node is treated. If we do a
-    // reInsert, sibling is nullptr. This is properly dealt with in adjustTree.
-    sibling_handle = overflowTreatment(
-        treeRef,
-        current_handle,
-        parentHandles,
-        hasReinsertedOnLevel
-    );
+    sibling_handle = splitNode(treeRef, current_handle);
   }
 
   // I3 [Propagate overflow treatment changes upward]
@@ -1937,14 +1930,7 @@ tree_node_handle BranchNode<min_branch_factor, max_branch_factor>::insert(
 
     // If we exceed treeRef->maxBranchFactor we need to do something about it
     if (num_els > max_branch_factor) {
-      // We call overflow treatment to determine how our sibling node is treated. If we do a
-      // reInsert, sibling is nullptr. This is properly dealt with in adjustTree.
-      sibling_handle = insertion_point->overflowTreatment(
-              treeRef,
-              insertion_point_handle,
-              parentHandles,
-              hasReinsertedOnLevel
-      );
+      sibling_handle = insertion_point->splitNode(treeRef, insertion_point_handle);
     }
 
     // I3 [Propogate overflow treatment changes upward]
@@ -1966,14 +1952,7 @@ tree_node_handle BranchNode<min_branch_factor, max_branch_factor>::insert(
 
     // If we exceed treeRef->maxBranchFactor we need to do something about it
     if (num_els > max_branch_factor) {
-      // We call overflow treatment to determine how our sibling node is treated if we do a
-      // reInsert, sibling is nullptr. This is properly dealt with in adjustTree
-      sibling_handle = insertion_point->overflowTreatment(
-              treeRef,
-              insertion_point_handle,
-              parentHandles,
-              hasReinsertedOnLevel
-      );
+      sibling_handle = insertion_point->splitNode(treeRef, insertion_point_handle);
     }
 
     // I3 [Propogate overflow treatment changes upward]
