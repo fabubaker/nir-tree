@@ -1,7 +1,7 @@
 #!/bin/bash
 set -e
 # Usage:
-# ./collect_stats.sh data/tweets.csv exp 0.3
+# ./run_bench_and_collect_stats.sh data/tweets.csv exp 0.3
 # it will run benchmark on tweets with 30% bulk-load and a tag name "exp"
 
 dataset_path=$(realpath $1)
