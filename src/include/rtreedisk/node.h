@@ -77,6 +77,7 @@ public:
 
   void moveData(unsigned fromIndex, std::vector<Point> &toData);
   void moveData(std::vector<Point> &fromData);
+  void removeData(unsigned idx);
 
   tree_node_handle chooseSubtree(const NodeEntry &nodeEntry);
   tree_node_handle findLeaf(
@@ -330,6 +331,12 @@ void LeafNode<min_branch_factor, max_branch_factor>::moveData(std::vector<Point>
   {
     entries[i] = fromData.at(i);
   }
+}
+
+template <int min_branch_factor, int max_branch_factor>
+void LeafNode<min_branch_factor, max_branch_factor>::removeData(unsigned idx) {
+  entries[idx] = entries[cur_offset_ - 1];
+  cur_offset_--;
 }
 
 template <int min_branch_factor, int max_branch_factor>
