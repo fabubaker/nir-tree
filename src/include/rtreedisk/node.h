@@ -75,6 +75,9 @@ public:
   Rectangle boundingBox() const;
   void removePoint(const Point &givenPoint);
 
+  void moveData(unsigned fromIndex, std::vector<Point> &toData);
+  void moveData(std::vector<Point> &fromData);
+
   tree_node_handle chooseSubtree(const NodeEntry &nodeEntry);
   tree_node_handle findLeaf(
           RTreeDisk<min_branch_factor, max_branch_factor> *treeRef,
@@ -311,6 +314,22 @@ void LeafNode<min_branch_factor, max_branch_factor>::removePoint(const Point &gi
 
   entries.at(i) = entries.at(cur_offset_ - 1);
   cur_offset_--;
+}
+
+template <int min_branch_factor, int max_branch_factor>
+void LeafNode<min_branch_factor, max_branch_factor>::moveData(unsigned fromIndex, std::vector<Point> &toData) {
+  toData.push_back(entries[fromIndex]);
+  entries[fromIndex] = entries[cur_offset_ - 1];
+  cur_offset_--;
+}
+
+template <int min_branch_factor, int max_branch_factor>
+void LeafNode<min_branch_factor, max_branch_factor>::moveData(std::vector<Point> &fromData) {
+  cur_offset_ = fromData.size();
+  for (unsigned i = 0; i < cur_offset_; i++)
+  {
+    entries[i] = fromData.at(i);
+  }
 }
 
 template <int min_branch_factor, int max_branch_factor>
