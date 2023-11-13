@@ -518,63 +518,170 @@ tree_node_handle LeafNode<min_branch_factor, max_branch_factor>::splitNode(
       tree_node_handle current_handle
 ) {
   using NodeType = LeafNode<min_branch_factor, max_branch_factor>;
-  // S1: Call chooseSplitAxis to determine the axis perpendicular to which the split is performed
-  // S2: Invoke chooseSplitIndex given the axis to determine the best distribution along this axis
-  // S3: Distribute the entries among these two groups
-
-  // Call chooseSplitAxis to determine the axis perpendicular to which the split is performed
-  // For now we will save the axis as an int -> since this allows for room for growth in the future
-  // Call ChooseSplitIndex to create optimal splitting of data array
-  unsigned splitAxis = chooseSplitAxis();
-  unsigned splitIndex = chooseSplitIndex(splitAxis);
-
-  /*
-    std::cout << "Split Leaf Node: {" <<  std::endl;
-    for( unsigned i = 0; i < cur_offset_; i++ ) {
-        std::cout << entries.at(i) << std::endl;
-    }
-    std::cout << "}" << std::endl;
-    std::cout << "Split on axis" << splitAxis << ", index: " <<
-        splitIndex << std::endl;
-        */
-
   tree_node_allocator *allocator = get_node_allocator(treeRef);
-  auto alloc_data = allocator->create_new_tree_node<NodeType>(NodeHandleType(LEAF_NODE));
+
+  /* Begin R-Tree split procedure */
+  double dataSize = cur_offset_;
+
+  // Compute the first entry in each group based on PS1 & PS2
+  unsigned seedA = 0;
+  unsigned seedB = dataSize - 1;
+
+  // This rectangle drank too much and represents how wasted iData and jData are
+  double maxWasted = 0.0;
+
+  // QS1 [Pick entry for each group]
+  Point iData, jData;
+  for (unsigned i = 0; i < dataSize; ++i)
+  {
+    iData = entries[i];
+    for (unsigned j = 0; j < dataSize; ++j)
+    {
+      jData = entries[j];
+
+      Rectangle temp = Rectangle(iData, iData);
+      temp.expand(jData);
+
+      double wasted = temp.area();
+
+      if (maxWasted < wasted)
+      {
+        maxWasted = wasted;
+
+        seedA = i;
+        seedB = j;
+      }
+    }
+  }
+
+  // Setup the two groups which will be the entries in the two new nodes
+  std::vector<Point> groupAData;
+  std::vector<Point> groupBData;
+
+  // Set the bounding rectangles
+  Rectangle boundingBoxA = Rectangle(entries[seedA], entries[seedA]);
+  Rectangle boundingBoxB = Rectangle(entries[seedB], entries[seedB]);
+
+  // seedA and seedB have both already been allocated so put them into the appropriate group
+  // and remove them from our data being careful to delete the one which will not affect the
+  // index of the other first
+  groupAData.push_back(entries[seedA]);
+  groupBData.push_back(entries[seedB]);
+  if (seedA > seedB)
+  {
+    removeData(seedA);
+    removeData(seedB);
+  }
+  else
+  {
+    removeData(seedB);
+    removeData(seedA);
+  }
+
+  // Go through the remaining entries and add them to groupA or groupB
+  double groupAAffinity, groupBAffinity;
+  // QS2 [Check if done]
+  while (
+    cur_offset_ > 0 &&
+    (groupAData.size() + cur_offset_ > min_branch_factor) &&
+    (groupBData.size() + cur_offset_ > min_branch_factor)
+  )
+  {
+    // PN1 [Determine the cost of putting each entry in each group]
+    unsigned groupAIndex = 0;
+    double groupAMin = std::numeric_limits<double>::infinity();
+    unsigned groupBIndex = 0;
+    double groupBMin = std::numeric_limits<double>::infinity();
+
+    for (unsigned i = 0; i < cur_offset_; ++i)
+    {
+      groupAAffinity = boundingBoxA.computeExpansionArea(entries[i]);
+      groupBAffinity = boundingBoxB.computeExpansionArea(entries[i]);
+
+      // PN2 [Find entry with greatest preference for one group]
+      if (groupAAffinity < groupAMin)
+      {
+        groupAMin = groupAAffinity;
+        groupAIndex = i;
+      }
+
+      if (groupBAffinity < groupBMin)
+      {
+        groupBMin = groupBAffinity;
+        groupBIndex = i;
+      }
+    }
+
+    // QS3 [Select where to assign entry]
+    if (groupAMin == groupBMin)
+    {
+      // Tie so use smaller area
+      if (boundingBoxA.area() < boundingBoxB.area())
+      {
+        boundingBoxA.expand(entries[groupAIndex]);
+        moveData(groupAIndex, groupAData);
+      }
+      else
+      {
+        // Better area or in the worst case an arbitrary choice
+        boundingBoxB.expand(entries[groupBIndex]);
+        moveData(groupBIndex, groupBData);
+      }
+    }
+    else if (groupAMin < groupBMin)
+    {
+      // Higher affinity for groupA
+      boundingBoxA.expand(entries[groupAIndex]);
+      moveData(groupAIndex, groupAData);
+    }
+    else
+    {
+      // Higher affinity for groupB
+      boundingBoxB.expand(entries[groupBIndex]);
+      moveData(groupBIndex, groupBData);
+    }
+  }
+
+  // If we stopped because half the entries were assigned then great put the others in the
+  // opposite group
+  if (groupAData.size() + cur_offset_ == min_branch_factor)
+  {
+    for (unsigned i = 0; i < cur_offset_; ++i)
+    {
+      groupAData.emplace_back(entries[i]);
+    }
+  }
+  else if (groupBData.size() + cur_offset_ == min_branch_factor)
+  {
+    for (unsigned i = 0; i < cur_offset_; ++i)
+    {
+      groupBData.emplace_back(entries[i]);
+    }
+  }
+  else
+  {
+    // We really shouldn't be here so panic!
+    assert(false);
+  }
+
+  // Create the new node and fill it
   uint16_t current_level = current_handle.get_level();
-
+  auto alloc_data = allocator->create_new_tree_node<NodeType>();
+  tree_node_handle siblingHandle = alloc_data.second;
   auto newSibling = alloc_data.first;
-  tree_node_handle sibling_handle = alloc_data.second;
 
-  new (&(*(newSibling))) NodeType();
-  sibling_handle.set_level(current_level);
+  new (&(*newSibling)) NodeType();
+  siblingHandle.set_level(current_level);
 
-  // Copy everything to the right of the splitPoint (inclusive) to the new sibling
-  std::copy(entries.begin() + splitIndex, entries.begin() + cur_offset_, newSibling->entries.begin());
-
-  newSibling->cur_offset_ = cur_offset_ - splitIndex;
-
-  // Chop our node's data down
-  cur_offset_ = splitIndex;
+  // Fill us with groupA and the new node with groupB
+  moveData(groupAData);
+  newSibling->moveData(groupBData);
 
   assert(cur_offset_ > 0);
   assert(newSibling->cur_offset_ > 0);
 
-  /*
-    std::cout << "New Node1: {" <<  std::endl;
-    for( unsigned i = 0; i < cur_offset_; i++ ) {
-        std::cout << entries.at(i) << std::endl;
-    }
-    std::cout << "}" << std::endl;
-
-    std::cout << "New Node2: {" <<  std::endl;
-    for( unsigned i = 0; i < newSibling->cur_offset_; i++ ) {
-        std::cout << newSibling->entries.at(i) << std::endl;
-    }
-    std::cout << "}" << std::endl;
-    */
-
   // Return our newly minted sibling
-  return sibling_handle;
+  return siblingHandle;
 }
 
 // Note: This function modifies parentHandles.
