@@ -1,5 +1,5 @@
 #!/bin/bash
-#Usage: ./gen_rect.sh tweets
+#Usage: ./generate_rectangles.sh tweets
 dataset_path="$1"
 
 dataset_name=$(echo $dataset_path | awk -F/ '{gsub(/\..*$/,"",$NF); print $NF}')
