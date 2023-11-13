@@ -15,9 +15,9 @@
 #include <fcntl.h>
 #include <unistd.h>
 
-namespace rstartreedisk {
+namespace rtreedisk {
 template <int min_branch_factor, int max_branch_factor>
-class RStarTreeDisk : public Index {
+class RTreeDisk : public Index {
 public:
   static constexpr float p = 0.3; // For reinsertion entries. 0.3 by default
 
@@ -28,7 +28,7 @@ public:
   std::vector<bool> hasReinsertedOnLevel;
 
   // Constructors and destructors
-  RStarTreeDisk(size_t memory_budget, std::string backing_file) : backing_file_(backing_file) {
+  RTreeDisk(size_t memory_budget, std::string backing_file) : backing_file_(backing_file) {
     node_allocator_ = std::make_unique<tree_node_allocator>(memory_budget, backing_file);
 
     // Initialize buffer pool
@@ -58,7 +58,7 @@ public:
     assert(rc == sizeof(root));
   }
 
-  ~RStarTreeDisk(){};
+  ~RTreeDisk(){};
 
   // Datastructure interface
   std::vector<Point> exhaustiveSearch(Point requestedPoint);
@@ -105,7 +105,7 @@ public:
 };
 
 template <int min_branch_factor, int max_branch_factor>
-std::vector<Point> RStarTreeDisk<min_branch_factor, max_branch_factor>::exhaustiveSearch(Point requestedPoint) {
+std::vector<Point> RTreeDisk<min_branch_factor, max_branch_factor>::exhaustiveSearch(Point requestedPoint) {
   std::vector<Point> v;
   if (root.get_type() == LEAF_NODE) {
     auto root_ptr = get_leaf_node(root);
@@ -119,18 +119,18 @@ std::vector<Point> RStarTreeDisk<min_branch_factor, max_branch_factor>::exhausti
 }
 
 template <int min_branch_factor, int max_branch_factor>
-std::vector<Point> RStarTreeDisk<min_branch_factor, max_branch_factor>::search(Point requestedPoint) {
+std::vector<Point> RTreeDisk<min_branch_factor, max_branch_factor>::search(Point requestedPoint) {
   return point_search(root, requestedPoint, this);
 }
 
 template <int min_branch_factor, int max_branch_factor>
-std::vector<Point> RStarTreeDisk<min_branch_factor, max_branch_factor>::search(Rectangle
+std::vector<Point> RTreeDisk<min_branch_factor, max_branch_factor>::search(Rectangle
                                                                                requestedRectangle) {
   return rectangle_search(root, requestedRectangle, this);
 }
 
 template <int min_branch_factor, int max_branch_factor>
-void RStarTreeDisk<min_branch_factor, max_branch_factor>::insert(Point givenPoint) {
+void RTreeDisk<min_branch_factor, max_branch_factor>::insert(Point givenPoint) {
   if (root.get_type() == LEAF_NODE) {
     auto root_ptr = get_leaf_node(root);
     std::fill(hasReinsertedOnLevel.begin(), hasReinsertedOnLevel.end(), false);
@@ -143,7 +143,7 @@ void RStarTreeDisk<min_branch_factor, max_branch_factor>::insert(Point givenPoin
 }
 
 template <int min_branch_factor, int max_branch_factor>
-void RStarTreeDisk<min_branch_factor, max_branch_factor>::remove(Point givenPoint) {
+void RTreeDisk<min_branch_factor, max_branch_factor>::remove(Point givenPoint) {
   std::fill(hasReinsertedOnLevel.begin(), hasReinsertedOnLevel.end(), false);
   if (root.get_type() == LEAF_NODE) {
     auto root_ptr = get_leaf_node(root);
@@ -155,7 +155,7 @@ void RStarTreeDisk<min_branch_factor, max_branch_factor>::remove(Point givenPoin
 }
 
 template <int min_branch_factor, int max_branch_factor>
-unsigned RStarTreeDisk<min_branch_factor, max_branch_factor>::checksum() {
+unsigned RTreeDisk<min_branch_factor, max_branch_factor>::checksum() {
   if (root.get_type() == LEAF_NODE) {
     auto root_ptr = get_leaf_node(root);
     return root_ptr->checksum();
@@ -165,13 +165,13 @@ unsigned RStarTreeDisk<min_branch_factor, max_branch_factor>::checksum() {
 }
 
 template <int min_branch_factor, int max_branch_factor>
-void RStarTreeDisk<min_branch_factor, max_branch_factor>::print() {
+void RTreeDisk<min_branch_factor, max_branch_factor>::print() {
   std::ofstream outputFile("printed_rstar_tree.txt");
 
   struct Printer {
       Printer(std::ofstream &printFile): printFile(printFile) {}
 
-      void operator()(RStarTreeDisk<min_branch_factor, max_branch_factor> *treeRef, tree_node_handle node_handle) {
+      void operator()(RTreeDisk<min_branch_factor, max_branch_factor> *treeRef, tree_node_handle node_handle) {
         printPackedNodes<min_branch_factor, max_branch_factor>(treeRef, node_handle, printFile);
       }
 
@@ -185,17 +185,17 @@ void RStarTreeDisk<min_branch_factor, max_branch_factor>::print() {
 }
 
 template <int min_branch_factor, int max_branch_factor>
-bool RStarTreeDisk<min_branch_factor, max_branch_factor>::validate() {
+bool RTreeDisk<min_branch_factor, max_branch_factor>::validate() {
   return true;
 }
 
 template <int min_branch_factor, int max_branch_factor>
-void RStarTreeDisk<min_branch_factor, max_branch_factor>::stat() {
+void RTreeDisk<min_branch_factor, max_branch_factor>::stat() {
   stat_node(root, this);
 }
 
 template <int min_branch_factor, int max_branch_factor>
-void RStarTreeDisk<min_branch_factor, max_branch_factor>::visualize() {
+void RTreeDisk<min_branch_factor, max_branch_factor>::visualize() {
 
 }
-} // namespace rstartreedisk
+} // namespace rtreedisk

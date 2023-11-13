@@ -19,21 +19,21 @@
 #include <vector>
 #include <fstream>
 
-namespace rstartreedisk {
-template <int min_branch_factor, int max_branch_factor> class RStarTreeDisk;
+namespace rtreedisk {
+template <int min_branch_factor, int max_branch_factor> class RTreeDisk;
 
 template <int min_branch_factor, int max_branch_factor>
-tree_node_allocator *get_node_allocator(RStarTreeDisk<min_branch_factor, max_branch_factor> *treeRef) {
+tree_node_allocator *get_node_allocator(RTreeDisk<min_branch_factor, max_branch_factor> *treeRef) {
   return treeRef->node_allocator_.get();
 }
 
 template <int min_branch_factor, int max_branch_factor>
-float get_p_value(RStarTreeDisk<min_branch_factor, max_branch_factor> *treeRef) {
+float get_p_value(RTreeDisk<min_branch_factor, max_branch_factor> *treeRef) {
   return treeRef->p;
 }
 
 template <int min_branch_factor, int max_branch_factor>
-tree_node_handle get_root_handle(RStarTreeDisk<min_branch_factor, max_branch_factor> *treeRef) {
+tree_node_handle get_root_handle(RTreeDisk<min_branch_factor, max_branch_factor> *treeRef) {
   return treeRef->root;
 }
 
@@ -77,7 +77,7 @@ public:
 
   tree_node_handle chooseSubtree(const NodeEntry &nodeEntry);
   tree_node_handle findLeaf(
-          RStarTreeDisk<min_branch_factor, max_branch_factor> *treeRef,
+          RTreeDisk<min_branch_factor, max_branch_factor> *treeRef,
           tree_node_handle selfHandle,
           const Point &givenPoint
   );
@@ -86,24 +86,24 @@ public:
   unsigned chooseSplitAxis();
   unsigned chooseSplitIndex(unsigned axis);
   tree_node_handle splitNode(
-    RStarTreeDisk<min_branch_factor, max_branch_factor> *treeRef,
+    RTreeDisk<min_branch_factor, max_branch_factor> *treeRef,
     tree_node_handle current_handle
   );
   tree_node_handle adjustTree(
-    RStarTreeDisk<min_branch_factor, max_branch_factor> *treeRef,
+    RTreeDisk<min_branch_factor, max_branch_factor> *treeRef,
     tree_node_handle current_handle,
     tree_node_handle sibling_handle,
     std::stack<tree_node_handle> parentHandles,
     std::vector<bool> &hasReinsertedOnLevel
   );
   tree_node_handle reInsert(
-        RStarTreeDisk<min_branch_factor, max_branch_factor> *treeRef,
+        RTreeDisk<min_branch_factor, max_branch_factor> *treeRef,
         tree_node_handle current_handle,
         std::stack<tree_node_handle> parentHandles,
         std::vector<bool> &hasReinsertedOnLevel
   );
   tree_node_handle overflowTreatment(
-          RStarTreeDisk<min_branch_factor, max_branch_factor> *treeRef,
+          RTreeDisk<min_branch_factor, max_branch_factor> *treeRef,
           tree_node_handle current_handle,
           std::stack<tree_node_handle> parentHandles,
           std::vector<bool> &hasReinsertedOnLevel
@@ -115,7 +115,7 @@ public:
 
   // These return the root of the tree.
   tree_node_handle insert(
-        RStarTreeDisk<min_branch_factor, max_branch_factor> *treeRef,
+        RTreeDisk<min_branch_factor, max_branch_factor> *treeRef,
         tree_node_handle current_handle,
         Point nodeEntry,
         std::vector<bool> &hasReinsertedOnLevel
@@ -166,13 +166,13 @@ public:
   bool updateBoundingBox(tree_node_handle child, Rectangle updatedBoundingBox);
   void removeChild(tree_node_handle child);
   tree_node_handle chooseSubtree(
-      RStarTreeDisk<min_branch_factor, max_branch_factor> *treeRef,
+      RTreeDisk<min_branch_factor, max_branch_factor> *treeRef,
       tree_node_handle current_handle,
       std::stack<tree_node_handle> &parentHandles,
       const NodeEntry &givenNodeEntry
   );
   tree_node_handle findLeaf(
-          RStarTreeDisk<min_branch_factor, max_branch_factor> *treeRef,
+          RTreeDisk<min_branch_factor, max_branch_factor> *treeRef,
           tree_node_handle selfHandle,
           const Point &givenPoint
   );
@@ -181,24 +181,24 @@ public:
   unsigned chooseSplitAxis();
   unsigned chooseSplitIndex(unsigned axis);
   tree_node_handle splitNode(
-    RStarTreeDisk<min_branch_factor, max_branch_factor> *treeRef,
+    RTreeDisk<min_branch_factor, max_branch_factor> *treeRef,
     tree_node_handle current_handle
   );
   tree_node_handle adjustTree(
-          RStarTreeDisk<min_branch_factor, max_branch_factor> *treeRef,
+          RTreeDisk<min_branch_factor, max_branch_factor> *treeRef,
           tree_node_handle current_handle,
           tree_node_handle sibling_handle,
           std::stack<tree_node_handle> parentHandles,
           std::vector<bool> &hasReinsertedOnLevel
   );
   tree_node_handle reInsert(
-          RStarTreeDisk<min_branch_factor, max_branch_factor> *treeRef,
+          RTreeDisk<min_branch_factor, max_branch_factor> *treeRef,
           tree_node_handle current_handle,
           std::stack<tree_node_handle> parentHandles,
           std::vector<bool> &hasReinsertedOnLevel
   );
   tree_node_handle overflowTreatment(
-          RStarTreeDisk<min_branch_factor, max_branch_factor> *treeRef,
+          RTreeDisk<min_branch_factor, max_branch_factor> *treeRef,
           tree_node_handle current_handle,
           std::stack<tree_node_handle> parentHandles,
           std::vector<bool> &hasReinsertedOnLevel
@@ -210,7 +210,7 @@ public:
 
   // These return the root of the tree.
   tree_node_handle insert(
-          RStarTreeDisk<min_branch_factor, max_branch_factor> *treeRef,
+          RTreeDisk<min_branch_factor, max_branch_factor> *treeRef,
           tree_node_handle current_handle,
           NodeEntry nodeEntry,
           std::vector<bool> &hasReinsertedOnLevel
@@ -262,7 +262,7 @@ double computeOverlapGrowth(unsigned index, const std::array<B, N + 1> &entries,
 }
 
 template <int min_branch_factor, int max_branch_factor, typename functor>
-void treeWalker(RStarTreeDisk<min_branch_factor, max_branch_factor> *treeRef, tree_node_handle root, functor &f) {
+void treeWalker(RTreeDisk<min_branch_factor, max_branch_factor> *treeRef, tree_node_handle root, functor &f) {
   std::stack<tree_node_handle> context;
   context.push(root);
   tree_node_handle currentContext;
@@ -331,7 +331,7 @@ tree_node_handle LeafNode<min_branch_factor, max_branch_factor>::chooseSubtree(c
 
 template <int min_branch_factor, int max_branch_factor>
 tree_node_handle LeafNode<min_branch_factor, max_branch_factor>::findLeaf(
-    RStarTreeDisk<min_branch_factor, max_branch_factor> *treeRef,
+    RTreeDisk<min_branch_factor, max_branch_factor> *treeRef,
     tree_node_handle selfHandle,
     const Point &givenPoint
 ) {
@@ -488,7 +488,7 @@ unsigned LeafNode<min_branch_factor, max_branch_factor>::chooseSplitIndex(unsign
 
 template <int min_branch_factor, int max_branch_factor>
 tree_node_handle LeafNode<min_branch_factor, max_branch_factor>::splitNode(
-      RStarTreeDisk<min_branch_factor, max_branch_factor> *treeRef,
+      RTreeDisk<min_branch_factor, max_branch_factor> *treeRef,
       tree_node_handle current_handle
 ) {
   using NodeType = LeafNode<min_branch_factor, max_branch_factor>;
@@ -627,7 +627,7 @@ std::pair<tree_node_handle, tree_node_handle> adjustTreeBottomHalf(
 
 template <int min_branch_factor, int max_branch_factor>
 tree_node_handle adjustTreeSub(
-        RStarTreeDisk<min_branch_factor, max_branch_factor> *treeRef,
+        RTreeDisk<min_branch_factor, max_branch_factor> *treeRef,
         tree_node_handle current_handle,
         tree_node_handle sibling_handle,
         std::stack<tree_node_handle> parentHandles,
@@ -702,7 +702,7 @@ tree_node_handle adjustTreeSub(
 
 template <int min_branch_factor, int max_branch_factor>
 tree_node_handle LeafNode<min_branch_factor, max_branch_factor>::adjustTree(
-        RStarTreeDisk<min_branch_factor, max_branch_factor> *treeRef,
+        RTreeDisk<min_branch_factor, max_branch_factor> *treeRef,
         tree_node_handle current_handle,
         tree_node_handle sibling_handle,
         std::stack<tree_node_handle> parentHandles,
@@ -713,7 +713,7 @@ tree_node_handle LeafNode<min_branch_factor, max_branch_factor>::adjustTree(
 
 template <int min_branch_factor, int max_branch_factor>
 tree_node_handle BranchNode<min_branch_factor, max_branch_factor>::adjustTree(
-        RStarTreeDisk<min_branch_factor, max_branch_factor> *treeRef,
+        RTreeDisk<min_branch_factor, max_branch_factor> *treeRef,
         tree_node_handle current_handle,
         tree_node_handle sibling_handle,
         std::stack<tree_node_handle> parentHandles,
@@ -724,7 +724,7 @@ tree_node_handle BranchNode<min_branch_factor, max_branch_factor>::adjustTree(
 
 template <int min_branch_factor, int max_branch_factor>
 tree_node_handle LeafNode<min_branch_factor, max_branch_factor>::reInsert(
-        RStarTreeDisk<min_branch_factor, max_branch_factor> *treeRef,
+        RTreeDisk<min_branch_factor, max_branch_factor> *treeRef,
         tree_node_handle current_handle,
         std::stack<tree_node_handle> parentHandles,
         std::vector<bool> &hasReinsertedOnLevel
@@ -822,7 +822,7 @@ tree_node_handle LeafNode<min_branch_factor, max_branch_factor>::reInsert(
 // Overflow treatment for dealing with a node that is too big (overflow)
 template <int min_branch_factor, int max_branch_factor>
 tree_node_handle LeafNode<min_branch_factor, max_branch_factor>::overflowTreatment(
-        RStarTreeDisk<min_branch_factor, max_branch_factor> *treeRef,
+        RTreeDisk<min_branch_factor, max_branch_factor> *treeRef,
         tree_node_handle current_handle,
         std::stack<tree_node_handle> parentHandles,
         std::vector<bool> &hasReinsertedOnLevel
@@ -846,7 +846,7 @@ tree_node_handle LeafNode<min_branch_factor, max_branch_factor>::overflowTreatme
 // that means the tree only has one leaf node.
 template <int min_branch_factor, int max_branch_factor>
 tree_node_handle LeafNode<min_branch_factor, max_branch_factor>::insert(
-        RStarTreeDisk<min_branch_factor, max_branch_factor> *treeRef,
+        RTreeDisk<min_branch_factor, max_branch_factor> *treeRef,
         tree_node_handle current_handle,
         Point nodeEntry,
         std::vector<bool> &hasReinsertedOnLevel
@@ -864,15 +864,6 @@ tree_node_handle LeafNode<min_branch_factor, max_branch_factor>::insert(
 
   uint16_t current_level = current_handle.get_level();
   assert(current_level == 0); // Leaf nodes have level = 0
-
-  /*std::cout << "Inserted Point: " << nodeEntry <<
-        std::endl;
-    std::cout << "Insertion point now has points: { " << std::endl;
-    for( size_t i = 0; i < cur_offset_; i++ ) {
-        std::cout << entries.at(i) << std::endl;
-    }
-    std::cout << "}" << std::endl;
-    */
 
   // If we exceed treeRef->maxBranchFactor we need to do something about it
   if (cur_offset_ > max_branch_factor) {
@@ -1204,7 +1195,7 @@ template <int min_branch_factor, int max_branch_factor>
 void point_search_leaf_node(LeafNode<min_branch_factor, max_branch_factor> &node,
                             Point &requestedPoint,
                             std::vector<Point> &accumulator,
-                            RStarTreeDisk<min_branch_factor, max_branch_factor> *treeRef)
+                            RTreeDisk<min_branch_factor, max_branch_factor> *treeRef)
 {
   unsigned intersection_count = 0;
 
@@ -1223,7 +1214,7 @@ template <int min_branch_factor, int max_branch_factor>
 void point_search_branch_node(BranchNode<min_branch_factor, max_branch_factor> &node,
                               Point &requestedPoint,
                               std::stack<tree_node_handle> &context,
-                              RStarTreeDisk<min_branch_factor, max_branch_factor> *treeRef)
+                              RTreeDisk<min_branch_factor, max_branch_factor> *treeRef)
 {
   unsigned matching_branch_counter = 0;
   unsigned intersection_count = 0;
@@ -1245,7 +1236,7 @@ template <int min_branch_factor, int max_branch_factor>
 std::vector<Point> point_search(
         tree_node_handle start_point,
         Point &requestedPoint,
-        RStarTreeDisk<min_branch_factor, max_branch_factor> *treeRef)
+        RTreeDisk<min_branch_factor, max_branch_factor> *treeRef)
 {
   std::vector<Point> accumulator;
   std::stack<tree_node_handle> context;
@@ -1282,7 +1273,7 @@ template <int min_branch_factor, int max_branch_factor>
 void rectangle_search_leaf_node(LeafNode<min_branch_factor, max_branch_factor> &node,
                             Rectangle &requestedRectangle,
                             std::vector<Point> &accumulator,
-                            RStarTreeDisk<min_branch_factor, max_branch_factor> *treeRef)
+                            RTreeDisk<min_branch_factor, max_branch_factor> *treeRef)
 {
   unsigned intersection_count = 0;
 
@@ -1301,7 +1292,7 @@ template <int min_branch_factor, int max_branch_factor>
 void rectangle_search_branch_node(BranchNode<min_branch_factor, max_branch_factor> &node,
                                 Rectangle &requestedRectangle,
                                 std::stack<tree_node_handle> &context,
-                                RStarTreeDisk<min_branch_factor, max_branch_factor> *treeRef)
+                                RTreeDisk<min_branch_factor, max_branch_factor> *treeRef)
 {
   unsigned intersection_count = 0;
 
@@ -1320,7 +1311,7 @@ template <int min_branch_factor, int max_branch_factor>
 std::vector<Point> rectangle_search(
         tree_node_handle start_point,
         Rectangle &requestedRectangle,
-        RStarTreeDisk<min_branch_factor, max_branch_factor> *treeRef)
+        RTreeDisk<min_branch_factor, max_branch_factor> *treeRef)
 {
   std::vector<Point> accumulator;
 
@@ -1356,7 +1347,7 @@ std::vector<Point> rectangle_search(
 // Populates parentHandles with the path taken to get to the leaf
 template <int min_branch_factor, int max_branch_factor>
 tree_node_handle BranchNode<min_branch_factor, max_branch_factor>::chooseSubtree(
-        RStarTreeDisk<min_branch_factor, max_branch_factor> *treeRef,
+        RTreeDisk<min_branch_factor, max_branch_factor> *treeRef,
         tree_node_handle current_handle,
         std::stack<tree_node_handle> &parentHandles,
         const NodeEntry &givenNodeEntry
@@ -1498,7 +1489,7 @@ tree_node_handle BranchNode<min_branch_factor, max_branch_factor>::chooseSubtree
 
 template <int min_branch_factor, int max_branch_factor>
 tree_node_handle BranchNode<min_branch_factor, max_branch_factor>::findLeaf(
-        RStarTreeDisk<min_branch_factor, max_branch_factor> *treeRef,
+        RTreeDisk<min_branch_factor, max_branch_factor> *treeRef,
         tree_node_handle selfHandle,
         const Point &givenPoint
 ) {
@@ -1719,7 +1710,7 @@ unsigned BranchNode<min_branch_factor, max_branch_factor>::chooseSplitIndex(unsi
 
 template <int min_branch_factor, int max_branch_factor>
 tree_node_handle BranchNode<min_branch_factor, max_branch_factor>::splitNode(
-    RStarTreeDisk<min_branch_factor, max_branch_factor> *treeRef,
+    RTreeDisk<min_branch_factor, max_branch_factor> *treeRef,
     tree_node_handle current_handle
 ) {
   using NodeType = BranchNode<min_branch_factor, max_branch_factor>;
@@ -1797,7 +1788,7 @@ tree_node_handle BranchNode<min_branch_factor, max_branch_factor>::splitNode(
 
 template <int min_branch_factor, int max_branch_factor>
 tree_node_handle BranchNode<min_branch_factor, max_branch_factor>::reInsert(
-        RStarTreeDisk<min_branch_factor, max_branch_factor> *treeRef,
+        RTreeDisk<min_branch_factor, max_branch_factor> *treeRef,
         tree_node_handle current_handle,
         std::stack<tree_node_handle> parentHandles,
         std::vector<bool> &hasReinsertedOnLevel
@@ -1891,7 +1882,7 @@ tree_node_handle BranchNode<min_branch_factor, max_branch_factor>::reInsert(
 // Overflow treatement for dealing with a node that is too big (overflow)
 template <int min_branch_factor, int max_branch_factor>
 tree_node_handle BranchNode<min_branch_factor, max_branch_factor>::overflowTreatment(
-        RStarTreeDisk<min_branch_factor, max_branch_factor> *treeRef,
+        RTreeDisk<min_branch_factor, max_branch_factor> *treeRef,
         tree_node_handle current_handle,
         std::stack<tree_node_handle> parentHandles,
         std::vector<bool> &hasReinsertedOnLevel
@@ -1914,7 +1905,7 @@ tree_node_handle BranchNode<min_branch_factor, max_branch_factor>::overflowTreat
 // insert() is always called on the root node.
 template <int min_branch_factor, int max_branch_factor>
 tree_node_handle BranchNode<min_branch_factor, max_branch_factor>::insert(
-        RStarTreeDisk<min_branch_factor, max_branch_factor> *treeRef,
+        RTreeDisk<min_branch_factor, max_branch_factor> *treeRef,
         tree_node_handle current_handle,
         NodeEntry nodeEntry,
         std::vector<bool> &hasReinsertedOnLevel
@@ -1942,15 +1933,6 @@ tree_node_handle BranchNode<min_branch_factor, max_branch_factor>::insert(
     auto insertion_point = treeRef->get_leaf_node(insertion_point_handle);
     insertion_point->addPoint(std::get<Point>(nodeEntry));
 
-    /*std::cout << "Inserted Point: " << std::get<Point>( nodeEntry ) <<
-            std::endl;
-        std::cout << "Insertion point now has points: { " << std::endl;
-        for( size_t i = 0; i < insertion_point->cur_offset_; i++ ) {
-            std::cout << insertion_point->entries.at(i) << std::endl;
-        }
-        std::cout << "}" << std::endl;
-        */
-
     unsigned num_els = insertion_point->cur_offset_;
 
     // If we exceed treeRef->maxBranchFactor we need to do something about it
@@ -1977,17 +1959,6 @@ tree_node_handle BranchNode<min_branch_factor, max_branch_factor>::insert(
     auto insertion_point = treeRef->get_branch_node(insertion_point_handle);
     Branch &b = std::get<Branch>(nodeEntry);
     insertion_point->addBranchToNode(b);
-    /*
-        std::cout << "Inserted branch with bounding box: " <<
-            b.boundingBox << std::endl;
-        std::cout << "Insertion point now has boundingBoxes: {" <<
-            std::endl;
-        for( size_t i = 0; i < insertion_point->cur_offset_; i++ ) {
-            std::cout << insertion_point->entries.at(i).boundingBox <<
-                std::endl;
-        }
-        std::cout << "}" << std::endl;
-        */
 
     assert(insertion_point_level == b.child.get_level() + 1);
 
@@ -2129,7 +2100,7 @@ void BranchNode<min_branch_factor, max_branch_factor>::printTree() const {
 #if 0
   // Print this node first
   struct Printer {
-    void operator()(RStarTreeDisk<min_branch_factor, max_branch_factor> *treeRef, tree_node_handle node_handle) {
+    void operator()(RTreeDisk<min_branch_factor, max_branch_factor> *treeRef, tree_node_handle node_handle) {
       if (node_handle.get_type() == LEAF_NODE) {
         auto node = treeRef->get_leaf_node(node_handle);
         node->print();
@@ -2150,7 +2121,7 @@ void BranchNode<min_branch_factor, max_branch_factor>::printTree() const {
 
 template <int min_branch_factor, int max_branch_factor>
 void printPackedNodes(
-        RStarTreeDisk<min_branch_factor, max_branch_factor> *treeRef,
+        RTreeDisk<min_branch_factor, max_branch_factor> *treeRef,
         tree_node_handle node_handle,
         std::ofstream &printFile
   ) {
@@ -2193,7 +2164,7 @@ unsigned BranchNode<min_branch_factor, max_branch_factor>::checksum() const {
       }
 
       void operator()(
-          RStarTreeDisk<min_branch_factor, max_branch_factor> *treeRef,
+          RTreeDisk<min_branch_factor, max_branch_factor> *treeRef,
           tree_node_handle node_handle)
       {
         if (node_handle.get_type() == LEAF_NODE) {
@@ -2223,7 +2194,7 @@ unsigned BranchNode<min_branch_factor, max_branch_factor>::height(tree_node_hand
 }
 
 template <int min_branch_factor, int max_branch_factor>
-void stat_node(tree_node_handle root_handle, RStarTreeDisk<min_branch_factor, max_branch_factor> *treeRef) {
+void stat_node(tree_node_handle root_handle, RTreeDisk<min_branch_factor, max_branch_factor> *treeRef) {
   std::stack<tree_node_handle> context;
 
   context.push(root_handle);
@@ -2302,4 +2273,4 @@ void stat_node(tree_node_handle root_handle, RStarTreeDisk<min_branch_factor, ma
 
   std::cout << treeRef->stats << std::endl;
 }
-} // namespace rstartreedisk
+} // namespace rtreedisk
