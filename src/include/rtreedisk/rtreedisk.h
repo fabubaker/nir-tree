@@ -166,7 +166,7 @@ unsigned RTreeDisk<min_branch_factor, max_branch_factor>::checksum() {
 
 template <int min_branch_factor, int max_branch_factor>
 void RTreeDisk<min_branch_factor, max_branch_factor>::print() {
-  std::ofstream outputFile("printed_rstar_tree.txt");
+  std::ofstream outputFile("printed_r_tree.txt");
 
   struct Printer {
       Printer(std::ofstream &printFile): printFile(printFile) {}
