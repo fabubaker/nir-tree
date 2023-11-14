@@ -662,15 +662,10 @@ tree_node_handle LeafNode<min_branch_factor, max_branch_factor>::splitNode(
       groupBData.emplace_back(entries[i]);
     }
   }
-  else
-  {
-    // We really shouldn't be here so panic!
-    assert(false);
-  }
 
   // Create the new node and fill it
   uint16_t current_level = current_handle.get_level();
-  auto alloc_data = allocator->create_new_tree_node<NodeType>();
+  auto alloc_data = allocator->create_new_tree_node<NodeType>(NodeHandleType(LEAF_NODE));
   tree_node_handle siblingHandle = alloc_data.second;
   auto newSibling = alloc_data.first;
 
@@ -1853,6 +1848,7 @@ tree_node_handle BranchNode<min_branch_factor, max_branch_factor>::splitNode(
   double groupAAffinity, groupBAffinity;
   // QS2 [Check if done]
   while (
+      cur_offset_ > 0 &&
       (groupABoundingBoxes.size() + cur_offset_ > min_branch_factor) &&
       (groupBBoundingBoxes.size() + cur_offset_ > min_branch_factor)
   )
@@ -1932,15 +1928,10 @@ tree_node_handle BranchNode<min_branch_factor, max_branch_factor>::splitNode(
       groupBChildren.emplace_back(b.child);
     }
   }
-  else
-  {
-    // We really shouldn't be here so panic!
-    assert(false);
-  }
 
   // Create the new node and fill it
   uint16_t current_level = current_handle.get_level();
-  auto alloc_data = allocator->create_new_tree_node<NodeType>();
+  auto alloc_data = allocator->create_new_tree_node<NodeType>(NodeHandleType(BRANCH_NODE));
   tree_node_handle newSiblingHandle = alloc_data.second;
   auto newSibling = alloc_data.first;
 
