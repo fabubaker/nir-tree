@@ -169,6 +169,9 @@ public:
   Rectangle boundingBox() const;
   bool updateBoundingBox(tree_node_handle child, Rectangle updatedBoundingBox);
   void removeChild(tree_node_handle child);
+  void moveChildren(std::vector<tree_node_handle> &fromChildren, std::vector<Rectangle> &fromBoxes);
+  void moveChild(unsigned fromIndex, std::vector<Rectangle> &toRectangles, std::vector<tree_node_handle> &toChildren);
+
   tree_node_handle chooseSubtree(
       RTreeDisk<min_branch_factor, max_branch_factor> *treeRef,
       tree_node_handle current_handle,
@@ -1295,6 +1298,33 @@ void BranchNode<min_branch_factor, max_branch_factor>::removeChild(tree_node_han
   }
   assert(entries.at(i).child == child);
   entries.at(i) = entries.at(cur_offset_ - 1);
+  cur_offset_--;
+}
+
+template <int min_branch_factor, int max_branch_factor>
+void BranchNode<min_branch_factor, max_branch_factor>::moveChildren(
+  std::vector<tree_node_handle> &fromChildren, std::vector<Rectangle> &fromBoxes
+) {
+  assert(fromChildren.size() == fromBoxes.size());
+
+  cur_offset_ = fromChildren.size();
+  for (unsigned i = 0; i < cur_offset_; i++)
+  {
+    entries[i] = Branch(fromBoxes.at(i), fromChildren.at(i));
+  }
+
+  fromChildren.clear();
+  fromBoxes.clear();
+}
+
+template <int min_branch_factor, int max_branch_factor>
+void BranchNode<min_branch_factor, max_branch_factor>::moveChild(
+  unsigned fromIndex, std::vector<Rectangle> &toRectangles, std::vector<tree_node_handle> &toChildren
+) {
+  Branch &b = entries[fromIndex];
+  toRectangles.push_back(b.boundingBox);
+  toChildren.push_back(b.child);
+  entries[fromIndex] = entries[cur_offset_ - 1];
   cur_offset_--;
 }
 
