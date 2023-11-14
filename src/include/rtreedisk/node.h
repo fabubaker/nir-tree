@@ -725,12 +725,7 @@ std::pair<tree_node_handle, tree_node_handle> adjustTreeBottomHalf(
 
     if (sz >= (unsigned) max_branch_factor) {
       tree_node_handle parent_before_handle = parent_handle;
-      tree_node_handle sibling_parent_handle = parent_ptr->overflowTreatment(
-              treeRef,
-              parent_handle,
-              parentHandles,
-              hasReinsertedOnLevel
-      );
+      tree_node_handle sibling_parent_handle = parent_ptr->splitNode(treeRef, parent_handle);
 
       if (sibling_parent_handle) {
         // We split our parent, so now we have two (possible) parents
