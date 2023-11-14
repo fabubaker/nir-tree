@@ -169,6 +169,7 @@ public:
   Rectangle boundingBox() const;
   bool updateBoundingBox(tree_node_handle child, Rectangle updatedBoundingBox);
   void removeChild(tree_node_handle child);
+  void removeChild(unsigned idx);
   void moveChildren(std::vector<tree_node_handle> &fromChildren, std::vector<Rectangle> &fromBoxes);
   void moveChild(unsigned fromIndex, std::vector<Rectangle> &toRectangles, std::vector<tree_node_handle> &toChildren);
 
@@ -1298,6 +1299,12 @@ void BranchNode<min_branch_factor, max_branch_factor>::removeChild(tree_node_han
   }
   assert(entries.at(i).child == child);
   entries.at(i) = entries.at(cur_offset_ - 1);
+  cur_offset_--;
+}
+
+template <int min_branch_factor, int max_branch_factor>
+void BranchNode<min_branch_factor, max_branch_factor>::removeChild(unsigned idx) {
+  entries[idx] = entries[cur_offset_ - 1];
   cur_offset_--;
 }
 
