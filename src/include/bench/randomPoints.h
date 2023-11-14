@@ -464,7 +464,7 @@ runBench(
   Index *spatialIndex;
 
   if (configU["tree"] == R_TREE) {
-    spatialIndex = new rtreedisk::RTreeDisk<3, 6>(
+    spatialIndex = new rtreedisk::RTreeDisk<R_TREE_MIN_FANOUT, R_TREE_MAX_FANOUT>(
             configU["buffer_pool_memory"], configS["db_file_name"]
     );
   } else if (configU["tree"] == R_PLUS_TREE) {
