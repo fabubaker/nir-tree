@@ -1048,14 +1048,9 @@ tree_node_handle LeafNode<min_branch_factor, max_branch_factor>::insert(
     hasReinsertedOnLevel.push_back(false);
 
     return new_root_handle;
-  } else {
-    // We might no longer be the parent.  If we hit overflowTreatment, we may have triggered
-    // reInsert, which then triggered a split. That insert will have returned newRoot, but
-    // because reInsert() returns nullptr, we don't know about it
-    // P.S: Technically reInsert changes treeRef->root, which will always contain the most
-    // up-to-date root handle.
-    return treeRef->root;
   }
+
+  return treeRef->root;
 }
 
 // To be called on a leaf
@@ -2183,14 +2178,9 @@ tree_node_handle BranchNode<min_branch_factor, max_branch_factor>::insert(
     hasReinsertedOnLevel.push_back(false);
 
     return new_root_handle;
-  } else {
-    // We might no longer be the parent.  If we hit overflowTreatment, we may have triggered
-    // reInsert, which then triggered a split. That insert will have returned newRoot, but
-    // because reInsert() returns nullptr, we don't know about it
-    // P.S: Technically reInsert changes treeRef->root, which will always contain the most
-    // up-to-date root handle.
-    return treeRef->root;
   }
+
+  return treeRef->root;
 }
 
 // Always called on root, this = root
