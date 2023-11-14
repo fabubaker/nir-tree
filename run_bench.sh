@@ -9,7 +9,9 @@ rects_dir=$(realpath $3)
 tag="$4"
 
 tree_name=''
-if [ $tree_type -eq 1 ]; then
+if [ $tree_type -eq 0 ]; then
+   tree_name='rtree'
+elif [ $tree_type -eq 1 ]; then
    tree_name='rplus'
 elif [ $tree_type -eq 2 ]; then
    tree_name='rstar'
