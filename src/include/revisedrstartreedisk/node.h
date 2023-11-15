@@ -76,14 +76,12 @@ namespace revisedrstartreedisk {
         void removePoint(const Point &givenPoint);
 
         tree_node_handle findLeaf(
-                RevisedRStarTreeDisk
-          <min_branch_factor, max_branch_factor> *treeRef,
+                RevisedRStarTreeDisk<min_branch_factor, max_branch_factor> *treeRef,
                 tree_node_handle selfHandle,
                 const Point &givenPoint
         );
         SplitResult splitNode(
-                RevisedRStarTreeDisk
-          <min_branch_factor, max_branch_factor> *treeRef,
+                RevisedRStarTreeDisk<min_branch_factor, max_branch_factor> *treeRef,
                 tree_node_handle current_handle,
                 Partition p
         );
@@ -95,8 +93,7 @@ namespace revisedrstartreedisk {
 
         // These return the root of the tree.
         tree_node_handle insert(
-                RevisedRStarTreeDisk
-          <min_branch_factor, max_branch_factor> *treeRef,
+                RevisedRStarTreeDisk<min_branch_factor, max_branch_factor> *treeRef,
                 tree_node_handle current_handle,
                 Point point
         );
@@ -136,22 +133,28 @@ namespace revisedrstartreedisk {
         // Helper functions
         Rectangle boundingBox() const;
         void removeChild(tree_node_handle child);
+        void chooseNodeHelper(
+                unsigned limitIndex, 
+                Point &givenPoint, 
+                unsigned &chosenIndex, 
+                bool &success, 
+                std::vector<bool> &candidates, 
+                std::vector<double> &deltas, 
+                unsigned startIndex, 
+                bool useMarginDelta);
         tree_node_handle chooseSubtree(
-                RevisedRStarTreeDisk
-          <min_branch_factor, max_branch_factor> *treeRef,
+                RevisedRStarTreeDisk<min_branch_factor, max_branch_factor> *treeRef,
                 tree_node_handle current_handle,
                 std::stack<tree_node_handle> &parentHandles,
                 const Point &givenPoint
         );
         tree_node_handle findLeaf(
-                RevisedRStarTreeDisk
-          <min_branch_factor, max_branch_factor> *treeRef,
+                RevisedRStarTreeDisk<min_branch_factor, max_branch_factor> *treeRef,
                 tree_node_handle selfHandle,
                 const Point &givenPoint
         );
         SplitResult splitNode(
-                RevisedRStarTreeDisk
-          <min_branch_factor, max_branch_factor> *treeRef,
+                RevisedRStarTreeDisk<min_branch_factor, max_branch_factor> *treeRef,
                 tree_node_handle current_handle,
                 Partition p
         );
@@ -160,14 +163,12 @@ namespace revisedrstartreedisk {
 
         // Datastructure interface functions
         void exhaustiveSearch(
-          const Point &requestedPoint, std::vector<Point> &accumulator, RevisedRStarTreeDisk
-    <min_branch_factor, max_branch_factor> *treeRef
+          const Point &requestedPoint, std::vector<Point> &accumulator, RevisedRStarTreeDisk<min_branch_factor, max_branch_factor> *treeRef
         ) const;
 
         // These return the root of the tree.
         tree_node_handle insert(
-                RevisedRStarTreeDisk
-          <min_branch_factor, max_branch_factor> *treeRef,
+                RevisedRStarTreeDisk<min_branch_factor, max_branch_factor> *treeRef,
                 tree_node_handle current_handle,
                 Point point
         );
@@ -244,8 +245,7 @@ namespace revisedrstartreedisk {
 
     template <int min_branch_factor, int max_branch_factor>
     tree_node_handle LeafNode<min_branch_factor, max_branch_factor>::findLeaf(
-            RevisedRStarTreeDisk
-      <min_branch_factor, max_branch_factor> *treeRef,
+            RevisedRStarTreeDisk<min_branch_factor, max_branch_factor> *treeRef,
             tree_node_handle selfHandle,
             const Point &givenPoint
     ) {
@@ -298,8 +298,7 @@ namespace revisedrstartreedisk {
 
     template <int min_branch_factor, int max_branch_factor>
     SplitResult LeafNode<min_branch_factor, max_branch_factor>::splitNode(
-      RevisedRStarTreeDisk
-<min_branch_factor, max_branch_factor> *treeRef,
+      RevisedRStarTreeDisk<min_branch_factor, max_branch_factor> *treeRef,
       tree_node_handle current_handle,
       Partition p
     ) {
@@ -349,8 +348,7 @@ namespace revisedrstartreedisk {
 
     template <int min_branch_factor, int max_branch_factor>
     SplitResult propagateSplit(
-      RevisedRStarTreeDisk
-<min_branch_factor, max_branch_factor> *treeRef,
+      RevisedRStarTreeDisk<min_branch_factor, max_branch_factor> *treeRef,
       pinned_node_ptr<BranchNode<min_branch_factor, max_branch_factor>> current_node,
       tree_node_handle current_handle,
       tree_node_handle parent_handle,
@@ -417,8 +415,7 @@ namespace revisedrstartreedisk {
 
     template <int min_branch_factor, int max_branch_factor>
     SplitResult propagateSplit(
-      RevisedRStarTreeDisk
-<min_branch_factor, max_branch_factor> *treeRef,
+      RevisedRStarTreeDisk<min_branch_factor, max_branch_factor> *treeRef,
       pinned_node_ptr<LeafNode<min_branch_factor, max_branch_factor>> current_node,
       tree_node_handle current_handle,
       tree_node_handle parent_handle,
@@ -458,8 +455,7 @@ namespace revisedrstartreedisk {
 
     template <int min_branch_factor, int max_branch_factor>
     SplitResult adjustTree(
-      RevisedRStarTreeDisk
-<min_branch_factor, max_branch_factor> *treeRef,
+      RevisedRStarTreeDisk<min_branch_factor, max_branch_factor> *treeRef,
       tree_node_handle current_handle,
       std::stack<tree_node_handle> parentHandles
     ) {
@@ -523,8 +519,7 @@ namespace revisedrstartreedisk {
 // that means the tree only has one leaf node.
     template <int min_branch_factor, int max_branch_factor>
     tree_node_handle LeafNode<min_branch_factor, max_branch_factor>::insert(
-            RevisedRStarTreeDisk
-      <min_branch_factor, max_branch_factor> *treeRef,
+            RevisedRStarTreeDisk<min_branch_factor, max_branch_factor> *treeRef,
             tree_node_handle current_handle,
             Point point
     ) {
@@ -781,8 +776,7 @@ namespace revisedrstartreedisk {
     template <int min_branch_factor, int max_branch_factor>
     void BranchNode<min_branch_factor, max_branch_factor>::exhaustiveSearch(
         const Point &requestedPoint, std::vector<Point> &accumulator,
-        RevisedRStarTreeDisk
-  <min_branch_factor, max_branch_factor> *treeRef
+        RevisedRStarTreeDisk<min_branch_factor, max_branch_factor> *treeRef
     ) const {
       for (unsigned i = 0; i < cur_offset_; i++) {
         tree_node_handle child_handle = entries.at(i).child;
@@ -801,8 +795,7 @@ namespace revisedrstartreedisk {
     void point_search_leaf_node(LeafNode<min_branch_factor, max_branch_factor> &node,
                                 Point &requestedPoint,
                                 std::vector<Point> &accumulator,
-                                RevisedRStarTreeDisk
-                          <min_branch_factor, max_branch_factor> *treeRef)
+                                RevisedRStarTreeDisk<min_branch_factor, max_branch_factor> *treeRef)
     {
       unsigned intersection_count = 0;
 
@@ -821,8 +814,7 @@ namespace revisedrstartreedisk {
     void point_search_branch_node(BranchNode<min_branch_factor, max_branch_factor> &node,
                                   Point &requestedPoint,
                                   std::stack<tree_node_handle> &context,
-                                  RevisedRStarTreeDisk
-                            <min_branch_factor, max_branch_factor> *treeRef)
+                                  RevisedRStarTreeDisk<min_branch_factor, max_branch_factor> *treeRef)
     {
       unsigned matching_branch_counter = 0;
       unsigned intersection_count = 0;
@@ -844,8 +836,7 @@ namespace revisedrstartreedisk {
     std::vector<Point> point_search(
             tree_node_handle start_point,
             Point &requestedPoint,
-            RevisedRStarTreeDisk
-      <min_branch_factor, max_branch_factor> *treeRef)
+            RevisedRStarTreeDisk<min_branch_factor, max_branch_factor> *treeRef)
     {
       std::vector<Point> accumulator;
       std::stack<tree_node_handle> context;
@@ -882,8 +873,7 @@ namespace revisedrstartreedisk {
     void rectangle_search_leaf_node(LeafNode<min_branch_factor, max_branch_factor> &node,
                                     Rectangle &requestedRectangle,
                                     std::vector<Point> &accumulator,
-                                    RevisedRStarTreeDisk
-                              <min_branch_factor, max_branch_factor> *treeRef)
+                                    RevisedRStarTreeDisk<min_branch_factor, max_branch_factor> *treeRef)
     {
       unsigned intersection_count = 0;
 
@@ -902,8 +892,7 @@ namespace revisedrstartreedisk {
     void rectangle_search_branch_node(BranchNode<min_branch_factor, max_branch_factor> &node,
                                       Rectangle &requestedRectangle,
                                       std::stack<tree_node_handle> &context,
-                                      RevisedRStarTreeDisk
-                                <min_branch_factor, max_branch_factor> *treeRef)
+                                      RevisedRStarTreeDisk<min_branch_factor, max_branch_factor> *treeRef)
     {
       unsigned intersection_count = 0;
 
@@ -922,8 +911,7 @@ namespace revisedrstartreedisk {
     std::vector<Point> rectangle_search(
             tree_node_handle start_point,
             Rectangle &requestedRectangle,
-            RevisedRStarTreeDisk
-      <min_branch_factor, max_branch_factor> *treeRef)
+            RevisedRStarTreeDisk<min_branch_factor, max_branch_factor> *treeRef)
     {
       std::vector<Point> accumulator;
 
@@ -955,12 +943,49 @@ namespace revisedrstartreedisk {
 #endif
       return accumulator;
     }
+    	
+    template <int min_branch_factor, int max_branch_factor>
+    void BranchNode<min_branch_factor, max_branch_factor>::chooseNodeHelper(unsigned limitIndex, 
+                                                                            Point &givenPoint, 
+                                                                            unsigned &chosenIndex, 
+                                                                            bool &success, 
+                                                                            std::vector<bool> &candidates, 
+                                                                            std::vector<double> &deltas, 
+                                                                            unsigned startIndex, 
+                                                                            bool useMarginDelta)
+    {
+      candidates[startIndex] = true;
+      deltas[startIndex] = 0.0;
+
+      for (unsigned j = 0; j <= limitIndex; ++j)
+      {
+        if (j != startIndex)
+        {
+          unsigned additionalDelta = useMarginDelta ? entries.at(startIndex).boundingBox.marginDelta(givenPoint, entries.at(j).boundingBox) : entries.at(startIndex).boundingBox.areaDelta(givenPoint, entries.at(j0f32x).boundingBox);
+          deltas[startIndex] += additionalDelta;
+
+          if (additionalDelta != 0.0 && !candidates[j])
+          {
+            this->chooseNodeHelper(limitIndex, givenPoint, chosenIndex, success, candidates, deltas, j, useMarginDelta);
+            if (success)
+            {
+              break;
+            }
+          }
+        }
+      }
+
+      if (deltas[startIndex] == 0.0)
+      {
+        chosenIndex = startIndex;
+        success = true;
+      }
+    }
 
     // Populates parentHandles with the path taken to get to the leaf
     template <int min_branch_factor, int max_branch_factor>
     tree_node_handle BranchNode<min_branch_factor, max_branch_factor>::chooseSubtree(
-            RevisedRStarTreeDisk
-      <min_branch_factor, max_branch_factor> *treeRef,
+            RevisedRStarTreeDisk<min_branch_factor, max_branch_factor> *treeRef,
             tree_node_handle current_handle,
             std::stack<tree_node_handle> &parentHandles,
             const Point &givenPoint
@@ -974,40 +999,146 @@ namespace revisedrstartreedisk {
 
         auto node = treeRef->get_branch_node(node_handle);
 
-        // Compute the smallest expansion
-        unsigned smallestExpansionIndex = 0;
-        Branch &b_0 = node->entries.at(0);
-        double smallestExpansionArea = b_0.boundingBox.computeExpansionArea(givenPoint);
+				unsigned optimalBranchIndex = 0;
 
-        for (unsigned i = 1; i < node->cur_offset_ and smallestExpansionArea != -1.0; i++) {
+				// Find all rectangles that completely cover the given point
+				std::vector<unsigned> covers(0);
+				for (unsigned i = 0; i < node->cur_offset_; ++i) {
           Branch &b_i = node->entries.at(i);
-          double expansionArea = b_i.boundingBox.computeExpansionArea(givenPoint);
+					if (b_i.boundingBox.containsPoint(givenPoint)) {
+						covers.push_back(i);
+					}
+				}
 
-          if (expansionArea < smallestExpansionArea) {
-            smallestExpansionIndex = i;
-            smallestExpansionArea = expansionArea;
-          }
-        }
+				if (!covers.empty()) {
+					// If any rectangles cover the given point select the lowest volume, then lowest
+					// margin rectangle among them
+					double minVolume = std::numeric_limits<double>::infinity();
+					double minMargin = std::numeric_limits<double>::infinity();
+					unsigned minIndex = covers.front();
 
-        if (smallestExpansionArea != -1.0) {
-          Branch &b = node->entries.at(smallestExpansionIndex);
-          b.boundingBox.expand(givenPoint);
-        }
+					for (unsigned i : covers) {
+						double evalVolume = node->entries.at(i).boundingBox.computeExpansionArea(givenPoint);
+            double evalMargin = node->entries.at(i).boundingBox.computeExpansionMargin(givenPoint);
+						if (evalVolume < minVolume) {
+							minVolume = evalVolume;
+							minMargin = evalMargin;
+							minIndex = i;
+						} else if (evalVolume == minVolume && evalVolume == 0) {
+							// Tie break using perimeter
+							if (evalMargin < minMargin) {
+								minVolume = evalVolume;
+								minMargin = evalMargin;
+								minIndex = i;
+							}
+						}
+					}
 
-        // Descend
-        // Keep track of the previous handle before descending
+					optimalBranchIndex = minIndex;
+				} else {
+          // Make the entries easier to work with
+          // std::vector<Branch *> entriesCopy;
+          // entriesCopy.reserve(node->cur_offset_);
+          // for (unsigned i = 0; i < node->cur_offset_; i++) {
+          //   entriesCopy.push_back(&(node->entries.at(i)));
+          // }
+					// Sort the entries in ascending order of their margin delta
+					std::sort(node->entries.begin(), node->entries.begin() + node->cur_offset_, [givenPoint](Branch &a, Branch &b){
+            return a.boundingBox.computeExpansionMargin(givenPoint) <= b.boundingBox.computeExpansionMargin(givenPoint);});
+
+					// Look at the first entry's intersection margin with all the others
+					double deltaWithAll = 0.0;
+					for (Branch &branch : node->entries) {
+						deltaWithAll += branch.boundingBox.marginDelta(givenPoint, node->entries[0].boundingBox);
+					}
+
+					if (deltaWithAll == 0.0) {
+						optimalBranchIndex = 0;
+					} else {
+						// Set limitIndex based on margin deltas that are not 0
+						unsigned limitIndex = 0;
+						double maxMarginDelta = - std::numeric_limits<double>::infinity();
+
+						for (unsigned i = 1; i < node->cur_offset_; ++i) {
+							double evalMarginDelta = node->entries[0].boundingBox.marginDelta(givenPoint, node->entries[i].boundingBox);
+							if (evalMarginDelta > maxMarginDelta) {
+								maxMarginDelta = evalMarginDelta;
+								limitIndex = i;
+							}
+						}
+
+						// Consider branches only up to limitIndex
+						std::vector<bool> candidate(limitIndex + 1, false);
+						std::vector<double> deltas(limitIndex + 1, 0.0);
+						bool success = false;
+						unsigned chosenIndex;
+
+						// Determine if there exists a rectangle with zero area containing given point
+						bool zeroAreaContainer = false;
+						for (unsigned i = 0; !zeroAreaContainer && i <= limitIndex; ++i) {
+							zeroAreaContainer = 0.0 == node->entries[i].boundingBox.copyExpand(givenPoint).area();
+						}
+
+						if (zeroAreaContainer) {
+							node->chooseNodeHelper(limitIndex, givenPoint, chosenIndex, success, candidate, deltas, 0, true);
+						} else {
+							node->chooseNodeHelper(limitIndex, givenPoint, chosenIndex, success, candidate, deltas, 0, false);
+						}
+
+						if (success) {
+							optimalBranchIndex = chosenIndex;
+						} else {
+							double minDelta = std::numeric_limits<double>::infinity();
+
+							for (unsigned i = 0; i <= limitIndex; ++i) {
+								if (deltas[i] < minDelta && candidate[i]) {
+									minDelta = deltas[i];
+									optimalBranchIndex = i;
+								}
+							}
+						}
+					}
+				}
+
+				// Descend
         parentHandles.push(node_handle);
-        Branch &b = node->entries.at(smallestExpansionIndex);
+        Branch &b = node->entries.at(optimalBranchIndex);
+        b.boundingBox.expand(givenPoint);
         node_handle = b.child;
-      }
+      }        
+      //   // Compute the smallest expansion
+      //   unsigned smallestExpansionIndex = 0;
+      //   Branch &b_0 = node->entries.at(0);
+      //   double smallestExpansionArea = b_0.boundingBox.computeExpansionArea(givenPoint);
+
+      //   for (unsigned i = 1; i < node->cur_offset_ and smallestExpansionArea != -1.0; i++) {
+      //     Branch &b_i = node->entries.at(i);
+      //     double expansionArea = b_i.boundingBox.computeExpansionArea(givenPoint);
+
+      //     if (expansionArea < smallestExpansionArea) {
+      //       smallestExpansionIndex = i;
+      //       smallestExpansionArea = expansionArea;
+      //     }
+      //   }
+
+      //   if (smallestExpansionArea != -1.0) {
+      //     Branch &b = node->entries.at(smallestExpansionIndex);
+      //     b.boundingBox.expand(givenPoint);
+      //   }
+
+      //   // Descend
+      //   // Keep track of the previous handle before descending
+      //   parentHandles.push(node_handle);
+      //   Branch &b = node->entries.at(smallestExpansionIndex);
+      //   node_handle = b.child;
+      // }
 
       assert(false);
     }
 
     template <int min_branch_factor, int max_branch_factor>
     tree_node_handle BranchNode<min_branch_factor, max_branch_factor>::findLeaf(
-            RevisedRStarTreeDisk
-      <min_branch_factor, max_branch_factor> *treeRef,
+            RevisedRStarTreeDisk<min_branch_factor, max_branch_factor> *treeRef,
             tree_node_handle selfHandle,
             const Point &givenPoint
     ) {
@@ -1158,8 +1289,7 @@ namespace revisedrstartreedisk {
 
     template <int min_branch_factor, int max_branch_factor>
     SplitResult BranchNode<min_branch_factor, max_branch_factor>::splitNode(
-            RevisedRStarTreeDisk
-      <min_branch_factor, max_branch_factor> *treeRef,
+            RevisedRStarTreeDisk<min_branch_factor, max_branch_factor> *treeRef,
             tree_node_handle current_handle,
             Partition p
     ) {
@@ -1238,8 +1368,7 @@ namespace revisedrstartreedisk {
 // insert() is always called on the root node.
     template <int min_branch_factor, int max_branch_factor>
     tree_node_handle BranchNode<min_branch_factor, max_branch_factor>::insert(
-            RevisedRStarTreeDisk
-      <min_branch_factor, max_branch_factor> *treeRef,
+            RevisedRStarTreeDisk<min_branch_factor, max_branch_factor> *treeRef,
             tree_node_handle current_handle,
             Point point
     ) {
@@ -1370,8 +1499,7 @@ namespace revisedrstartreedisk {
       }
 
       void operator()(
-          RevisedRStarTreeDisk
-    <min_branch_factor, max_branch_factor> *treeRef,
+          RevisedRStarTreeDisk<min_branch_factor, max_branch_factor> *treeRef,
           tree_node_handle node_handle)
       {
         if (node_handle.get_type() == LEAF_NODE) {
