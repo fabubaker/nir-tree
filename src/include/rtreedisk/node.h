@@ -586,7 +586,7 @@ tree_node_handle LeafNode<min_branch_factor, max_branch_factor>::splitNode(
   double groupAAffinity, groupBAffinity;
   // QS2 [Check if done]
   while (
-    cur_offset_ > 0 &&
+    cur_offset_ > 0 && // moveDataTo updates cur_offset_
     (groupAData.size() + cur_offset_ > min_branch_factor) &&
     (groupBData.size() + cur_offset_ > min_branch_factor)
   )
@@ -648,6 +648,7 @@ tree_node_handle LeafNode<min_branch_factor, max_branch_factor>::splitNode(
 
   // If we stopped because half the entries were assigned then great put the others in the
   // opposite group
+  // NOTE: Do not use moveDataTo here as it will mess up the loop index
   if (groupAData.size() + cur_offset_ == min_branch_factor)
   {
     for (unsigned i = 0; i < cur_offset_; ++i)
@@ -1848,7 +1849,7 @@ tree_node_handle BranchNode<min_branch_factor, max_branch_factor>::splitNode(
   double groupAAffinity, groupBAffinity;
   // QS2 [Check if done]
   while (
-      cur_offset_ > 0 &&
+      cur_offset_ > 0 && // moveChildrenTo updates cur_offset_
       (groupABoundingBoxes.size() + cur_offset_ > min_branch_factor) &&
       (groupBBoundingBoxes.size() + cur_offset_ > min_branch_factor)
   )
@@ -1910,6 +1911,7 @@ tree_node_handle BranchNode<min_branch_factor, max_branch_factor>::splitNode(
 
   // If we stopped because half the entries were assigned then great put the others in the
   // opposite group
+  // NOTE: Do not use moveChildTo here as it will mess up the loop index
   if (groupABoundingBoxes.size() + cur_offset_ == min_branch_factor)
   {
     for (unsigned i = 0; i < cur_offset_; ++i)
