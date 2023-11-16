@@ -525,7 +525,7 @@ tree_node_handle LeafNode<min_branch_factor, max_branch_factor>::splitNode(
   tree_node_allocator *allocator = get_node_allocator(treeRef);
 
   /* Begin R-Tree split procedure */
-  double dataSize = cur_offset_;
+  unsigned dataSize = cur_offset_;
 
   // Compute the first entry in each group based on PS1 & PS2
   unsigned seedA = 0;
