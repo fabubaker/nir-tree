@@ -103,10 +103,9 @@ void generate_tree(
   Index *spatialIndex;
 
   if (configU["tree"] == NIR_TREE) {
-    nirtreedisk::NIRTreeDisk<NIR_MIN_FANOUT, NIR_MAX_FANOUT> *tree =
-            new nirtreedisk::NIRTreeDisk<NIR_MIN_FANOUT, NIR_MAX_FANOUT>(
-            configU["buffer_pool_memory"], backing_file,
-            nirtreedisk::LINE_MINIMIZE_DOWN_SPLITS
+    auto *tree = new nirtreedisk::NIRTreeDisk<NIR_MIN_FANOUT, NIR_MAX_FANOUT>(
+      configU["buffer_pool_memory"], backing_file,
+      nirtreedisk::LINE_MINIMIZE_DOWN_SPLITS
     );
 
     spatialIndex = tree;
@@ -139,8 +138,7 @@ void generate_tree(
     bufferPool->stat();
     bufferPool->resetStat();
   } else if (configU["tree"] == R_STAR_TREE) {
-    rstartreedisk::RStarTreeDisk<R_STAR_MIN_FANOUT, R_STAR_MAX_FANOUT> *tree =
-            new rstartreedisk::RStarTreeDisk<R_STAR_MIN_FANOUT, R_STAR_MAX_FANOUT>(
+    auto *tree = new rstartreedisk::RStarTreeDisk<R_STAR_MIN_FANOUT, R_STAR_MAX_FANOUT>(
             configU["buffer_pool_memory"], backing_file
     );
     spatialIndex = tree;
@@ -172,8 +170,7 @@ void generate_tree(
     bufferPool->stat();
     bufferPool->resetStat();
   } else if (configU["tree"] == R_PLUS_TREE) {
-    rplustreedisk::RPlusTreeDisk<R_PLUS_MIN_FANOUT, R_PLUS_MAX_FANOUT> *tree =
-            new rplustreedisk::RPlusTreeDisk<R_PLUS_MIN_FANOUT, R_PLUS_MAX_FANOUT>(
+    auto *tree = new rplustreedisk::RPlusTreeDisk<R_PLUS_MIN_FANOUT, R_PLUS_MAX_FANOUT>(
             configU["buffer_pool_memory"], backing_file
     );
     spatialIndex = tree;
@@ -200,6 +197,38 @@ void generate_tree(
             R_PLUS_MAX_FANOUT
     );
     std::cout << "Created R+Tree" << std::endl;
+
+    std::cout << "Buffer pool stats after sequential inserts: " << std::endl;
+    bufferPool->stat();
+    bufferPool->resetStat();
+  } else if (configU["tree"] == R_TREE) {
+    auto *tree = new rtreedisk::RTreeDisk<R_TREE_MIN_FANOUT, R_TREE_MAX_FANOUT>(
+            configU["buffer_pool_memory"], backing_file
+    );
+    spatialIndex = tree;
+    bufferPool = &(tree->node_allocator_->buffer_pool_);
+
+    std::cout << "Bulk Loading..." << std::endl;
+    std::cout << "Creating tree with " << configU["buffer_pool_memory"] << "bytes" << std::endl;
+    bulk_load_tree(
+            tree, configU, all_points.begin(), all_points.begin() + cut_off_bulk_load,
+            R_TREE_MAX_FANOUT,
+            (rplustreedisk::LeafNode<R_TREE_MIN_FANOUT, R_TREE_MAX_FANOUT> *) nullptr,
+            (rplustreedisk::BranchNode<R_TREE_MIN_FANOUT, R_TREE_MAX_FANOUT> *) nullptr
+    );
+
+    std::cout << "Buffer pool stats after bulk-loading: " << std::endl;
+    bufferPool->stat();
+    bufferPool->resetStat();
+
+    // insert the rest of points:
+    std::cout << "Sequential Inserting..." << std::endl;
+    sequential_insert_tree(
+            tree, configU,
+            all_points.begin() + cut_off_bulk_load, all_points.end(),
+            R_TREE_MAX_FANOUT
+    );
+    std::cout << "Created RTree" << std::endl;
 
     std::cout << "Buffer pool stats after sequential inserts: " << std::endl;
     bufferPool->stat();

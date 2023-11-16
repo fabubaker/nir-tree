@@ -75,6 +75,10 @@ public:
   Rectangle boundingBox() const;
   void removePoint(const Point &givenPoint);
 
+  void moveDataTo(unsigned fromIndex, std::vector<Point> &toData);
+  void copyDataFrom(std::vector<Point> &fromData);
+  void removeData(unsigned idx);
+
   tree_node_handle chooseSubtree(const NodeEntry &nodeEntry);
   tree_node_handle findLeaf(
           RTreeDisk<min_branch_factor, max_branch_factor> *treeRef,
@@ -165,6 +169,10 @@ public:
   Rectangle boundingBox() const;
   bool updateBoundingBox(tree_node_handle child, Rectangle updatedBoundingBox);
   void removeChild(tree_node_handle child);
+  void removeChild(unsigned idx);
+  void moveChildTo(unsigned fromIndex, std::vector<Rectangle> &toRectangles, std::vector<tree_node_handle> &toChildren);
+  void copyChildrenFrom(std::vector<tree_node_handle> &fromChildren, std::vector<Rectangle> &fromBoxes);
+
   tree_node_handle chooseSubtree(
       RTreeDisk<min_branch_factor, max_branch_factor> *treeRef,
       tree_node_handle current_handle,
@@ -310,6 +318,28 @@ void LeafNode<min_branch_factor, max_branch_factor>::removePoint(const Point &gi
   assert(givenPoint == entries.at(i));
 
   entries.at(i) = entries.at(cur_offset_ - 1);
+  cur_offset_--;
+}
+
+template <int min_branch_factor, int max_branch_factor>
+void LeafNode<min_branch_factor, max_branch_factor>::moveDataTo(unsigned fromIndex, std::vector<Point> &toData) {
+  toData.push_back(entries[fromIndex]);
+  entries[fromIndex] = entries[cur_offset_ - 1];
+  cur_offset_--;
+}
+
+template <int min_branch_factor, int max_branch_factor>
+void LeafNode<min_branch_factor, max_branch_factor>::copyDataFrom(std::vector<Point> &fromData) {
+  cur_offset_ = fromData.size();
+  for (unsigned i = 0; i < cur_offset_; i++)
+  {
+    entries[i] = fromData.at(i);
+  }
+}
+
+template <int min_branch_factor, int max_branch_factor>
+void LeafNode<min_branch_factor, max_branch_factor>::removeData(unsigned idx) {
+  entries[idx] = entries[cur_offset_ - 1];
   cur_offset_--;
 }
 
@@ -492,63 +522,166 @@ tree_node_handle LeafNode<min_branch_factor, max_branch_factor>::splitNode(
       tree_node_handle current_handle
 ) {
   using NodeType = LeafNode<min_branch_factor, max_branch_factor>;
-  // S1: Call chooseSplitAxis to determine the axis perpendicular to which the split is performed
-  // S2: Invoke chooseSplitIndex given the axis to determine the best distribution along this axis
-  // S3: Distribute the entries among these two groups
-
-  // Call chooseSplitAxis to determine the axis perpendicular to which the split is performed
-  // For now we will save the axis as an int -> since this allows for room for growth in the future
-  // Call ChooseSplitIndex to create optimal splitting of data array
-  unsigned splitAxis = chooseSplitAxis();
-  unsigned splitIndex = chooseSplitIndex(splitAxis);
-
-  /*
-    std::cout << "Split Leaf Node: {" <<  std::endl;
-    for( unsigned i = 0; i < cur_offset_; i++ ) {
-        std::cout << entries.at(i) << std::endl;
-    }
-    std::cout << "}" << std::endl;
-    std::cout << "Split on axis" << splitAxis << ", index: " <<
-        splitIndex << std::endl;
-        */
-
   tree_node_allocator *allocator = get_node_allocator(treeRef);
-  auto alloc_data = allocator->create_new_tree_node<NodeType>(NodeHandleType(LEAF_NODE));
+
+  /* Begin R-Tree split procedure */
+  unsigned dataSize = cur_offset_;
+
+  // Compute the first entry in each group based on PS1 & PS2
+  unsigned seedA = 0;
+  unsigned seedB = dataSize - 1;
+
+  // This rectangle drank too much and represents how wasted iData and jData are
+  double maxWasted = 0.0;
+
+  // QS1 [Pick entry for each group]
+  Point iData, jData;
+  for (unsigned i = 0; i < dataSize; ++i)
+  {
+    iData = entries[i];
+    for (unsigned j = 0; j < dataSize; ++j)
+    {
+      jData = entries[j];
+
+      Rectangle temp = Rectangle(iData, iData);
+      temp.expand(jData);
+
+      double wasted = temp.area();
+
+      if (maxWasted < wasted)
+      {
+        maxWasted = wasted;
+
+        seedA = i;
+        seedB = j;
+      }
+    }
+  }
+
+  // Setup the two groups which will be the entries in the two new nodes
+  std::vector<Point> groupAData;
+  std::vector<Point> groupBData;
+
+  // Set the bounding rectangles
+  Rectangle boundingBoxA = Rectangle(entries[seedA], entries[seedA]);
+  Rectangle boundingBoxB = Rectangle(entries[seedB], entries[seedB]);
+
+  // seedA and seedB have both already been allocated so put them into the appropriate group
+  // and remove them from our data being careful to delete the one which will not affect the
+  // index of the other first
+  groupAData.push_back(entries[seedA]);
+  groupBData.push_back(entries[seedB]);
+  if (seedA > seedB)
+  {
+    removeData(seedA);
+    removeData(seedB);
+  }
+  else
+  {
+    removeData(seedB);
+    removeData(seedA);
+  }
+
+  // Go through the remaining entries and add them to groupA or groupB
+  double groupAAffinity, groupBAffinity;
+  // QS2 [Check if done]
+  while (
+    cur_offset_ > 0 && // moveDataTo updates cur_offset_
+    (groupAData.size() + cur_offset_ > min_branch_factor) &&
+    (groupBData.size() + cur_offset_ > min_branch_factor)
+  )
+  {
+    // PN1 [Determine the cost of putting each entry in each group]
+    unsigned groupAIndex = 0;
+    double groupAMin = std::numeric_limits<double>::infinity();
+    unsigned groupBIndex = 0;
+    double groupBMin = std::numeric_limits<double>::infinity();
+
+    for (unsigned i = 0; i < cur_offset_; ++i)
+    {
+      groupAAffinity = boundingBoxA.computeExpansionArea(entries[i]);
+      groupBAffinity = boundingBoxB.computeExpansionArea(entries[i]);
+
+      // PN2 [Find entry with greatest preference for one group]
+      if (groupAAffinity < groupAMin)
+      {
+        groupAMin = groupAAffinity;
+        groupAIndex = i;
+      }
+
+      if (groupBAffinity < groupBMin)
+      {
+        groupBMin = groupBAffinity;
+        groupBIndex = i;
+      }
+    }
+
+    // QS3 [Select where to assign entry]
+    if (groupAMin == groupBMin)
+    {
+      // Tie so use smaller area
+      if (boundingBoxA.area() < boundingBoxB.area())
+      {
+        boundingBoxA.expand(entries[groupAIndex]);
+        moveDataTo(groupAIndex, groupAData);
+      }
+      else
+      {
+        // Better area or in the worst case an arbitrary choice
+        boundingBoxB.expand(entries[groupBIndex]);
+        moveDataTo(groupBIndex, groupBData);
+      }
+    }
+    else if (groupAMin < groupBMin)
+    {
+      // Higher affinity for groupA
+      boundingBoxA.expand(entries[groupAIndex]);
+      moveDataTo(groupAIndex, groupAData);
+    }
+    else
+    {
+      // Higher affinity for groupB
+      boundingBoxB.expand(entries[groupBIndex]);
+      moveDataTo(groupBIndex, groupBData);
+    }
+  }
+
+  // If we stopped because half the entries were assigned then great put the others in the
+  // opposite group
+  // NOTE: Do not use moveDataTo here as it will mess up the loop index
+  if (groupAData.size() + cur_offset_ == min_branch_factor)
+  {
+    for (unsigned i = 0; i < cur_offset_; ++i)
+    {
+      groupAData.emplace_back(entries[i]);
+    }
+  }
+  else if (groupBData.size() + cur_offset_ == min_branch_factor)
+  {
+    for (unsigned i = 0; i < cur_offset_; ++i)
+    {
+      groupBData.emplace_back(entries[i]);
+    }
+  }
+
+  // Create the new node and fill it
   uint16_t current_level = current_handle.get_level();
-
+  auto alloc_data = allocator->create_new_tree_node<NodeType>(NodeHandleType(LEAF_NODE));
+  tree_node_handle siblingHandle = alloc_data.second;
   auto newSibling = alloc_data.first;
-  tree_node_handle sibling_handle = alloc_data.second;
 
-  new (&(*(newSibling))) NodeType();
-  sibling_handle.set_level(current_level);
+  new (&(*newSibling)) NodeType();
+  siblingHandle.set_level(current_level);
 
-  // Copy everything to the right of the splitPoint (inclusive) to the new sibling
-  std::copy(entries.begin() + splitIndex, entries.begin() + cur_offset_, newSibling->entries.begin());
-
-  newSibling->cur_offset_ = cur_offset_ - splitIndex;
-
-  // Chop our node's data down
-  cur_offset_ = splitIndex;
+  // Fill us with groupA and the new node with groupB
+  copyDataFrom(groupAData);
+  newSibling->copyDataFrom(groupBData);
 
   assert(cur_offset_ > 0);
   assert(newSibling->cur_offset_ > 0);
 
-  /*
-    std::cout << "New Node1: {" <<  std::endl;
-    for( unsigned i = 0; i < cur_offset_; i++ ) {
-        std::cout << entries.at(i) << std::endl;
-    }
-    std::cout << "}" << std::endl;
-
-    std::cout << "New Node2: {" <<  std::endl;
-    for( unsigned i = 0; i < newSibling->cur_offset_; i++ ) {
-        std::cout << newSibling->entries.at(i) << std::endl;
-    }
-    std::cout << "}" << std::endl;
-    */
-
   // Return our newly minted sibling
-  return sibling_handle;
+  return siblingHandle;
 }
 
 // Note: This function modifies parentHandles.
@@ -588,12 +721,7 @@ std::pair<tree_node_handle, tree_node_handle> adjustTreeBottomHalf(
 
     if (sz >= (unsigned) max_branch_factor) {
       tree_node_handle parent_before_handle = parent_handle;
-      tree_node_handle sibling_parent_handle = parent_ptr->overflowTreatment(
-              treeRef,
-              parent_handle,
-              parentHandles,
-              hasReinsertedOnLevel
-      );
+      tree_node_handle sibling_parent_handle = parent_ptr->splitNode(treeRef, parent_handle);
 
       if (sibling_parent_handle) {
         // We split our parent, so now we have two (possible) parents
@@ -867,14 +995,7 @@ tree_node_handle LeafNode<min_branch_factor, max_branch_factor>::insert(
 
   // If we exceed treeRef->maxBranchFactor we need to do something about it
   if (cur_offset_ > max_branch_factor) {
-    // We call overflow treatment to determine how our sibling node is treated. If we do a
-    // reInsert, sibling is nullptr. This is properly dealt with in adjustTree.
-    sibling_handle = overflowTreatment(
-        treeRef,
-        current_handle,
-        parentHandles,
-        hasReinsertedOnLevel
-    );
+    sibling_handle = splitNode(treeRef, current_handle);
   }
 
   // I3 [Propagate overflow treatment changes upward]
@@ -918,14 +1039,9 @@ tree_node_handle LeafNode<min_branch_factor, max_branch_factor>::insert(
     hasReinsertedOnLevel.push_back(false);
 
     return new_root_handle;
-  } else {
-    // We might no longer be the parent.  If we hit overflowTreatment, we may have triggered
-    // reInsert, which then triggered a split. That insert will have returned newRoot, but
-    // because reInsert() returns nullptr, we don't know about it
-    // P.S: Technically reInsert changes treeRef->root, which will always contain the most
-    // up-to-date root handle.
-    return treeRef->root;
   }
+
+  return treeRef->root;
 }
 
 // To be called on a leaf
@@ -1173,6 +1289,39 @@ void BranchNode<min_branch_factor, max_branch_factor>::removeChild(tree_node_han
 }
 
 template <int min_branch_factor, int max_branch_factor>
+void BranchNode<min_branch_factor, max_branch_factor>::removeChild(unsigned idx) {
+  entries[idx] = entries[cur_offset_ - 1];
+  cur_offset_--;
+}
+
+template <int min_branch_factor, int max_branch_factor>
+void BranchNode<min_branch_factor, max_branch_factor>::copyChildrenFrom(
+  std::vector<tree_node_handle> &fromChildren, std::vector<Rectangle> &fromBoxes
+) {
+  assert(fromChildren.size() == fromBoxes.size());
+
+  cur_offset_ = fromChildren.size();
+  for (unsigned i = 0; i < cur_offset_; i++)
+  {
+    entries[i] = Branch(fromBoxes.at(i), fromChildren.at(i));
+  }
+
+  fromChildren.clear();
+  fromBoxes.clear();
+}
+
+template <int min_branch_factor, int max_branch_factor>
+void BranchNode<min_branch_factor, max_branch_factor>::moveChildTo(
+  unsigned fromIndex, std::vector<Rectangle> &toRectangles, std::vector<tree_node_handle> &toChildren
+) {
+  Branch &b = entries[fromIndex];
+  toRectangles.push_back(b.boundingBox);
+  toChildren.push_back(b.child);
+  entries[fromIndex] = entries[cur_offset_ - 1];
+  cur_offset_--;
+}
+
+template <int min_branch_factor, int max_branch_factor>
 void BranchNode<min_branch_factor, max_branch_factor>::exhaustiveSearch(const Point &requestedPoint, std::vector<Point> &accumulator) const {
 #if 0
   for (unsigned i = 0; i < cur_offset_; i++) {
@@ -1352,15 +1501,6 @@ tree_node_handle BranchNode<min_branch_factor, max_branch_factor>::chooseSubtree
         std::stack<tree_node_handle> &parentHandles,
         const NodeEntry &givenNodeEntry
 ) {
-  // CS1: This is called on the root! Just like insert/reinsert
-  // CS2: If N is a leaf return N (same)
-  // CS3: If the child pointers (bounding boxes) -> choose rectangle that needs least
-  // 		overlap enlargement to fit the new Point/bounding rectangle. If tie return smallest area.
-  // 		i.e. the rectangle that has the least overlap -> tbh I'm not sure we can just leave this
-  // 	Else:
-  // 		If not child pointers (bounding boxes) -> choose rectangle that needs least
-  // 		overlap enlargement to fit the new Point (same as before) if tie return smallest area (same)
-
   // CL1 [Initialize]
   tree_node_handle node_handle = current_handle;
 
@@ -1370,14 +1510,11 @@ tree_node_handle BranchNode<min_branch_factor, max_branch_factor>::chooseSubtree
 
   if (entryIsBranch) {
     const Branch &b = std::get<Branch>(givenNodeEntry);
-    //std::cout << "ChooseSubTree for branch: " << b.boundingBox <<
-    //    std::endl;
     givenEntryBoundingBox = b.boundingBox;
     tree_node_handle child_handle = b.child;
     stoppingLevel = child_handle.get_level() + 1;
   } else {
     const Point &p = std::get<Point>(givenNodeEntry);
-    //std::cout << "ChooseSubTree for point: " << p << std::endl;
     givenEntryBoundingBox = Rectangle(p, Point::closest_larger_point(p));
   }
 
@@ -1395,93 +1532,25 @@ tree_node_handle BranchNode<min_branch_factor, max_branch_factor>::chooseSubtree
       return node_handle;
     }
 
-    unsigned descentIndex = 0;
-    auto child_handle = node->entries.at(0).child;
-    bool childrenAreLeaves = (child_handle.get_type() == LEAF_NODE);
+    unsigned smallestExpansionIndex = 0;
+    double smallestExpansionArea = std::numeric_limits<double>::infinity();
 
-    if (childrenAreLeaves) {
-      //std::cout << "ChildrenAreLeaves: " << childrenAreLeaves <<
-      //    std::endl;
-      double smallestOverlapExpansion = std::numeric_limits<double>::infinity();
-      double smallestExpansionArea = std::numeric_limits<double>::infinity();
-      double smallestArea = std::numeric_limits<double>::infinity();
+    // CL2 [Choose subtree]
+    // Find the bounding box with least required expansion
+    for (unsigned i = 0; i < node->cur_offset_; i++) {
+      const Branch &b = node->entries.at(i);
+      double testExpansionArea = b.boundingBox.computeExpansionArea(givenEntryBoundingBox);
 
-      // Choose the entry in N whose rectangle needs least overlap enlargement
-      unsigned num_entries_els = node->cur_offset_;
-      for (unsigned i = 0; i < num_entries_els; i++) {
-        const Branch &b = node->entries.at(i);
-
-        // Compute overlap
-        double testOverlapExpansionArea =
-                computeOverlapGrowth<NodeEntry, Branch, max_branch_factor>(
-                  i, node->entries,
-           node->cur_offset_, givenEntryBoundingBox
-                );
-
-        //std::cout << "overlapGrowth " << i << ": " <<
-        //    testOverlapExpansionArea << std::endl;
-
-        // Take largest overlap
-        if (smallestOverlapExpansion > testOverlapExpansionArea) {
-          descentIndex = i;
-          smallestOverlapExpansion = testOverlapExpansionArea;
-          smallestExpansionArea = b.boundingBox.computeExpansionArea(givenEntryBoundingBox);
-          smallestArea = b.boundingBox.area();
-        } else if (smallestOverlapExpansion == testOverlapExpansionArea) {
-          // Use expansion area to break tie
-          double testExpansionArea = b.boundingBox.computeExpansionArea(givenEntryBoundingBox);
-          if (smallestExpansionArea > testExpansionArea) {
-            descentIndex = i;
-            // Don't need to update smallestOverlapExpansion, its the same
-            smallestExpansionArea = testExpansionArea;
-            smallestArea = b.boundingBox.area();
-          } else if (smallestExpansionArea == testExpansionArea) {
-            // Use area to break tie
-            double testArea = b.boundingBox.area();
-            if (smallestArea > testArea) {
-              descentIndex = i;
-              // Don't need to update smallestOverlapExpansion, its the same
-              // Don't need to update smallestExpansionArea, its the same
-              smallestArea = testArea;
-            }
-          }
-        }
-      }
-      // childrenAreLeaves end
-    } else {
-      double smallestExpansionArea = std::numeric_limits<double>::infinity();
-      double smallestArea = std::numeric_limits<double>::infinity();
-      unsigned num_entries_els = node->cur_offset_;
-
-      // CL2 [Choose subtree]
-      // Find the bounding box with least required expansion/overlap
-      for (unsigned i = 0; i < num_entries_els; i++) {
-        const Branch &b = node->entries.at(i);
-        double testExpansionArea = b.boundingBox.computeExpansionArea(givenEntryBoundingBox);
-
-        if (smallestExpansionArea > testExpansionArea) {
-          descentIndex = i;
-          smallestExpansionArea = testExpansionArea;
-          smallestArea = b.boundingBox.area();
-        } else if (smallestExpansionArea == testExpansionArea) {
-          // Use area to break tie
-          double testArea = b.boundingBox.area();
-
-          if (smallestArea > testArea) {
-            descentIndex = i;
-            // Don't need to update smallestExpansionArea
-            smallestArea = testArea;
-          }
-        }
+      if (smallestExpansionArea > testExpansionArea) {
+        smallestExpansionIndex = i;
+        smallestExpansionArea = testExpansionArea;
       }
     }
 
-    //std::cout << "Proceeding down index " << descentIndex <<
-    //    std::endl;
     // Descend
     // Keep track of the previous node before descending
     parentHandles.push(node_handle);
-    node_handle = node->entries[descentIndex].child;
+    node_handle = node->entries[smallestExpansionIndex].child;
   }
 
   assert(false);
@@ -1714,76 +1783,169 @@ tree_node_handle BranchNode<min_branch_factor, max_branch_factor>::splitNode(
     tree_node_handle current_handle
 ) {
   using NodeType = BranchNode<min_branch_factor, max_branch_factor>;
-  // S1: Call chooseSplitAxis to determine the axis perpendicular to which the split is performed
-  // S2: Invoke chooseSplitIndex given the axis to determine the best distribution along this axis
-  // S3: Distribute the entries among these two groups
-
-  // Call chooseSplitAxis to determine the axis perpendicular to which the split is performed
-  // For now we will save the axis as a int -> since this allows for room for growth in the future
-  // Call ChooseSplitIndex to create optimal splitting of data array
-  unsigned splitAxis = chooseSplitAxis();
-  unsigned splitIndex = chooseSplitIndex(splitAxis);
-
-  /*std::cout << "Split Branch Node: {" <<  std::endl;
-    for( unsigned i = 0; i < cur_offset_; i++ ) {
-        std::cout << entries.at(i).boundingBox << std::endl;
-    }
-    std::cout << "}" << std::endl;
-    std::cout << "Split on axis" << splitAxis << ", index: " <<
-        splitIndex << std::endl;
-    */
-
   tree_node_allocator *allocator = get_node_allocator(treeRef);
-  auto alloc_data = allocator->create_new_tree_node<NodeType>(NodeHandleType(BRANCH_NODE));
-  uint16_t current_level = current_handle.get_level();
 
-  auto newSibling = alloc_data.first;
-  tree_node_handle sibling_handle = alloc_data.second;
+  /* Begin R-Tree split procedure */
+  // Setup the two groups which will be the entries in the two new nodes
+  unsigned boundingBoxesSize = cur_offset_;
+  unsigned seedA = 0;
+  unsigned seedB = boundingBoxesSize - 1;
 
-  new (&(*(newSibling))) NodeType();
-  sibling_handle.set_level(current_level);
+  // Compute the first entry in each group based on PS1 & PS2
+  double maxWasted = 0;
+  Rectangle iBox, jBox;
+  for (unsigned i = 0; i < boundingBoxesSize; ++i)
+  {
+    iBox = entries[i].boundingBox;
+    for (unsigned j = 0; j < boundingBoxesSize; ++j)
+    {
+      jBox = entries[j].boundingBox;
 
-  // Copy everything to the right of the splitPoint (inclusive) to the new sibling
-  std::copy(entries.begin() + splitIndex, entries.begin() + cur_offset_, newSibling->entries.begin());
+      // Calculate the wasted space
+      Rectangle temp = iBox;
+      temp.expand(jBox);
 
-  newSibling->cur_offset_ = cur_offset_ - splitIndex;
+      double wasted = temp.area() - iBox.area() - jBox.area() + iBox.computeIntersectionArea(jBox);
 
-#ifndef NDEBUG
-  for (unsigned i = 0; i < newSibling->cur_offset_; i++) {
-    Branch &b = newSibling->entries.at(i);
+      if (maxWasted < wasted)
+      {
+        maxWasted = wasted;
 
-    if (b.child.get_type() == LEAF_NODE) {
-      assert(current_level == b.child.get_level() + 1);
-      assert(sibling_handle.get_level() == b.child.get_level() + 1);
-    } else {
-      assert(current_level == b.child.get_level() + 1);
-      assert(sibling_handle.get_level() == b.child.get_level() + 1);
+        seedA = i;
+        seedB = j;
+      }
     }
   }
-#endif
 
-  // Chop our node's data down
-  cur_offset_ = splitIndex;
+  // Setup the two groups which will be the entries in the two new nodes
+  std::vector<Rectangle> groupABoundingBoxes;
+  std::vector<tree_node_handle> groupAChildren;
+  std::vector<Rectangle> groupBBoundingBoxes;
+  std::vector<tree_node_handle> groupBChildren;
 
-  assert(cur_offset_ > 0);
-  assert(newSibling->cur_offset_ > 0);
+  // Set the bounding rectangles
+  Rectangle boundingBoxA = entries[seedA].boundingBox;
+  Rectangle boundingBoxB = entries[seedB].boundingBox;
 
-  /*
-    std::cout << "New Node1: {" <<  std::endl;
-    for( unsigned i = 0; i < cur_offset_; i++ ) {
-        std::cout << entries.at(i).boundingBox << std::endl;
+  // seedA and seedB have both already been allocated so put them into the appropriate group
+  // and remove them from our boundingBoxes being careful to delete the one which will not
+  // affect the index of the other first
+  groupABoundingBoxes.push_back(entries[seedA].boundingBox);
+  groupAChildren.push_back(entries[seedA].child);
+  groupBBoundingBoxes.push_back(entries[seedB].boundingBox);
+  groupBChildren.push_back(entries[seedB].child);
+  if (seedA > seedB)
+  {
+    removeChild(seedA);
+    removeChild(seedB);
+  }
+  else
+  {
+    removeChild(seedB);
+    removeChild(seedA);
+  }
+
+  // Go through the remaining entries and add them to groupA or groupB
+  double groupAAffinity, groupBAffinity;
+  // QS2 [Check if done]
+  while (
+      cur_offset_ > 0 && // moveChildrenTo updates cur_offset_
+      (groupABoundingBoxes.size() + cur_offset_ > min_branch_factor) &&
+      (groupBBoundingBoxes.size() + cur_offset_ > min_branch_factor)
+  )
+  {
+    // PN1 [Determine the cost of putting each entry in each group]
+    unsigned groupAIndex = 0;
+    double groupAMin = std::numeric_limits<double>::infinity();
+    unsigned groupBIndex = 0;
+    double groupBMin = std::numeric_limits<double>::infinity();
+
+    for (unsigned i = 0; i < cur_offset_; ++i)
+    {
+      Rectangle r = entries[i].boundingBox;
+      groupAAffinity = boundingBoxA.computeExpansionArea(r);
+      groupBAffinity = boundingBoxB.computeExpansionArea(r);
+      // PN2 [Find entry with greatest preference for one group]
+      if (groupAAffinity < groupAMin)
+      {
+        groupAMin = groupAAffinity;
+        groupAIndex = i;
+      }
+
+      if (groupBAffinity < groupBMin)
+      {
+        groupBMin = groupBAffinity;
+        groupBIndex = i;
+      }
     }
-    std::cout << "}" << std::endl;
 
-    std::cout << "New Node2: {" <<  std::endl;
-    for( unsigned i = 0; i < newSibling->cur_offset_; i++ ) {
-        std::cout << newSibling->entries.at(i).boundingBox << std::endl;
+    // QS3 [Select where to assign entry]
+    if (groupAMin == groupBMin)
+    {
+      // Tie so use smaller area
+      if (boundingBoxA.area() < boundingBoxB.area())
+      {
+        boundingBoxA.expand(entries[groupAIndex].boundingBox);
+        moveChildTo(groupAIndex, groupABoundingBoxes, groupAChildren);
+      }
+      else
+      {
+        // Better area or in the worst case an arbitrary choice
+        boundingBoxB.expand(entries[groupBIndex].boundingBox);
+        moveChildTo(groupBIndex, groupBBoundingBoxes, groupBChildren);
+      }
     }
-    std::cout << "}" << std::endl;
-    */
+    else if (groupAMin < groupBMin)
+    {
+      // Higher affinity for groupA
+      boundingBoxA.expand(entries[groupAIndex].boundingBox);
+      moveChildTo(groupAIndex, groupABoundingBoxes, groupAChildren);
+    }
+    else
+    {
+      // Higher affinity for groupB
+      boundingBoxB.expand(entries[groupBIndex].boundingBox);
+      moveChildTo(groupBIndex, groupBBoundingBoxes, groupBChildren);
+    }
+  }
+
+  // If we stopped because half the entries were assigned then great put the others in the
+  // opposite group
+  // NOTE: Do not use moveChildTo here as it will mess up the loop index
+  if (groupABoundingBoxes.size() + cur_offset_ == min_branch_factor)
+  {
+    for (unsigned i = 0; i < cur_offset_; ++i)
+    {
+      Branch &b = entries[i];
+      groupABoundingBoxes.emplace_back(b.boundingBox);
+      groupAChildren.emplace_back(b.child);
+    }
+  }
+  else if (groupBBoundingBoxes.size() + cur_offset_ == min_branch_factor)
+  {
+    for (unsigned i = 0; i < cur_offset_; ++i)
+    {
+      Branch &b = entries[i];
+      groupBBoundingBoxes.emplace_back(b.boundingBox);
+      groupBChildren.emplace_back(b.child);
+    }
+  }
+
+  // Create the new node and fill it
+  uint16_t current_level = current_handle.get_level();
+  auto alloc_data = allocator->create_new_tree_node<NodeType>(NodeHandleType(BRANCH_NODE));
+  tree_node_handle newSiblingHandle = alloc_data.second;
+  auto newSibling = alloc_data.first;
+
+  new (&(*newSibling)) NodeType();
+  newSiblingHandle.set_level(current_level);
+
+  // Fill us with groupA and the new node with groupB
+  copyChildrenFrom(groupAChildren, groupABoundingBoxes);
+  newSibling->copyChildrenFrom(groupBChildren, groupBBoundingBoxes);
 
   // Return our newly minted sibling
-  return sibling_handle;
+  return newSiblingHandle;
 }
 
 template <int min_branch_factor, int max_branch_factor>
@@ -1937,14 +2099,7 @@ tree_node_handle BranchNode<min_branch_factor, max_branch_factor>::insert(
 
     // If we exceed treeRef->maxBranchFactor we need to do something about it
     if (num_els > max_branch_factor) {
-      // We call overflow treatment to determine how our sibling node is treated. If we do a
-      // reInsert, sibling is nullptr. This is properly dealt with in adjustTree.
-      sibling_handle = insertion_point->overflowTreatment(
-              treeRef,
-              insertion_point_handle,
-              parentHandles,
-              hasReinsertedOnLevel
-      );
+      sibling_handle = insertion_point->splitNode(treeRef, insertion_point_handle);
     }
 
     // I3 [Propogate overflow treatment changes upward]
@@ -1966,14 +2121,7 @@ tree_node_handle BranchNode<min_branch_factor, max_branch_factor>::insert(
 
     // If we exceed treeRef->maxBranchFactor we need to do something about it
     if (num_els > max_branch_factor) {
-      // We call overflow treatment to determine how our sibling node is treated if we do a
-      // reInsert, sibling is nullptr. This is properly dealt with in adjustTree
-      sibling_handle = insertion_point->overflowTreatment(
-              treeRef,
-              insertion_point_handle,
-              parentHandles,
-              hasReinsertedOnLevel
-      );
+      sibling_handle = insertion_point->splitNode(treeRef, insertion_point_handle);
     }
 
     // I3 [Propogate overflow treatment changes upward]
@@ -2018,14 +2166,9 @@ tree_node_handle BranchNode<min_branch_factor, max_branch_factor>::insert(
     hasReinsertedOnLevel.push_back(false);
 
     return new_root_handle;
-  } else {
-    // We might no longer be the parent.  If we hit overflowTreatment, we may have triggered
-    // reInsert, which then triggered a split. That insert will have returned newRoot, but
-    // because reInsert() returns nullptr, we don't know about it
-    // P.S: Technically reInsert changes treeRef->root, which will always contain the most
-    // up-to-date root handle.
-    return treeRef->root;
   }
+
+  return treeRef->root;
 }
 
 // Always called on root, this = root

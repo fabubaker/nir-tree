@@ -166,13 +166,24 @@ unsigned RTreeDisk<min_branch_factor, max_branch_factor>::checksum() {
 
 template <int min_branch_factor, int max_branch_factor>
 void RTreeDisk<min_branch_factor, max_branch_factor>::print() {
-  std::ofstream outputFile("printed_rstar_tree.txt");
+  std::ofstream outputFile("printed_r_tree.txt");
 
   struct Printer {
       Printer(std::ofstream &printFile): printFile(printFile) {}
 
       void operator()(RTreeDisk<min_branch_factor, max_branch_factor> *treeRef, tree_node_handle node_handle) {
-        printPackedNodes<min_branch_factor, max_branch_factor>(treeRef, node_handle, printFile);
+        if (node_handle.get_type() == BRANCH_NODE) {
+          auto node = treeRef->get_branch_node(node_handle);
+          printFile << node->boundingBox() << std::endl;
+        } else {
+          auto node = treeRef->get_leaf_node(node_handle);
+          printFile << node->boundingBox() << std::endl;
+
+          // Also print points
+          for (size_t i = 0; i < node->cur_offset_; i++) {
+            printFile << node->entries[i] << std::endl;
+          }
+        }
       }
 
       std::ofstream &printFile;
