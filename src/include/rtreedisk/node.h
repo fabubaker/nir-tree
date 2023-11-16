@@ -75,8 +75,8 @@ public:
   Rectangle boundingBox() const;
   void removePoint(const Point &givenPoint);
 
-  void moveDataTo(unsigned fromIndex, std::vector<Point> &toData);
-  void copyDataFrom(std::vector<Point> &fromData);
+  void moveData(unsigned fromIndex, std::vector<Point> &toData);
+  void moveData(std::vector<Point> &fromData);
   void removeData(unsigned idx);
 
   tree_node_handle chooseSubtree(const NodeEntry &nodeEntry);
@@ -322,14 +322,14 @@ void LeafNode<min_branch_factor, max_branch_factor>::removePoint(const Point &gi
 }
 
 template <int min_branch_factor, int max_branch_factor>
-void LeafNode<min_branch_factor, max_branch_factor>::moveDataTo(unsigned fromIndex, std::vector<Point> &toData) {
+void LeafNode<min_branch_factor, max_branch_factor>::moveData(unsigned fromIndex, std::vector<Point> &toData) {
   toData.push_back(entries[fromIndex]);
   entries[fromIndex] = entries[cur_offset_ - 1];
   cur_offset_--;
 }
 
 template <int min_branch_factor, int max_branch_factor>
-void LeafNode<min_branch_factor, max_branch_factor>::copyDataFrom(std::vector<Point> &fromData) {
+void LeafNode<min_branch_factor, max_branch_factor>::moveData(std::vector<Point> &fromData) {
   cur_offset_ = fromData.size();
   for (unsigned i = 0; i < cur_offset_; i++)
   {
@@ -623,26 +623,26 @@ tree_node_handle LeafNode<min_branch_factor, max_branch_factor>::splitNode(
       if (boundingBoxA.area() < boundingBoxB.area())
       {
         boundingBoxA.expand(entries[groupAIndex]);
-        moveDataTo(groupAIndex, groupAData);
+        moveData(groupAIndex, groupAData);
       }
       else
       {
         // Better area or in the worst case an arbitrary choice
         boundingBoxB.expand(entries[groupBIndex]);
-        moveDataTo(groupBIndex, groupBData);
+        moveData(groupBIndex, groupBData);
       }
     }
     else if (groupAMin < groupBMin)
     {
       // Higher affinity for groupA
       boundingBoxA.expand(entries[groupAIndex]);
-      moveDataTo(groupAIndex, groupAData);
+      moveData(groupAIndex, groupAData);
     }
     else
     {
       // Higher affinity for groupB
       boundingBoxB.expand(entries[groupBIndex]);
-      moveDataTo(groupBIndex, groupBData);
+      moveData(groupBIndex, groupBData);
     }
   }
 
@@ -673,8 +673,8 @@ tree_node_handle LeafNode<min_branch_factor, max_branch_factor>::splitNode(
   siblingHandle.set_level(current_level);
 
   // Fill us with groupA and the new node with groupB
-  moveDataTo(groupAData);
-  newSibling->copyDataFrom(groupBData);
+  moveData(groupAData);
+  newSibling->moveData(groupBData);
 
   assert(cur_offset_ > 0);
   assert(newSibling->cur_offset_ > 0);
