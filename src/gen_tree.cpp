@@ -213,8 +213,8 @@ void generate_tree(
     bulk_load_tree(
             tree, configU, all_points.begin(), all_points.begin() + cut_off_bulk_load,
             R_TREE_MAX_FANOUT,
-            (rplustreedisk::LeafNode<R_TREE_MIN_FANOUT, R_TREE_MAX_FANOUT> *) nullptr,
-            (rplustreedisk::BranchNode<R_TREE_MIN_FANOUT, R_TREE_MAX_FANOUT> *) nullptr
+            (rtreedisk::LeafNode<R_TREE_MIN_FANOUT, R_TREE_MAX_FANOUT> *) nullptr,
+            (rtreedisk::BranchNode<R_TREE_MIN_FANOUT, R_TREE_MAX_FANOUT> *) nullptr
     );
 
     std::cout << "Buffer pool stats after bulk-loading: " << std::endl;
@@ -229,6 +229,38 @@ void generate_tree(
             R_TREE_MAX_FANOUT
     );
     std::cout << "Created RTree" << std::endl;
+
+    std::cout << "Buffer pool stats after sequential inserts: " << std::endl;
+    bufferPool->stat();
+    bufferPool->resetStat();
+  } else if (configU["tree"] == REVISED_R_STAR_TREE) {
+    auto *tree = new revisedrstartreedisk::RevisedRStarTreeDisk<REVISED_R_STAR_MIN_FANOUT, REVISED_R_STAR_MAX_FANOUT>(
+            configU["buffer_pool_memory"], backing_file
+    );
+    spatialIndex = tree;
+    bufferPool = &(tree->node_allocator_->buffer_pool_);
+
+    std::cout << "Bulk Loading..." << std::endl;
+    std::cout << "Creating tree with " << configU["buffer_pool_memory"] << "bytes" << std::endl;
+    bulk_load_tree(
+            tree, configU, all_points.begin(), all_points.begin() + cut_off_bulk_load,
+            REVISED_R_STAR_MAX_FANOUT,
+            (revisedrstartreedisk::LeafNode<REVISED_R_STAR_MIN_FANOUT, REVISED_R_STAR_MAX_FANOUT> *) nullptr,
+            (revisedrstartreedisk::BranchNode<REVISED_R_STAR_MIN_FANOUT, REVISED_R_STAR_MAX_FANOUT> *) nullptr
+    );
+
+    std::cout << "Buffer pool stats after bulk-loading: " << std::endl;
+    bufferPool->stat();
+    bufferPool->resetStat();
+
+    // insert the rest of points:
+    std::cout << "Sequential Inserting..." << std::endl;
+    sequential_insert_tree(
+            tree, configU,
+            all_points.begin() + cut_off_bulk_load, all_points.end(),
+            REVISED_R_STAR_TREE_MAX_FANOUT
+    );
+    std::cout << "Created Revised R*Tree" << std::endl;
 
     std::cout << "Buffer pool stats after sequential inserts: " << std::endl;
     bufferPool->stat();
