@@ -56,6 +56,8 @@ namespace revisedrstartreedisk {
 
     template <int min_branch_factor, int max_branch_factor>
     class LeafNode {
+    private:
+        Point originalCentre;
     public:
         // Obnoxiously, this needs to have a +1 so we can overflow
         // by 1 entry and deal with it later.
@@ -63,7 +65,9 @@ namespace revisedrstartreedisk {
         unsigned cur_offset_;
 
         // Constructors and destructors
-        LeafNode(): cur_offset_(0) {}
+        LeafNode(): cur_offset_(0) {
+          originalCentre = Point::atOrigin;
+        }
 
         void addPoint(const Point &p) {
           entries.at(cur_offset_++) = p;
@@ -113,6 +117,8 @@ namespace revisedrstartreedisk {
 
     template <int min_branch_factor, int max_branch_factor>
     class BranchNode {
+    private:
+        Point originalCentre;
     public:
         std::array<Branch, max_branch_factor + 1> entries;
         unsigned cur_offset_;
@@ -120,6 +126,7 @@ namespace revisedrstartreedisk {
         // Constructors and destructors
         BranchNode() {
           cur_offset_ = 0;
+          originalCentre = Point::atOrigin;
         }
 
         void addBranchToNode(Rectangle boundingBox, tree_node_handle child) {
@@ -138,7 +145,7 @@ namespace revisedrstartreedisk {
         void removeChild(tree_node_handle child);
         void chooseNodeHelper(
                 unsigned limitIndex, 
-                Point &givenPoint, 
+                const Point &givenPoint, 
                 unsigned &chosenIndex, 
                 bool &success, 
                 std::vector<bool> &candidates, 
@@ -343,7 +350,7 @@ namespace revisedrstartreedisk {
       double M = (double) max_branch_factor;
       double asym = 2 * (bb.centrePoint()[axis] - originalCentre[axis]) / (std::fabs(bb.upperRight[axis] - bb.lowerLeft[axis]));
       double u = (1 - (2 * m) / (M + 1)) * asym;
-      double sigma = treeRef.s * (1 + std::fabs(u));
+      double sigma = s * (1 + std::fabs(u));
       double y1 = std::exp(-1 / std::pow(s, 2));
       double ys = 1 / (1 - y1);
 
@@ -451,6 +458,9 @@ namespace revisedrstartreedisk {
         {right_node->boundingBox(), right_handle}
       };
 
+      left_node->originalCentre = split.leftBranch.boundingBox.centrePoint();
+      right_node->originalCentre = split.rightBranch.boundingBox.centrePoint();
+      
       return split;
     }
 
@@ -1054,7 +1064,7 @@ namespace revisedrstartreedisk {
     	
     template <int min_branch_factor, int max_branch_factor>
     void BranchNode<min_branch_factor, max_branch_factor>::chooseNodeHelper(unsigned limitIndex, 
-                                                                            Point &givenPoint, 
+                                                                            const Point &givenPoint, 
                                                                             unsigned &chosenIndex, 
                                                                             bool &success, 
                                                                             std::vector<bool> &candidates, 
@@ -1069,7 +1079,7 @@ namespace revisedrstartreedisk {
       {
         if (j != startIndex)
         {
-          unsigned additionalDelta = useMarginDelta ? entries.at(startIndex).boundingBox.marginDelta(givenPoint, entries.at(j).boundingBox) : entries.at(startIndex).boundingBox.areaDelta(givenPoint, entries.at(j0f32x).boundingBox);
+          unsigned additionalDelta = useMarginDelta ? entries.at(startIndex).boundingBox.marginDelta(givenPoint, entries.at(j).boundingBox) : entries.at(startIndex).boundingBox.areaDelta(givenPoint, entries.at(j).boundingBox);
           deltas[startIndex] += additionalDelta;
 
           if (additionalDelta != 0.0 && !candidates[j])
@@ -1213,33 +1223,7 @@ namespace revisedrstartreedisk {
         Branch &b = node->entries.at(optimalBranchIndex);
         b.boundingBox.expand(givenPoint);
         node_handle = b.child;
-      }        
-      //   // Compute the smallest expansion
-      //   unsigned smallestExpansionIndex = 0;
-      //   Branch &b_0 = node->entries.at(0);
-      //   double smallestExpansionArea = b_0.boundingBox.computeExpansionArea(givenPoint);
-
-      //   for (unsigned i = 1; i < node->cur_offset_ and smallestExpansionArea != -1.0; i++) {
-      //     Branch &b_i = node->entries.at(i);
-      //     double expansionArea = b_i.boundingBox.computeExpansionArea(givenPoint);
-
-      //     if (expansionArea < smallestExpansionArea) {
-      //       smallestExpansionIndex = i;
-      //       smallestExpansionArea = expansionArea;
-      //     }
-      //   }
-
-      //   if (smallestExpansionArea != -1.0) {
-      //     Branch &b = node->entries.at(smallestExpansionIndex);
-      //     b.boundingBox.expand(givenPoint);
-      //   }
-
-      //   // Descend
-      //   // Keep track of the previous handle before descending
-      //   parentHandles.push(node_handle);
-      //   Branch &b = node->entries.at(smallestExpansionIndex);
-      //   node_handle = b.child;
-      // }
+      }       
 
       assert(false);
     }
@@ -1402,7 +1386,7 @@ namespace revisedrstartreedisk {
       double M = (double) max_branch_factor;
       double asym = 2 * (bb.centrePoint()[axis] - originalCentre[axis]) / (std::fabs(bb.upperRight[axis] - bb.lowerLeft[axis]));
       double u = (1 - (2 * m) / (M + 1)) * asym;
-      double sigma = treeRef.s * (1 + std::fabs(u));
+      double sigma = s * (1 + std::fabs(u));
       double y1 = std::exp(-1 / std::pow(s, 2));
       double ys = 1 / (1 - y1);
 
@@ -1512,6 +1496,9 @@ namespace revisedrstartreedisk {
               {right_node->boundingBox(), right_handle}
       };
 
+      left_node->originalCentre = split.leftBranch.boundingBox.centrePoint();
+      right_node->originalCentre = split.rightBranch.boundingBox.centrePoint();
+      
       return split;
     }
 

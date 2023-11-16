@@ -1287,7 +1287,7 @@ template void sequential_insert_tree(
 );
 
 template void sequential_insert_tree(
-        revisedrstartreedisk::RevisedRStarTreeDisk<REVISED_R_STAR_TREE_MIN_FANOUT, REVISED_R_STAR_TREE_MAX_FANOUT> *tree,
+        revisedrstartreedisk::RevisedRStarTreeDisk<REVISED_R_STAR_MIN_FANOUT, REVISED_R_STAR_MAX_FANOUT> *tree,
         std::map<std::string, size_t> &configU,
         std::vector<Point>::iterator begin,
         std::vector<Point>::iterator end,

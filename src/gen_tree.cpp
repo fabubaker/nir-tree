@@ -258,7 +258,7 @@ void generate_tree(
     sequential_insert_tree(
             tree, configU,
             all_points.begin() + cut_off_bulk_load, all_points.end(),
-            REVISED_R_STAR_TREE_MAX_FANOUT
+            REVISED_R_STAR_MAX_FANOUT
     );
     std::cout << "Created Revised R*Tree" << std::endl;
 
