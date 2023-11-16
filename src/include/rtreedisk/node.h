@@ -170,8 +170,8 @@ public:
   bool updateBoundingBox(tree_node_handle child, Rectangle updatedBoundingBox);
   void removeChild(tree_node_handle child);
   void removeChild(unsigned idx);
-  void moveChildren(std::vector<tree_node_handle> &fromChildren, std::vector<Rectangle> &fromBoxes);
-  void moveChild(unsigned fromIndex, std::vector<Rectangle> &toRectangles, std::vector<tree_node_handle> &toChildren);
+  void moveChildTo(unsigned fromIndex, std::vector<Rectangle> &toRectangles, std::vector<tree_node_handle> &toChildren);
+  void copyChildrenFrom(std::vector<tree_node_handle> &fromChildren, std::vector<Rectangle> &fromBoxes);
 
   tree_node_handle chooseSubtree(
       RTreeDisk<min_branch_factor, max_branch_factor> *treeRef,
@@ -1294,7 +1294,7 @@ void BranchNode<min_branch_factor, max_branch_factor>::removeChild(unsigned idx)
 }
 
 template <int min_branch_factor, int max_branch_factor>
-void BranchNode<min_branch_factor, max_branch_factor>::moveChildren(
+void BranchNode<min_branch_factor, max_branch_factor>::copyChildrenFrom(
   std::vector<tree_node_handle> &fromChildren, std::vector<Rectangle> &fromBoxes
 ) {
   assert(fromChildren.size() == fromBoxes.size());
@@ -1310,7 +1310,7 @@ void BranchNode<min_branch_factor, max_branch_factor>::moveChildren(
 }
 
 template <int min_branch_factor, int max_branch_factor>
-void BranchNode<min_branch_factor, max_branch_factor>::moveChild(
+void BranchNode<min_branch_factor, max_branch_factor>::moveChildTo(
   unsigned fromIndex, std::vector<Rectangle> &toRectangles, std::vector<tree_node_handle> &toChildren
 ) {
   Branch &b = entries[fromIndex];
@@ -1885,26 +1885,26 @@ tree_node_handle BranchNode<min_branch_factor, max_branch_factor>::splitNode(
       if (boundingBoxA.area() < boundingBoxB.area())
       {
         boundingBoxA.expand(entries[groupAIndex].boundingBox);
-        moveChild(groupAIndex, groupABoundingBoxes, groupAChildren);
+        moveChildTo(groupAIndex, groupABoundingBoxes, groupAChildren);
       }
       else
       {
         // Better area or in the worst case an arbitrary choice
         boundingBoxB.expand(entries[groupBIndex].boundingBox);
-        moveChild(groupBIndex, groupBBoundingBoxes, groupBChildren);
+        moveChildTo(groupBIndex, groupBBoundingBoxes, groupBChildren);
       }
     }
     else if (groupAMin < groupBMin)
     {
       // Higher affinity for groupA
       boundingBoxA.expand(entries[groupAIndex].boundingBox);
-      moveChild(groupAIndex, groupABoundingBoxes, groupAChildren);
+      moveChildTo(groupAIndex, groupABoundingBoxes, groupAChildren);
     }
     else
     {
       // Higher affinity for groupB
       boundingBoxB.expand(entries[groupBIndex].boundingBox);
-      moveChild(groupBIndex, groupBBoundingBoxes, groupBChildren);
+      moveChildTo(groupBIndex, groupBBoundingBoxes, groupBChildren);
     }
   }
 
@@ -1939,8 +1939,8 @@ tree_node_handle BranchNode<min_branch_factor, max_branch_factor>::splitNode(
   newSiblingHandle.set_level(current_level);
 
   // Fill us with groupA and the new node with groupB
-  moveChildren(groupAChildren, groupABoundingBoxes);
-  newSibling->moveChildren(groupBChildren, groupBBoundingBoxes);
+  copyChildrenFrom(groupAChildren, groupABoundingBoxes);
+  newSibling->copyChildrenFrom(groupBChildren, groupBBoundingBoxes);
 
   // Return our newly minted sibling
   return newSiblingHandle;
