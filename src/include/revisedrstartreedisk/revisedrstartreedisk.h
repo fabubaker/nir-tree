@@ -19,6 +19,7 @@ namespace revisedrstartreedisk {
     template <int min_branch_factor, int max_branch_factor>
     class RevisedRStarTreeDisk : public Index {
     public:
+        const double s = 0.5; // for chooseSplitIndex
         tree_node_handle root;
         std::unique_ptr<tree_node_allocator> node_allocator_;
         std::string backing_file_;

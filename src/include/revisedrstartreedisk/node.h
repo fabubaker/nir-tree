@@ -80,10 +80,13 @@ namespace revisedrstartreedisk {
                 tree_node_handle selfHandle,
                 const Point &givenPoint
         );
+        unsigned chooseSplitLeafAxis();
+        unsigned chooseSplitNonLeafAxis();
+        unsigned chooseSplitAxis();
+        unsigned chooseSplitIndex(unsigned axis, double s);
         SplitResult splitNode(
                 RevisedRStarTreeDisk<min_branch_factor, max_branch_factor> *treeRef,
-                tree_node_handle current_handle,
-                Partition p
+                tree_node_handle current_handle
         );
         tree_node_handle condenseTree();
         Partition partitionNode();
@@ -153,10 +156,13 @@ namespace revisedrstartreedisk {
                 tree_node_handle selfHandle,
                 const Point &givenPoint
         );
+        unsigned chooseSplitLeafAxis();
+        unsigned chooseSplitNonLeafAxis();
+        unsigned chooseSplitAxis();
+        unsigned chooseSplitIndex(unsigned axis, double s);
         SplitResult splitNode(
                 RevisedRStarTreeDisk<min_branch_factor, max_branch_factor> *treeRef,
-                tree_node_handle current_handle,
-                Partition p
+                tree_node_handle current_handle
         );
         tree_node_handle condenseTree();
         Partition partitionNode();
@@ -259,84 +265,186 @@ namespace revisedrstartreedisk {
     }
 
     template <int min_branch_factor, int max_branch_factor>
-    Partition LeafNode<min_branch_factor, max_branch_factor>::partitionNode() {
-      Partition defaultPartition;
-      unsigned costMetric = std::numeric_limits<unsigned>::max();
-      double location;
+    unsigned LeafNode<min_branch_factor, max_branch_factor>::chooseSplitLeafAxis() {
+      unsigned optimalAxis = 0;
+      double optimalMargin = std::numeric_limits<double>::infinity();
 
+      // Make the entries easier to work with
+      std::vector<Point *> entriesCopy;
+      entriesCopy.reserve(cur_offset_);
+      for (unsigned i = 0; i < cur_offset_; i++) {
+        entriesCopy.push_back(&(entries.at(i)));
+      }
+
+      // Consider all M-2m+2 distributions in each dimension
       for (unsigned d = 0; d < dimensions; d++) {
-        // Sort along dimension d
-        std::sort(
-          entries.begin(), entries.begin() + cur_offset_,
-          [d](Point &a, Point &b) { return a.orderedCompare(b, d); }
-        );
+        // First sort in the current dimension
+        std::sort(entriesCopy.begin(), entriesCopy.end(), [d](Point *a, Point *b) {
+            return (*a)[d] < (*b)[d];
+        });
 
-        // Pick at least half the data
-        location = entries.at(cur_offset_ / 2 - 1)[d];
+        // Setup groups
+        std::vector<Point *> groupA(entriesCopy.begin(), entriesCopy.begin() + min_branch_factor);
+        std::vector<Point *> groupB(entriesCopy.begin() + min_branch_factor, entriesCopy.end());
 
-        // Compute cost, # of duplicates of this location
-        unsigned duplicateCount = 0;
-        for (unsigned i = 0; i < cur_offset_; i++) {
-          Point &data_point = entries.at(i);
-
-          if (location == data_point[d]) {
-            duplicateCount++;
+        // Cycle through all M-2m+2 distributions
+        while (groupA.size() <= max_branch_factor and groupB.size() >= min_branch_factor) {
+          // Compute the margin of groupA and groupB
+          Rectangle boundingBoxA(*groupA[0], Point::closest_larger_point(*groupA[0]));
+          for (unsigned i = 1; i < groupA.size(); i++) {
+            boundingBoxA.expand(*groupA[i]);
           }
-        }
 
-        // Compare cost
-        if (duplicateCount < costMetric) {
-          defaultPartition.dimension = d;
-          // Set the partition location after the point.
-          defaultPartition.location = nextafter(location, DBL_MAX);
-          costMetric = duplicateCount;
+          Rectangle boundingBoxB(*groupB[0], Point::closest_larger_point(*groupB[0]));
+          for (unsigned i = 1; i < groupB.size(); i++) {
+            boundingBoxB.expand(*groupB[i]);
+          }
+
+          // get sum of margin on either side of the split
+          double evalMargin = boundingBoxA.margin() + boundingBoxB.margin();
+          if (evalMargin < optimalMargin) {
+            optimalMargin = evalMargin;
+            optimalAxis = d;
+          }
+          // Add one new value to groupA and remove one from groupB to obtain next distribution
+          Point *transferPoint = groupB.front();
+          groupB.erase(groupB.begin());
+          groupA.push_back(transferPoint);
         }
       }
 
-      return defaultPartition;
+      // Sort along our best axis
+      std::sort(entries.begin(), entries.begin() + cur_offset_,
+                [optimalAxis](Point &a, Point &b) { return a[optimalAxis] < b[optimalAxis]; });
+
+      return optimalAxis;
     }
 
+    // CSA1: Sort entries by lower and upper bound along each axis and compute S -> sum of all
+    //  margin values for the different distributions. This can be stored in a array of variable
+    //  that we keep in a loop -> and the just compare to the others?
+    // 	We can first call a helper function that returns an array of all possible distributions for it?
+    // CSA2: Return the Axis that has the minimum total sum of all the distributions
+    template <int min_branch_factor, int max_branch_factor>
+    unsigned LeafNode<min_branch_factor, max_branch_factor>::chooseSplitAxis() {
+      return chooseSplitLeafAxis();
+    }
+
+    // CSI1: Given the chosen split index
+    // 	group all the entries into multiple groups and choose the one that has the least
+    // 	overlap value; resolve ties with the minimum area
+    // 	returns tuple of best distribution group indices
+    template <int min_branch_factor, int max_branch_factor>
+    unsigned LeafNode<min_branch_factor, max_branch_factor>::chooseSplitIndex(unsigned axis, double s) {
+      // We assume this is called after we have sorted this->data according to axis.
+      // Precompute the elements not dependant on candidateIndex
+      Rectangle bb = this->boundingBox();
+      double m = (double) min_branch_factor;
+      double M = (double) max_branch_factor;
+      double asym = 2 * (bb.centrePoint()[axis] - originalCentre[axis]) / (std::fabs(bb.upperRight[axis] - bb.lowerLeft[axis]));
+      double u = (1 - (2 * m) / (M + 1)) * asym;
+      double sigma = treeRef.s * (1 + std::fabs(u));
+      double y1 = std::exp(-1 / std::pow(s, 2));
+      double ys = 1 / (1 - y1);
+
+      const auto groupABegin = entries.begin();
+      const auto groupAEnd = entries.begin() + min_branch_factor;
+      const auto groupBBegin = entries.begin() + min_branch_factor;
+      const auto groupBEnd = entries.begin() + cur_offset_;
+
+      std::vector<Point> groupA(groupABegin, groupAEnd);
+      std::vector<Point> groupB(groupBBegin, groupBEnd);
+      unsigned splitIndex = cur_offset_ / 2;
+
+      // Find the best size out of all the distributions
+      double minWeight = std::numeric_limits<double>::infinity();
+
+      // Tracking what the current "cut" mark is
+      unsigned currentSplitPoint = min_branch_factor;
+
+      // Try each of the M-2m + 2 groups
+      while (groupA.size() <= max_branch_factor and groupB.size() >= min_branch_factor) {
+        // Compute the margin of groupA and groupB
+        Rectangle boundingBoxA(groupA[0], Point::closest_larger_point(groupA[0]));
+        for (unsigned i = 1; i < groupA.size(); i++) {
+          boundingBoxA.expand(groupA[i]);
+        }
+
+        Rectangle boundingBoxB(groupB[0], Point::closest_larger_point(
+                groupB[0]));
+        for (unsigned i = 1; i < groupB.size(); i++) {
+          boundingBoxB.expand(groupB[i]);
+        }
+
+        // Evaluate wf(i)
+        double xi = ((2 * currentSplitPoint) / (M + 1)) - 1;
+        double weightFunction = ys * (std::exp(-std::pow((xi - u) / sigma, 2)) - y1);
+
+        // Compute intersection area to determine best grouping of data points
+        double evalDistOverlap = boundingBoxA.computeIntersectionArea(boundingBoxB);
+        
+        // Evaluate wg(i)
+        double evalWeight;
+        if (evalDistOverlap == 0.0) {
+          double weightGoal = boundingBoxA.margin() + boundingBoxB.margin() - bb.margin();
+          evalWeight = weightGoal * weightFunction;
+        } else {
+          double weightGoal = evalDistOverlap;
+          evalWeight = weightGoal / weightFunction;
+        }
+
+        if (evalWeight < minWeight) {
+          splitIndex = currentSplitPoint;
+          minWeight = evalWeight;
+        }
+
+        // Add one new value to groupA and remove one from groupB to obtain next distribution
+        Point transferPoint = groupB.front();
+        groupB.erase(groupB.begin());
+        groupA.push_back(transferPoint);
+
+        // Push the split point forward.
+        currentSplitPoint++;
+      }
+
+      return splitIndex;
+    }
     template <int min_branch_factor, int max_branch_factor>
     SplitResult LeafNode<min_branch_factor, max_branch_factor>::splitNode(
       RevisedRStarTreeDisk<min_branch_factor, max_branch_factor> *treeRef,
-      tree_node_handle current_handle,
-      Partition p
-    ) {
+      tree_node_handle current_handle ) {
       using NodeType = LeafNode<min_branch_factor, max_branch_factor>;
+      // S1: Call chooseSplitAxis to determine the axis perpendicular to which the split is performed
+      // S2: Invoke chooseSplitIndex given the axis to determine the best distribution along this axis
+      // S3: Distribute the entries among these two groups
 
-      std::vector<Point> entriesCopy;
-      tree_node_allocator *allocator = get_node_allocator(treeRef);
-
-      // Create a copy of entries
-      for (unsigned i = 0; i < cur_offset_; i++) {
-        entriesCopy.push_back(entries.at(i));
-      }
+      // Call chooseSplitAxis to determine the axis perpendicular to which the split is performed
+      // For now we will save the axis as an int -> since this allows for room for growth in the future
+      // Call ChooseSplitIndex to create optimal splitting of data array
+      unsigned splitAxis = chooseSplitAxis();
+      unsigned splitIndex = chooseSplitIndex(splitAxis, treeRef->s);
 
       // We are the left child
       auto left_handle = current_handle;
-      auto left_node = this;
-      left_node->cur_offset_ = 0; // Reset our entries and repopulate below
+      auto left_node = this;   
 
       // Create a new sibling
+      tree_node_allocator *allocator = get_node_allocator(treeRef);
       auto alloc_data = allocator->create_new_tree_node<NodeType>(NodeHandleType(LEAF_NODE));
       new (&(*(alloc_data.first))) NodeType();
       auto right_handle = alloc_data.second;
       auto right_node = alloc_data.first;
       right_handle.set_level(left_handle.get_level());
+	
+      // Copy everything to the right of the splitPoint (inclusive) to the new sibling
+      std::copy(entries.begin() + splitIndex, entries.begin() + cur_offset_, right_node->entries.begin());
+      right_node->cur_offset_ = cur_offset_ - splitIndex;
 
-      // Loop through entries and assign points to left or right nodes
-      for (unsigned i = 0; i < entriesCopy.size(); i++) {
-        Point data_point = entriesCopy.at(i);
+      // Chop our node's data down
+      cur_offset_ = splitIndex;
 
-        if (data_point[p.dimension] < p.location and left_node->cur_offset_ < max_branch_factor ) {
-          left_node->entries.at(left_node->cur_offset_++) = data_point;
-        } else {
-          right_node->entries.at(right_node->cur_offset_++) = data_point;
-        }
-
-        assert( left_node->cur_offset_ <= max_branch_factor );
-        assert( right_node->cur_offset_ <= max_branch_factor );
-      }
+      assert(left_node->cur_offset_ <= max_branch_factor);
+      assert(right_node->cur_offset_ <= max_branch_factor);
 
       SplitResult split = {
         {left_node->boundingBox(), left_handle},
@@ -398,7 +506,7 @@ namespace revisedrstartreedisk {
       }
 
       // Otherwise, split node
-      newPropagationSplit = current_node->splitNode(treeRef, current_handle, current_node->partitionNode());
+      newPropagationSplit = current_node->splitNode(treeRef, current_handle);
 
       // The current node has been split into two new nodes, remove it from the parent
       if (parent_handle != nullptr) {
@@ -438,7 +546,7 @@ namespace revisedrstartreedisk {
       }
 
       // Otherwise, split node
-      newPropagationSplit = current_node->splitNode(treeRef, current_handle, current_node->partitionNode());
+      newPropagationSplit = current_node->splitNode(treeRef, current_handle);
 
       // The current node has been split into two new nodes, remove it from the parent
       if (parent_handle != nullptr) {
@@ -538,7 +646,7 @@ namespace revisedrstartreedisk {
         SplitResult split;
 
         // Split ourselves where the new point was inserted
-        split = splitNode(treeRef, current_handle, partitionNode());
+        split = splitNode(treeRef, current_handle);
 
         // Sanity check that we're still the root
         assert(treeRef->root == current_handle);
@@ -1170,189 +1278,231 @@ namespace revisedrstartreedisk {
       return tree_node_handle(nullptr);
     }
 
-    template <int min_branch_factor, int max_branch_factor>
-    Partition BranchNode<min_branch_factor, max_branch_factor>::partitionNode() {
-      Partition defaultPartition;
-      unsigned costMetric = std::numeric_limits<unsigned>::max();
-      double location;
-      std::vector<Rectangle> sortableBoundingBoxes;
+   template <int min_branch_factor, int max_branch_factor>
+    unsigned BranchNode<min_branch_factor, max_branch_factor>::chooseSplitNonLeafAxis() {
+      unsigned optimalAxisLower = 0;
+      unsigned optimalAxisUpper = 0;
+      double optimalMarginLower = std::numeric_limits<double>::infinity();
+      double optimalMarginUpper = std::numeric_limits<double>::infinity();
 
+      // Make entries easier to work with
+      std::vector<Branch *> lowerEntries;
+      lowerEntries.reserve(cur_offset_);
+      std::vector<Branch *> upperEntries;
+      upperEntries.reserve(cur_offset_);
       for (unsigned i = 0; i < cur_offset_; i++) {
-        Branch &b = entries.at(i);
-        sortableBoundingBoxes.push_back(b.boundingBox);
+        lowerEntries.push_back(&(entries.at(i)));
+        upperEntries.push_back(&(entries.at(i)));
       }
 
+      // Consider all M-2m+2 distributions in each dimension
       for (unsigned d = 0; d < dimensions; d++) {
-        // Sort along d
-        std::sort(sortableBoundingBoxes.begin(), sortableBoundingBoxes.end(),
-                   [d](Rectangle a, Rectangle b){ return a.isUpperRightSmaller(b, d); });
+        // First sort in the current dimension sorting both the lower and upper arrays
+        std::sort(lowerEntries.begin(), lowerEntries.end(), [d](Branch *a, Branch *b) {
+            return a->boundingBox.lowerLeft[d] < b->boundingBox.lowerLeft[d];
+        });
+        std::sort(upperEntries.begin(), upperEntries.end(), [d](Branch *a, Branch *b) {
+            return a->boundingBox.upperRight[d] < b->boundingBox.upperRight[d];
+        });
 
+        // Setup groups
+        std::vector<Branch *> groupALower(lowerEntries.begin(),
+                                          lowerEntries.begin() + min_branch_factor);
+        std::vector<Branch *> groupAUpper(upperEntries.begin(),
+                                          upperEntries.begin() + min_branch_factor);
 
-        // By picking a line based on the upper bounding point, we
-        // guaranteed that at least some of the entries will go to the
-        // left. But we can't guarantee that *all* entries won't go to the
-        // left, because we might have to downsplit the remaining
-        // entries in the array (R+ nodes are not guaranteed to be disjoint).
-        // This would result in a split not actually reducing the number
-        // of entries in our new split nodes, which defeats the whole
-        // point.
-        // I'm not sure we can even guarantee that a line partitions the
-        // data in a way such that we DONT overflow --- presumably every
-        // box isn't on top of each other but I'm not sure that's a
-        // property you rely on.
-        // But even if we could guarantee that, we still can't check
-        // every cut point to figure it out because that would be N^2
-        // and this is D N LOG N.
+        std::vector<Branch *> groupBLower(lowerEntries.begin() +
+                                          min_branch_factor,
+                                          lowerEntries.end());
+        std::vector<Branch *> groupBUpper(upperEntries.begin() +
+                                          min_branch_factor,
+                                          upperEntries.end());
 
-        location = sortableBoundingBoxes[sortableBoundingBoxes.size() / 2 - 1].upperRight[d];
-
-        // Compute cost, # of splits if d is chosen
-        unsigned currentInducedSplits = 0;
-        unsigned left_count = 0;
-        unsigned right_count = 0;
-        for (unsigned i = 0; i < sortableBoundingBoxes.size(); i++) {
-          bool is_contained_left = sortableBoundingBoxes[i].upperRight[d] <= location;
-          bool is_contained_right = sortableBoundingBoxes[i].lowerLeft[d] >= location;
-
-          if (is_contained_left) {
-            left_count++;
-          } else if(is_contained_right) {
-            right_count++;
-          } else if (sortableBoundingBoxes[i].lowerLeft[d] <= location and
-                     location <= sortableBoundingBoxes[i].upperRight[d]) {
-            currentInducedSplits++;
-            left_count++;
-            right_count++;
+        // Cycle through all M-2m+2 distributions
+        while (groupALower.size() <= max_branch_factor and groupBLower.size() >= min_branch_factor) {
+          // Compute the margin of groupA and groupB
+          Rectangle boundingBoxALower = groupALower[0]->boundingBox;
+          Rectangle boundingBoxAUpper = groupAUpper[0]->boundingBox;
+          for (unsigned i = 1; i < groupALower.size(); i++) {
+            boundingBoxALower.expand(groupALower[i]->boundingBox);
+            boundingBoxAUpper.expand(groupAUpper[i]->boundingBox);
           }
+
+          Rectangle boundingBoxBLower = groupBLower[0]->boundingBox;
+          Rectangle boundingBoxBUpper = groupBUpper[0]->boundingBox;
+          for (unsigned i = 1; i < groupBLower.size(); i++) {
+            boundingBoxBLower.expand(groupBLower[i]->boundingBox);
+            boundingBoxBUpper.expand(groupBUpper[i]->boundingBox);
+          }
+
+          // Add to the total margin sum
+          double evalMarginLower = boundingBoxALower.margin() + boundingBoxBLower.margin();
+          double evalMarginUpper = boundingBoxAUpper.margin() + boundingBoxBUpper.margin();
+          if (evalMarginLower < optimalMarginLower) {
+            optimalMarginLower = evalMarginLower;
+            optimalAxisLower = d;
+          }
+
+          if (evalMarginUpper < optimalMarginUpper) {
+            optimalMarginUpper = evalMarginUpper;
+            optimalAxisUpper = d;
+          }
+          // Add one new value to groupA and remove one from groupB to obtain next distribution
+          Branch *transferPointLower = groupBLower.front();
+          Branch *transferPointUpper = groupBUpper.front();
+          groupBLower.erase(groupBLower.begin());
+          groupBUpper.erase(groupBUpper.begin());
+          groupALower.push_back(transferPointLower);
+          groupAUpper.push_back(transferPointUpper);
+        }
+      }
+
+      bool sortLower = optimalMarginUpper > optimalMarginLower ? true : false;
+      unsigned optimalAxis = sortLower ? optimalAxisLower : optimalAxisUpper;
+
+      // Sort to match the optimal axis
+      if (sortLower) {
+
+        std::sort(entries.begin(), entries.begin() + cur_offset_,
+                  [optimalAxis](Branch &a, Branch &b) {
+                      return a.boundingBox.lowerLeft[optimalAxis] <
+                            b.boundingBox.lowerLeft[optimalAxis];
+                  });
+      } else {
+        std::sort(entries.begin(), entries.begin() + cur_offset_,
+                  [optimalAxis](Branch &a, Branch &b) {
+                      return a.boundingBox.upperRight[optimalAxis] <
+                            b.boundingBox.upperRight[optimalAxis];
+                  });
+      }
+
+      return optimalAxis;
+    }
+
+    // CSA1: Sort entries by lower and upper bound along each axis and compute S -> sum of all
+    //  margin values for the different distributions. This can be stored in a array of variable
+    //  that we keep in a loop -> and the just compare to the others?
+    // 	We can first call a helper function that returns an array of all possible distributions for it?
+    // CSA2: Return the Axis that has the minimum total sum of all the distributions
+    template <int min_branch_factor, int max_branch_factor>
+    unsigned BranchNode<min_branch_factor, max_branch_factor>::chooseSplitAxis() {
+      return chooseSplitNonLeafAxis();
+    }
+
+    // CSI1: Given the chosen split index
+    // 	group all the entries into multiple groups and choose the one that has the least
+    // 	overlap value; resolve ties with the minimum area
+    // 	returns tuple of best distribution group indices
+    template <int min_branch_factor, int max_branch_factor>
+    unsigned BranchNode<min_branch_factor, max_branch_factor>::chooseSplitIndex(unsigned axis, double s) {
+      // We assume this is called after we have sorted this->data according to axis.
+      // Precompute the elements not dependant on candidateIndex
+      Rectangle bb = this->boundingBox();
+      double m = (double) min_branch_factor;
+      double M = (double) max_branch_factor;
+      double asym = 2 * (bb.centrePoint()[axis] - originalCentre[axis]) / (std::fabs(bb.upperRight[axis] - bb.lowerLeft[axis]));
+      double u = (1 - (2 * m) / (M + 1)) * asym;
+      double sigma = treeRef.s * (1 + std::fabs(u));
+      double y1 = std::exp(-1 / std::pow(s, 2));
+      double ys = 1 / (1 - y1);
+
+      const auto groupABegin = entries.begin();
+      const auto groupAEnd = entries.begin() + min_branch_factor;
+      const auto groupBBegin = entries.begin() + min_branch_factor;
+      const auto groupBEnd = entries.begin() + cur_offset_;
+
+      std::vector<Branch> groupA(groupABegin, groupAEnd);
+      std::vector<Branch> groupB(groupBBegin, groupBEnd);
+      unsigned splitIndex = cur_offset_ / 2;
+
+      // Find the best size out of all the distributions
+      double minWeight = std::numeric_limits<double>::infinity();
+
+      // Tracking what the current "cut" mark is
+      unsigned currentSplitPoint = min_branch_factor;
+
+      // Try each of the M-2m + 2 groups
+      while (groupA.size() <= max_branch_factor and groupB.size() >= min_branch_factor) {
+        // Compute the margin of groupA and groupB
+        Rectangle boundingBoxA = groupA[0].boundingBox;
+        for (unsigned i = 1; i < groupA.size(); i++) {
+          boundingBoxA.expand(groupA[i].boundingBox);
         }
 
-        // Compare cost
-        if (left_count <= max_branch_factor and right_count <= max_branch_factor and
-            currentInducedSplits < costMetric) {
-          defaultPartition.dimension = d;
-          defaultPartition.location = location;
-          costMetric = currentInducedSplits;
+        Rectangle boundingBoxB = groupB[0].boundingBox;
+        for (unsigned i = 1; i < groupB.size(); i++) {
+          boundingBoxB.expand(groupB[i].boundingBox);
         }
+
+        // Evaluate wf(i)
+        double xi = ((2 * currentSplitPoint) / (M + 1)) - 1;
+        double weightFunction = ys * (std::exp(-std::pow((xi - u) / sigma, 2)) - y1);
+
+        // Compute intersection area to determine best grouping of data points
+        double evalDistOverlap = boundingBoxA.computeIntersectionArea(boundingBoxB);
+        
+        // Evaluate wg(i)
+        double evalWeight;
+        if (evalDistOverlap == 0.0) {
+          double weightGoal = boundingBoxA.margin() + boundingBoxB.margin() - bb.margin();
+          evalWeight = weightGoal * weightFunction;
+        } else {
+          double weightGoal = evalDistOverlap;
+          evalWeight = weightGoal / weightFunction;
+        }
+
+        if (evalWeight < minWeight) {
+          splitIndex = currentSplitPoint;
+          minWeight = evalWeight;
+        }
+
+        // Add one new value to groupA and remove one from groupB to obtain next distribution
+        Branch transferPoint = groupB.front();
+        groupB.erase(groupB.begin());
+        groupA.push_back(transferPoint);
+
+        // Push the split point forward.
+        currentSplitPoint++;
       }
 
-      // If there was a default split point that didnt' overflow children,
-      // use that
-      if (costMetric < std::numeric_limits<unsigned>::max()) {
-        return defaultPartition;
-      }
-
-      // It's time to get fancy
-      for (unsigned d = 0; d < dimensions; d++) {
-        for (unsigned i = 0; i < sortableBoundingBoxes.size(); i++) {
-          unsigned left_count = 0;
-          unsigned right_count = 0;
-          double partition_candidate = sortableBoundingBoxes[i].upperRight[d];
-          unsigned cost = 0;
-
-          for (unsigned j = 0; j < sortableBoundingBoxes.size(); j++) {
-            Rectangle &bounding_rect = sortableBoundingBoxes[j];
-            bool greater_than_left = bounding_rect.lowerLeft[d] < partition_candidate;
-            bool less_than_right = bounding_rect.upperRight[d] > partition_candidate;
-            bool requires_split = greater_than_left and less_than_right;
-            bool should_go_left = bounding_rect.upperRight[d] <= partition_candidate;
-            bool should_go_right = bounding_rect.lowerLeft[d] >= partition_candidate;
-
-            if (requires_split) {
-              left_count++;
-              right_count++;
-              cost++;
-            } else if (should_go_left) {
-              left_count++;
-            } else if (should_go_right) {
-              right_count++;
-            } else {
-              assert(false);
-            }
-          } //j
-
-          if (left_count <= max_branch_factor and
-              right_count <= max_branch_factor and
-              left_count > 0 and right_count > 0 ) {
-            if (cost < costMetric) {
-              defaultPartition.dimension = d;
-              defaultPartition.location = partition_candidate;
-              costMetric = cost;
-            }
-          }
-        } // i
-      } // d
-
-      assert(costMetric < std::numeric_limits<unsigned>::max());
-
-      return defaultPartition;
+      return splitIndex;
     }
 
     template <int min_branch_factor, int max_branch_factor>
     SplitResult BranchNode<min_branch_factor, max_branch_factor>::splitNode(
             RevisedRStarTreeDisk<min_branch_factor, max_branch_factor> *treeRef,
-            tree_node_handle current_handle,
-            Partition p
+            tree_node_handle current_handle
     ) {
       using NodeType = BranchNode<min_branch_factor, max_branch_factor>;
 
-      std::vector<Branch> entriesCopy;
-      tree_node_allocator *allocator = get_node_allocator(treeRef);
+      // S1: Call chooseSplitAxis to determine the axis perpendicular to which the split is performed
+      // S2: Invoke chooseSplitIndex given the axis to determine the best distribution along this axis
+      // S3: Distribute the entries among these two groups
 
-      // Create a copy of entries
-      for (unsigned i = 0; i < cur_offset_; i++) {
-        entriesCopy.push_back(entries.at(i));
-      }
+      // Call chooseSplitAxis to determine the axis perpendicular to which the split is performed
+      // For now we will save the axis as a int -> since this allows for room for growth in the future
+      // Call ChooseSplitIndex to create optimal splitting of data array
+      unsigned splitAxis = chooseSplitAxis();
+      unsigned splitIndex = chooseSplitIndex(splitAxis, treeRef->s);
 
       // We are the left child
       auto left_handle = current_handle;
       auto left_node = this;
-      left_node->cur_offset_ = 0; // Reset our entries and repopulate below
 
       // Create a new sibling node
+      tree_node_allocator *allocator = get_node_allocator(treeRef);
       auto alloc_data = allocator->create_new_tree_node<NodeType>(NodeHandleType(BRANCH_NODE));
       auto right_handle = alloc_data.second;
       auto right_node = alloc_data.first;
       new (&(*(right_node))) NodeType();
       right_handle.set_level(current_handle.get_level());
 
-      assert(left_node->cur_offset_ == 0);
-      assert(right_node->cur_offset_ == 0);
+      // Copy everything to the right of the splitPoint (inclusive) to the new sibling
+      std::copy(entries.begin() + splitIndex, entries.begin() + cur_offset_, right_node->entries.begin());
+      right_node->cur_offset_ = cur_offset_ - splitIndex;
 
-      // This is partitioning on a point that either shoves everything
-      // left or cuts enough stuff that left gets everything.
-      // Very confusing...
-      for (unsigned i = 0; i < entriesCopy.size(); i++) {
-        Branch b = entriesCopy.at(i);
-
-        bool is_contained_left = b.boundingBox.upperRight[p.dimension] <= p.location;
-        bool is_contained_right = b.boundingBox.lowerLeft[p.dimension] >= p.location;
-
-        assert(not(is_contained_left and is_contained_right));
-
-        if (is_contained_left) {
-          left_node->entries.at(left_node->cur_offset_++) = b;
-        } else if (is_contained_right) {
-          right_node->entries.at(right_node->cur_offset_++) = b;
-        } else { // Line cuts through child, so we downsplit
-          SplitResult downwardSplit;
-
-          if (b.child.get_type() == LEAF_NODE) {
-            auto child_node = treeRef->get_leaf_node(b.child);
-            downwardSplit = child_node->splitNode(treeRef, b.child, p);
-          } else {
-            auto child_node = treeRef->get_branch_node(b.child);
-            downwardSplit = child_node->splitNode(treeRef, b.child, p);
-          }
-
-          if (downwardSplit.leftBranch.boundingBox != Rectangle::atInfinity) {
-            left_node->entries.at(left_node->cur_offset_++) = downwardSplit.leftBranch;
-          }
-
-          if (downwardSplit.rightBranch.boundingBox != Rectangle::atInfinity) {
-            right_node->entries.at(right_node->cur_offset_++) = downwardSplit.rightBranch;
-          }
-        }
-      }
+      // Chop our node's data down
+      cur_offset_ = splitIndex;
 
       assert(left_node->cur_offset_ <= max_branch_factor);
       assert(right_node->cur_offset_ <= max_branch_factor);
