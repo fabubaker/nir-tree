@@ -1303,8 +1303,8 @@ template void bulk_load_tree(
         std::vector<Point>::iterator begin,
         std::vector<Point>::iterator end,
         unsigned max_branch_factor,
-        rplustreedisk::LeafNode<R_STAR_MIN_FANOUT, R_STAR_MAX_FANOUT> *leaf_node_type,
-        rplustreedisk::BranchNode<R_STAR_MIN_FANOUT, R_STAR_MAX_FANOUT> *branch_node_type
+        rplustreedisk::LeafNode<R_PLUS_MIN_FANOUT, R_PLUS_MAX_FANOUT> *leaf_node_type,
+        rplustreedisk::BranchNode<R_PLUS_MIN_FANOUT, R_PLUS_MAX_FANOUT> *branch_node_type
 );
 
 template void bulk_load_tree(
