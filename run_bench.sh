@@ -17,6 +17,8 @@ elif [ $tree_type -eq 2 ]; then
    tree_name='rstar'
 elif [ $tree_type -eq 3 ]; then
    tree_name='nir'
+elif [ $tree_type -eq 5 ]; then
+   tree_name='rrstar'
 else
   echo "Unknown tree type: $tree_type"
   exit 1

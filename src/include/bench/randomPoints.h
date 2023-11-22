@@ -12,6 +12,7 @@
 #include <quadtree/quadtree.h>
 #include <random>
 #include <revisedrstartree/revisedrstartree.h>
+#include <revisedrstartreedisk/revisedrstartreedisk.h>
 #include <rplustree/rplustree.h>
 #include <rplustreedisk/rplustreedisk.h>
 #include <rstartree/rstartree.h>
@@ -425,7 +426,14 @@ static bool is_already_loaded(std::map<std::string, uint64_t> &configU, Index *s
       return true;
     }
   } else if (configU["tree"] == R_TREE) {
-    auto tree = (rtreedisk::RTreeDisk<3, 6> *) spatial_index;
+    auto tree = (rtreedisk::RTreeDisk<R_TREE_MIN_FANOUT, R_TREE_MAX_FANOUT> *) spatial_index;
+    size_t existing_page_count = tree->node_allocator_->buffer_pool_.get_preexisting_page_count();
+
+    if (existing_page_count > 0) {
+      return true;
+    }
+  } else if (configU["tree"] == REVISED_R_STAR_TREE) {
+    auto tree = (revisedrstartreedisk::RevisedRStarTreeDisk<REVISED_R_STAR_MIN_FANOUT, REVISED_R_STAR_MAX_FANOUT> *) spatial_index;
     size_t existing_page_count = tree->node_allocator_->buffer_pool_.get_preexisting_page_count();
 
     if (existing_page_count > 0) {
@@ -491,9 +499,11 @@ runBench(
   } else if (configU["tree"] == QUAD_TREE) {
     spatialIndex = new quadtree::QuadTree();
   } else if (configU["tree"] == REVISED_R_STAR_TREE) {
-    spatialIndex = new revisedrstartree::RevisedRStarTree(
-            configU["minfanout"], configU["maxfanout"]
+    auto tree = new revisedrstartreedisk::RevisedRStarTreeDisk<REVISED_R_STAR_MIN_FANOUT, REVISED_R_STAR_MAX_FANOUT>(
+            configU["buffer_pool_memory"], configS["db_file_name"]
     );
+    bufferPool = &(tree->node_allocator_->buffer_pool_);
+    spatialIndex = tree;
   } else {
     std::cout << "Unknown tree selected. Exiting." << std::endl;
     return;

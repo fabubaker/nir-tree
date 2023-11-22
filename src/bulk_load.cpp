@@ -1286,6 +1286,14 @@ template void sequential_insert_tree(
         unsigned max_branch_factor
 );
 
+template void sequential_insert_tree(
+        revisedrstartreedisk::RevisedRStarTreeDisk<REVISED_R_STAR_MIN_FANOUT, REVISED_R_STAR_MAX_FANOUT> *tree,
+        std::map<std::string, size_t> &configU,
+        std::vector<Point>::iterator begin,
+        std::vector<Point>::iterator end,
+        unsigned max_branch_factor
+);
+
 /* bulk_load_tree */
 template void bulk_load_tree(
         rstartreedisk::RStarTreeDisk<R_STAR_MIN_FANOUT, R_STAR_MAX_FANOUT> *tree,
@@ -1303,8 +1311,8 @@ template void bulk_load_tree(
         std::vector<Point>::iterator begin,
         std::vector<Point>::iterator end,
         unsigned max_branch_factor,
-        rplustreedisk::LeafNode<R_STAR_MIN_FANOUT, R_STAR_MAX_FANOUT> *leaf_node_type,
-        rplustreedisk::BranchNode<R_STAR_MIN_FANOUT, R_STAR_MAX_FANOUT> *branch_node_type
+        rplustreedisk::LeafNode<R_PLUS_MIN_FANOUT, R_PLUS_MAX_FANOUT> *leaf_node_type,
+        rplustreedisk::BranchNode<R_PLUS_MIN_FANOUT, R_PLUS_MAX_FANOUT> *branch_node_type
 );
 
 template void bulk_load_tree(
@@ -1313,6 +1321,16 @@ template void bulk_load_tree(
         std::vector<Point>::iterator begin,
         std::vector<Point>::iterator end,
         unsigned max_branch_factor,
-        rplustreedisk::LeafNode<R_TREE_MIN_FANOUT, R_TREE_MAX_FANOUT> *leaf_node_type,
-        rplustreedisk::BranchNode<R_TREE_MIN_FANOUT, R_TREE_MAX_FANOUT> *branch_node_type
+        rtreedisk::LeafNode<R_TREE_MIN_FANOUT, R_TREE_MAX_FANOUT> *leaf_node_type,
+        rtreedisk::BranchNode<R_TREE_MIN_FANOUT, R_TREE_MAX_FANOUT> *branch_node_type
+);
+
+template void bulk_load_tree(
+        revisedrstartreedisk::RevisedRStarTreeDisk<REVISED_R_STAR_MIN_FANOUT, REVISED_R_STAR_MAX_FANOUT> *tree,
+        std::map<std::string, size_t> &configU,
+        std::vector<Point>::iterator begin,
+        std::vector<Point>::iterator end,
+        unsigned max_branch_factor,
+        revisedrstartreedisk::LeafNode<REVISED_R_STAR_MIN_FANOUT, REVISED_R_STAR_MAX_FANOUT> *leaf_node_type,
+        revisedrstartreedisk::BranchNode<REVISED_R_STAR_MIN_FANOUT, REVISED_R_STAR_MAX_FANOUT> *branch_node_type
 );
