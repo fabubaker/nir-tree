@@ -2475,7 +2475,7 @@ Partition BranchNode<min_branch_factor, max_branch_factor>::partitionNode(NIRTre
       return partitionExperimentalStrategy(treeRef);
       break;
     default:
-      return partitionLineMinimizeDownsplits(treeRef);
+      return partitionExperimentalStrategy(treeRef);
       break;
   }
 }
