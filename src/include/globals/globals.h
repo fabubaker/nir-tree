@@ -8,11 +8,11 @@
 const unsigned dimensions = DIM;
 
 // one extra space is saved for insertion which causes split
-const unsigned R_STAR_MIN_FANOUT = 5;
+const unsigned R_STAR_MIN_FANOUT = 40;
 const unsigned R_STAR_MAX_FANOUT = 83;
 const unsigned R_PLUS_MIN_FANOUT = 5;
 const unsigned R_PLUS_MAX_FANOUT = 83;
-const unsigned R_TREE_MIN_FANOUT = 5;
+const unsigned R_TREE_MIN_FANOUT = 40;
 const unsigned R_TREE_MAX_FANOUT = 83;
 const unsigned NIR_MIN_FANOUT = 5;
 const unsigned NIR_MAX_FANOUT = 83;
