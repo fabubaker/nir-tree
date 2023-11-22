@@ -561,6 +561,10 @@ runBench(
         bufferPool->stat();
       }
 
+      if (totalSearches >= 100000) {
+        break;
+      }
+
       bufferPool->resetStat();
     }
     std::cout << "Search OK." << std::endl;
