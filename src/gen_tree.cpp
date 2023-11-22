@@ -105,7 +105,7 @@ void generate_tree(
   if (configU["tree"] == NIR_TREE) {
     auto *tree = new nirtreedisk::NIRTreeDisk<NIR_MIN_FANOUT, NIR_MAX_FANOUT>(
       configU["buffer_pool_memory"], backing_file,
-      nirtreedisk::LINE_MINIMIZE_DOWN_SPLITS
+      nirtreedisk::EXPERIMENTAL_STRATEGY
     );
 
     spatialIndex = tree;
