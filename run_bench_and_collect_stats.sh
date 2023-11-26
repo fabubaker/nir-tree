@@ -104,7 +104,7 @@ echo "Tree Load Time, $nir_load_time, $rstar_load_time, $rplus_load_time, $rtree
 nir_load_io=$(grep "Page hits" nir_load.ot | tail -n 1 | cut -d":" -f2 | cut -c2-)
 rstar_load_io=$(grep "Page hits" rstar_load.ot | tail -n 1 | cut -d":" -f2 | cut -c2-)
 rplus_load_io=$(grep "Page hits" rplus_load.ot | tail -n 1 | cut -d":" -f2 | cut -c2-)
-rtree_load_io=$(grep "Page hits" rplus_load.ot | tail -n 1 | cut -d":" -f2 | cut -c2-)
+rtree_load_io=$(grep "Page hits" rtree_load.ot | tail -n 1 | cut -d":" -f2 | cut -c2-)
 echo "Tree Load I/O, $nir_load_io, $rstar_load_io, $rplus_load_io, $rtree_load_io" >> $results_file
 
 # tree sizes (KB)
