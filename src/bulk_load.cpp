@@ -668,7 +668,7 @@ std::pair<double, uint64_t> find_best_cut(
 
     // For now, we set area_weight to 1.0
     double area_weight = 1.0;
-    double cut_cost = cost_function(B0, B1, 1.0); 
+    double cut_cost = cost_function(B0, B1, 0.0);
 
     if (cut_cost < curr_lowest_cost){
       best_cut = i * M; 
