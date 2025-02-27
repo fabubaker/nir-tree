@@ -1,4 +1,4 @@
-#pragma once 
+#pragma once
 
 #include <storage/buffer_pool.h>
 #include <storage/page.h>
@@ -57,11 +57,11 @@ public:
     }
 
     bool operator==( std::nullptr_t ptr ) const {
-        return obj_ptr_ == ptr; 
+        return obj_ptr_ == ptr;
     }
 
     bool operator!=( std::nullptr_t ptr ) const {
-        return !(obj_ptr_ == ptr); 
+        return !(obj_ptr_ == ptr);
     }
 
     bool operator==( const pinned_node_ptr &other ) const {
@@ -87,7 +87,7 @@ public:
 // amazing memory problems
 struct NodeHandleType {
     explicit NodeHandleType( uint8_t type ):
-       type_( type ) { } 
+       type_( type ) { }
 
     uint8_t type_;
 };
@@ -166,7 +166,7 @@ public:
     tree_node_handle &operator=( const tree_node_handle &other ) =
         default;
 
-    tree_node_handle &operator=( const std::nullptr_t ) { 
+    tree_node_handle &operator=( const std::nullptr_t ) {
         page_location_.reset();
         return *this;
     }
@@ -178,7 +178,7 @@ public:
     inline uint16_t get_offset() {
         return page_location_.offset_;
     }
-    
+
     inline uint8_t get_type() {
         return type_;
     }
@@ -308,7 +308,7 @@ public:
         T *obj_ptr = (T *) (page_ptr->data_ + offset_into_page);
         space_left_in_cur_page_ -= node_size;
         tree_node_handle meta_ptr( page_ptr->header_.page_id_,  offset_into_page, type_code );
-        
+
         return std::make_pair( pinned_node_ptr( buffer_pool_, obj_ptr, page_ptr ), std::move(meta_ptr) );
     }
 

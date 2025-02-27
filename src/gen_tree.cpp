@@ -14,7 +14,7 @@ std::string benchTypes[] = {"UNIFORM", "ZIPF", "GAUSS", "DATASET_FROM_FILE"};
 std::string bulkloadAlgs[] = {"STR", "QTS", "TGS"};
 
 void parameters(
-        std::map<std::string, uint64_t> &configU,
+        std::map<std::string, size_t> &configU,
         std::map<std::string, double> &configD,
         std::map<std::string, std::string> configS
 ) {
@@ -34,7 +34,7 @@ void parameters(
 void generate_tree(
         std::map<std::string, size_t> &configU,
         std::map<std::string, double> &configD,
-        std::map<std::string, std::string> configS
+        std::map<std::string, std::string> &configS
 ) {
   std::string backing_file = configS["output_db_file_name"];
 
@@ -238,12 +238,12 @@ void generate_tree(
     abort();
   }
 
-  // Quick Test: Searching first 5000 points which are bulk loaded 
+  // Quick Test: Searching first 5000 points which are bulk loaded
   unsigned totalSearchesLoaded = 0;
   double totalTimeSearches = 0.0;
   std::cout << "Searching for bulk-loaded points..." << std::endl;
   for (auto iter = all_points.begin(); iter < all_points.begin() + cut_off_bulk_load; iter++ ) {
-    Point p = *iter; 
+    Point p = *iter;
     std::chrono::high_resolution_clock::time_point begin = std::chrono::high_resolution_clock::now();
     std::vector<Point> out = spatialIndex->search(p);
     if (out.size() != 1) {
@@ -266,7 +266,7 @@ void generate_tree(
   std::cout << "Searching for inserted points..." << std::endl;
   unsigned totalSearchesInserted = 0;
   for (auto iter = all_points.begin() + cut_off_bulk_load; iter < all_points.end(); iter++ ) {
-    Point p = *iter; 
+    Point p = *iter;
     std::chrono::high_resolution_clock::time_point begin = std::chrono::high_resolution_clock::now();
     std::vector<Point> out = spatialIndex->search(p);
     if (out.size() != 1) {
@@ -284,7 +284,7 @@ void generate_tree(
       break;
     }
   }
-  
+
   spatialIndex->stat();
 
   return;
@@ -292,7 +292,7 @@ void generate_tree(
 
 int main(int argc, char **argv) {
   int option;
-  std::map<std::string, uint64_t> configU;
+  std::map<std::string, size_t> configU;
   std::map<std::string, double> configD;
   std::map<std::string, std::string> configS;
 
